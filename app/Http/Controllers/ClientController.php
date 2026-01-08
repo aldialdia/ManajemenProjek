@@ -10,9 +10,7 @@ use Illuminate\View\View;
 
 class ClientController extends Controller
 {
-    /**
-     * Display a listing of clients.
-     */
+
     public function index(Request $request): View
     {
         $query = Client::withCount('projects');
@@ -32,17 +30,12 @@ class ClientController extends Controller
         return view('clients.index', compact('clients'));
     }
 
-    /**
-     * Show the form for creating a new client.
-     */
+ 
     public function create(): View
     {
         return view('clients.create');
     }
 
-    /**
-     * Store a newly created client.
-     */
     public function store(StoreClientRequest $request): RedirectResponse
     {
         $client = Client::create($request->validated());
@@ -52,9 +45,7 @@ class ClientController extends Controller
             ->with('success', 'Client created successfully.');
     }
 
-    /**
-     * Display the specified client.
-     */
+ 
     public function show(Client $client): View
     {
         $client->load([
@@ -66,17 +57,11 @@ class ClientController extends Controller
         return view('clients.show', compact('client'));
     }
 
-    /**
-     * Show the form for editing the client.
-     */
     public function edit(Client $client): View
     {
         return view('clients.edit', compact('client'));
     }
 
-    /**
-     * Update the specified client.
-     */
     public function update(StoreClientRequest $request, Client $client): RedirectResponse
     {
         $client->update($request->validated());
@@ -86,9 +71,6 @@ class ClientController extends Controller
             ->with('success', 'Client updated successfully.');
     }
 
-    /**
-     * Remove the specified client.
-     */
     public function destroy(Client $client): RedirectResponse
     {
         $client->delete();

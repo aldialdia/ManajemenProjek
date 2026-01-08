@@ -19,24 +19,19 @@ class ProjectController extends Controller
     ) {
     }
 
-    /**
-     * Display a listing of projects.
-     */
+
     public function index(Request $request): View
     {
         $query = Project::with(['client', 'users', 'tasks']);
 
-        // Filter by status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Filter by client
         if ($request->filled('client_id')) {
             $query->where('client_id', $request->client_id);
         }
 
-        // Search by name
         if ($request->filled('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
@@ -47,9 +42,6 @@ class ProjectController extends Controller
         return view('projects.index', compact('projects', 'clients'));
     }
 
-    /**
-     * Show the form for creating a new project.
-     */
     public function create(): View
     {
         $clients = Client::orderBy('name')->get();
@@ -70,9 +62,6 @@ class ProjectController extends Controller
             ->with('success', 'Project created successfully.');
     }
 
-    /**
-     * Display the specified project.
-     */
     public function show(Project $project): View
     {
         $project->load(['client', 'users', 'tasks.assignee', 'attachments']);
@@ -82,9 +71,6 @@ class ProjectController extends Controller
         return view('projects.show', compact('project', 'tasksByStatus'));
     }
 
-    /**
-     * Show the form for editing the project.
-     */
     public function edit(Project $project): View
     {
         $clients = Client::orderBy('name')->get();
@@ -93,9 +79,6 @@ class ProjectController extends Controller
         return view('projects.edit', compact('project', 'clients', 'users'));
     }
 
-    /**
-     * Update the specified project.
-     */
     public function update(UpdateProjectRequest $request, Project $project): RedirectResponse
     {
         $this->projectService->update($project, $request->validated());
