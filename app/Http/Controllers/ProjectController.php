@@ -44,10 +44,9 @@ class ProjectController extends Controller
 
     public function create(): View
     {
-        $clients = Client::orderBy('name')->get();
         $users = User::orderBy('name')->get();
 
-        return view('projects.create', compact('clients', 'users'));
+        return view('projects.create', compact('users'));
     }
 
     /**
@@ -73,10 +72,9 @@ class ProjectController extends Controller
 
     public function edit(Project $project): View
     {
-        $clients = Client::orderBy('name')->get();
         $users = User::orderBy('name')->get();
 
-        return view('projects.edit', compact('project', 'clients', 'users'));
+        return view('projects.edit', compact('project', 'users'));
     }
 
     public function update(UpdateProjectRequest $request, Project $project): RedirectResponse

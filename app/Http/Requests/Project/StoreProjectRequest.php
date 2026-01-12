@@ -26,11 +26,9 @@ class StoreProjectRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'status' => ['required', Rule::enum(ProjectStatus::class)],
-            'client_id' => ['nullable', 'exists:clients,id'],
-            'start_date' => ['nullable', 'date'],
+            'status' => ['nullable', Rule::enum(ProjectStatus::class)],
+            'start_date' => ['nullable', 'date', 'after_or_equal:today'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'budget' => ['nullable', 'numeric', 'min:0'],
             'users' => ['nullable', 'array'],
             'users.*' => ['exists:users,id'],
         ];

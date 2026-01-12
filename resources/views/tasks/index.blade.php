@@ -13,10 +13,17 @@
                 <i class="fas fa-columns"></i>
                 Kanban View
             </a>
-            <a href="{{ route('tasks.create') }}" class="btn btn-primary">
-                <i class="fas fa-plus"></i>
-                New Task
-            </a>
+            @if(request('project_id'))
+                <a href="{{ route('tasks.create', ['project_id' => request('project_id')]) }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i>
+                    New Task
+                </a>
+            @else
+                <a href="{{ route('projects.index') }}" class="btn btn-primary" title="Pilih project terlebih dahulu">
+                    <i class="fas fa-plus"></i>
+                    New Task
+                </a>
+            @endif
         </div>
     </div>
 

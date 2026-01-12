@@ -20,28 +20,13 @@
             @csrf
             @method('PUT')
 
-            <div class="grid grid-cols-2">
-                <x-forms.input-label 
-                    label="Project Name" 
-                    name="name" 
-                    :value="$project->name"
-                    placeholder="Enter project name"
-                    required
-                />
-
-                <x-forms.input-label 
-                    label="Client" 
-                    name="client_id" 
-                    type="select"
-                >
-                    <option value="">Select a client (optional)</option>
-                    @foreach($clients as $client)
-                        <option value="{{ $client->id }}" {{ old('client_id', $project->client_id) == $client->id ? 'selected' : '' }}>
-                            {{ $client->name }}
-                        </option>
-                    @endforeach
-                </x-forms.input-label>
-            </div>
+            <x-forms.input-label 
+                label="Project Name" 
+                name="name" 
+                :value="$project->name"
+                placeholder="Enter project name"
+                required
+            />
 
             <x-forms.input-label 
                 label="Description" 
@@ -80,13 +65,7 @@
                 />
             </div>
 
-            <x-forms.input-label 
-                label="Budget (IDR)" 
-                name="budget" 
-                type="number"
-                :value="$project->budget"
-                placeholder="0"
-            />
+
 
             <div class="form-group">
                 <label class="form-label">Team Members</label>

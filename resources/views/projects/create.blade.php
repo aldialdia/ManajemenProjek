@@ -16,30 +16,15 @@
 
 <div class="card">
     <div class="card-body">
-        <form action="{{ route('projects.store') }}" method="POST">
+        <form action="{{ route('projects.store') }}" method="POST" id="createProjectForm">
             @csrf
 
-            <div class="grid grid-cols-2">
-                <x-forms.input-label 
-                    label="Project Name" 
-                    name="name" 
-                    placeholder="Enter project name"
-                    required
-                />
-
-                <x-forms.input-label 
-                    label="Client" 
-                    name="client_id" 
-                    type="select"
-                >
-                    <option value="">Select a client (optional)</option>
-                    @foreach($clients as $client)
-                        <option value="{{ $client->id }}" {{ old('client_id') == $client->id ? 'selected' : '' }}>
-                            {{ $client->name }}
-                        </option>
-                    @endforeach
-                </x-forms.input-label>
-            </div>
+            <x-forms.input-label 
+                label="Project Name" 
+                name="name" 
+                placeholder="Enter project name"
+                required
+            />
 
             <x-forms.input-label 
                 label="Description" 
@@ -48,24 +33,13 @@
                 placeholder="Describe the project scope and objectives..."
             />
 
-            <div class="grid grid-cols-3">
-                <x-forms.input-label 
-                    label="Status" 
-                    name="status" 
-                    type="select"
-                    required
-                >
-                    <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
-                    <option value="on_hold" {{ old('status') === 'on_hold' ? 'selected' : '' }}>On Hold</option>
-                    <option value="completed" {{ old('status') === 'completed' ? 'selected' : '' }}>Completed</option>
-                    <option value="cancelled" {{ old('status') === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
-                </x-forms.input-label>
-
+            <div class="grid grid-cols-2">
                 <x-forms.input-label 
                     label="Start Date" 
                     name="start_date" 
                     type="date"
                     :value="old('start_date', date('Y-m-d'))"
+                    min="{{ date('Y-m-d') }}"
                 />
 
                 <x-forms.input-label 
@@ -75,12 +49,7 @@
                 />
             </div>
 
-            <x-forms.input-label 
-                label="Budget (IDR)" 
-                name="budget" 
-                type="number"
-                placeholder="0"
-            />
+
 
             <div class="form-group">
                 <label class="form-label">Team Members</label>
@@ -97,7 +66,7 @@
             </div>
 
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
                     <i class="fas fa-save"></i>
                     Create Project
                 </button>
@@ -150,5 +119,45 @@
         padding-top: 2rem;
         border-top: 1px solid #e2e8f0;
     }
+
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('createProjectForm');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        const nameInput = document.getElementById('name');
+        const descriptionInput = document.getElementById('description');
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+        const teamCheckboxes = document.querySelectorAll('input[name="users[]"]');
+        
+        function validateForm() {
+            const nameValid = nameInput.value.trim() !== '';
+            const descriptionValid = descriptionInput.value.trim() !== '';
+            const startDateValid = startDateInput.value !== '';
+            const endDateValid = endDateInput.value !== '';
+            const teamSelected = Array.from(teamCheckboxes).some(cb => cb.checked);
+            
+            const allValid = nameValid && descriptionValid && startDateValid && endDateValid && teamSelected;
+            
+            submitBtn.disabled = !allValid;
+        }
+        
+        // Add event listeners
+        nameInput.addEventListener('input', validateForm);
+        descriptionInput.addEventListener('input', validateForm);
+        startDateInput.addEventListener('change', validateForm);
+        endDateInput.addEventListener('change', validateForm);
+        teamCheckboxes.forEach(cb => cb.addEventListener('change', validateForm));
+        
+        // Initial validation
+        validateForm();
+    });
+</script>
 @endsection

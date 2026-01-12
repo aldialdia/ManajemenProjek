@@ -22,6 +22,15 @@
                     <!-- Left Column -->
                     <div>
                         <div class="form-group">
+                            <label class="form-label">Project</label>
+                            <div class="project-display">
+                                <i class="fas fa-folder"></i>
+                                <span>{{ $project->name }}</span>
+                            </div>
+                            <input type="hidden" name="project_id" value="{{ $project->id }}">
+                        </div>
+
+                        <div class="form-group">
                             <label for="title" class="form-label">Task Title <span class="text-danger">*</span></label>
                             <input type="text" id="title" name="title" class="form-control" placeholder="Enter task title"
                                 value="{{ old('title') }}" required>
@@ -35,21 +44,6 @@
                             <textarea id="description" name="description" class="form-control" rows="4"
                                 placeholder="Describe the task...">{{ old('description') }}</textarea>
                             @error('description')
-                                <span class="error-message">{{ $message }}</span>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="project_id" class="form-label">Project <span class="text-danger">*</span></label>
-                            <select id="project_id" name="project_id" class="form-control" required>
-                                <option value="">Select a project</option>
-                                @foreach($projects ?? [] as $project)
-                                    <option value="{{ $project->id }}" {{ old('project_id', request('project_id')) == $project->id ? 'selected' : '' }}>
-                                        {{ $project->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('project_id')
                                 <span class="error-message">{{ $message }}</span>
                             @enderror
                         </div>
@@ -118,4 +112,26 @@
             </form>
         </div>
     </div>
+
+    <style>
+        .project-display {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .project-display i {
+            color: #6366f1;
+            font-size: 1rem;
+        }
+
+        .project-display span {
+            font-weight: 600;
+            color: #1e293b;
+        }
+    </style>
 @endsection

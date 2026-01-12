@@ -70,15 +70,22 @@ class TaskController extends Controller
     /**
      * Show the form for creating a new task.
      */
-    public function create(Request $request): View
+    public function create(Request $request): View|RedirectResponse
     {
-        $projects = Project::where('status', 'active')->orderBy('name')->get();
-        $users = User::orderBy('name')->get();
-        $selectedProject = $request->filled('project_id')
-            ? Project::find($request->project_id)
-            : null;
+        // Redirect to projects if no project_id provided
+        if (!$request->filled('project_id')) {
+            return redirect()
+                ->route('projects.index')
+                ->with('warning', 'Silakan pilih project terlebih dahulu untuk membuat task.');
+        }
 
-        return view('tasks.create', compact('projects', 'users', 'selectedProject'));
+        // project_id is required - task must be created from within a project
+        $project = Project::with('users')->findOrFail($request->project_id);
+
+        // Only get users that are members of this project
+        $users = $project->users()->orderBy('name')->get();
+
+        return view('tasks.create', compact('project', 'users'));
     }
 
     /**
