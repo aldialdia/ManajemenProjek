@@ -15,11 +15,15 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::get('/register', fn() => view('auth.register'))->name('register');
 Route::post('/register', [AuthController::class, 'register']);
 
-Route::group(['middleware' => 'auth'], function () {
-    Route::get('/verify',[VerificationController::class, 'index']);
+Route::group(['middleware' => ['auth', 'check_status']], function () {
+    Route::get('/dashboard',[DashboardController::class, 'index']);
 });
 
-Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'check_status']);
+Route::group(['middleware' => 'auth'], function () {
+    Route::get('/verify',[VerificationController::class, 'index']);
+    Route::post('/verify',[VerificationController::class, 'store']);
+    Route::get('/verify{unique_id}',[VerificationController::class, 'show']);
+    Route::put('/verify/{unique_id}',[VerificationController::class, 'update']);
+});
 
 Route::post('/logout', [AuthController::class, 'logout']) ->middleware('auth');

@@ -22,12 +22,6 @@ class AuthController extends Controller
         return back()->with('Failed', 'Login gagal! Periksa kembali email dan password Anda.');
     }
 
-    public function logout()
-    {
-        Auth::logout(Auth::user());
-        return redirect('/login');
-    }
-
     public function register(Request $request)
     {
         $request->validate([
@@ -39,7 +33,13 @@ class AuthController extends Controller
 
         $request['status'] = 'verify';
         $user = User::create($request->all());
+        Auth::login($user);
+        return redirect('/dashboard');
+    }
 
-        return redirect('/login')->with('Success', 'Registrasi berhasil! Silakan login.');
+    public function logout()
+    {
+        Auth::logout(Auth::user());
+        return redirect('/login');
     }
 }

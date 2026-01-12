@@ -20,7 +20,6 @@ class CheckStatus
         }elseif($request->user()->status == 'verify'){
             return redirect('/verify');
         } else {
-            
             return redirect('/login')->with('error', 'Your account is inactive.');
         }
     }

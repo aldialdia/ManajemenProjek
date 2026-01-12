@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Verifikasi Email - Sistem Manajemen Proyek</title>
+    <title>Masukkan Kode OTP - Sistem Manajemen Proyek</title>
 
     <!-- Google Font: Poppins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -68,7 +68,7 @@
         .subtitle {
             color: #666;
             font-size: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
             line-height: 1.6;
         }
 
@@ -92,7 +92,35 @@
             border: 1px solid #f5c6cb;
         }
 
-        .btn-send {
+        .otp-input-wrapper {
+            margin-bottom: 15px;
+        }
+
+        .otp-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 20px;
+            font-weight: 600;
+            text-align: center;
+            letter-spacing: 8px;
+            font-family: 'Poppins', sans-serif;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .otp-input:focus {
+            border-color: #f7941d;
+        }
+
+        .otp-input::placeholder {
+            letter-spacing: 2px;
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .btn-verify {
             width: 100%;
             padding: 10px 20px;
             background: linear-gradient(135deg, #f7941d 0%, #ff6b35 100%);
@@ -110,54 +138,73 @@
             gap: 8px;
         }
 
-        .btn-send:hover {
+        .btn-verify:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(247, 148, 29, 0.4);
         }
 
-        .btn-send:active {
+        .btn-verify:active {
             transform: translateY(0);
         }
 
-        .btn-send i {
+        .btn-verify i {
             font-size: 14px;
         }
 
-        .user-email {
-            background: #f8f9fa;
-            padding: 10px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+        .resend-section {
+            margin-top: 18px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
         }
 
-        .user-email i {
+        .resend-text {
+            color: #666;
+            font-size: 11px;
+            margin-bottom: 8px;
+        }
+
+        .btn-resend {
+            background: none;
+            border: 1px solid #f7941d;
             color: #f7941d;
-            font-size: 14px;
-        }
-
-        .user-email span {
-            color: #333;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 12px;
             font-weight: 500;
-            font-size: 14px;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
-        .logout-link {
+        .btn-resend:hover {
+            background: #f7941d;
+            color: #fff;
+        }
+
+        .back-link {
             margin-top: 20px;
         }
 
-        .logout-link a {
+        .back-link a {
             color: #999;
             font-size: 13px;
             text-decoration: none;
             transition: color 0.3s ease;
         }
 
-        .logout-link a:hover {
+        .back-link a:hover {
             color: #f7941d;
+        }
+
+        @error('otp')
+            .otp-input {
+                border-color: #dc3545;
+            }
+
+        @enderror .error-text {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 8px;
         }
     </style>
 </head>
@@ -165,12 +212,11 @@
 <body>
     <div class="verification-card">
         <div class="icon-wrapper">
-            <i class="fas fa-envelope"></i>
+            <i class="fas fa-shield-alt"></i>
         </div>
 
-        <h1>Verifikasi Email</h1>
-        <p class="subtitle">Kami perlu memverifikasi alamat email Anda sebelum melanjutkan. Klik tombol di bawah untuk
-            mengirim kode OTP ke email Anda.</p>
+        <h1>Masukkan Kode OTP</h1>
+        <p class="subtitle">Kami telah mengirim kode verifikasi ke email Anda. Masukkan kode tersebut di bawah ini.</p>
 
         @if (session('Success'))
             <div class="alert alert-success">
@@ -183,30 +229,47 @@
             </div>
         @endif
 
-        <div class="user-email">
-            <i class="fas fa-user"></i>
-            <span>{{ Auth::user()->email }}</span>
-        </div>
-
-        <form action="/verify" method="post">
+        <form action="/verify/{{ $unique_id }}" method="post">
+            @method('put')
             @csrf
-            <input type="hidden" value="register" name="type">
-            <button type="submit" class="btn-send">
-                <i class="fas fa-paper-plane"></i>
-                Kirim Kode OTP
+
+            <div class="otp-input-wrapper">
+                <input type="text" name="otp" class="otp-input" placeholder="Masukkan OTP" maxlength="6"
+                    autocomplete="off">
+                @error('otp')
+                    <p class="error-text">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <button type="submit" class="btn-verify">
+                <i class="fas fa-check"></i>
+                Verifikasi
             </button>
         </form>
 
-        <div class="logout-link">
-            <form action="/logout" method="POST" style="display: inline;">
+        <div class="resend-section">
+            <p class="resend-text">Tidak menerima kode?</p>
+            <form action="/verify" method="post" style="display: inline;">
                 @csrf
-                <button type="submit"
-                    style="background: none; border: none; color: #999; font-size: 13px; cursor: pointer; font-family: 'Poppins', sans-serif;">
-                    <i class="fas fa-sign-out-alt"></i> Logout
+                <input type="hidden" value="resend" name="type">
+                <button type="submit" class="btn-resend">
+                    <i class="fas fa-redo"></i> Kirim Ulang OTP
                 </button>
             </form>
         </div>
+
+        <div class="back-link">
+            <a href="/verify"><i class="fas fa-arrow-left"></i> Kembali</a>
+        </div>
     </div>
+
+    <script>
+        // Auto focus and format OTP input
+        const otpInput = document.querySelector('.otp-input');
+        otpInput.addEventListener('input', function (e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    </script>
 </body>
 
 </html>
