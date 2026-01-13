@@ -36,6 +36,14 @@
                 placeholder="Describe the project scope and objectives..."
             />
 
+            <x-forms.input-label 
+                label="Tujuan Proyek" 
+                name="goals" 
+                type="textarea"
+                :value="$project->goals"
+                placeholder="Jelaskan tujuan yang ingin dicapai dari proyek ini..."
+            />
+
             <div class="grid grid-cols-3">
                 <x-forms.input-label 
                     label="Status" 
@@ -44,10 +52,11 @@
                     required
                 >
                     @php $currentStatus = old('status', $project->status->value ?? $project->status); @endphp
-                    <option value="active" {{ $currentStatus === 'active' ? 'selected' : '' }}>Active</option>
-                    <option value="on_hold" {{ $currentStatus === 'on_hold' ? 'selected' : '' }}>On Hold</option>
-                    <option value="completed" {{ $currentStatus === 'completed' ? 'selected' : '' }}>Completed</option>
-                    <option value="cancelled" {{ $currentStatus === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                    <option value="new" {{ $currentStatus === 'new' ? 'selected' : '' }}>Baru</option>
+                    <option value="active" {{ $currentStatus === 'active' ? 'selected' : '' }}>Sedang Berjalan</option>
+                    <option value="on_hold" {{ $currentStatus === 'on_hold' ? 'selected' : '' }}>Ditunda</option>
+                    <option value="completed" {{ $currentStatus === 'completed' ? 'selected' : '' }}>Selesai</option>
+                    <option value="cancelled" {{ $currentStatus === 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
                 </x-forms.input-label>
 
                 <x-forms.input-label 

@@ -5,20 +5,22 @@
 @section('content')
     <!-- Page Header -->
     <div class="page-header-overview">
-        <div class="header-left">
-            <a href="{{ route('projects.index') }}" class="back-link">
-                <i class="fas fa-arrow-left"></i>
-            </a>
-            <div>
-                <h1 class="project-main-title">{{ $project->name }}</h1>
-                <p class="project-date">{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</p>
-            </div>
-        </div>
+        <a href="{{ route('projects.index') }}" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+        </a>
         <div class="header-actions">
             <a href="{{ route('projects.edit', $project) }}" class="btn btn-edit">
                 <i class="fas fa-edit"></i>
                 Edit Project
             </a>
+            <form action="{{ route('projects.destroy', $project) }}" method="POST" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus project ini? Semua tugas dalam project juga akan terhapus.');">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn-delete">
+                    <i class="fas fa-trash"></i>
+                    Hapus Project
+                </button>
+            </form>
         </div>
     </div>
 
@@ -35,12 +37,16 @@
                     <div class="info-card-content">
                         <h2 class="info-card-title">{{ $project->name }}</h2>
                         <p class="info-card-desc">{{ $project->description ?? 'Tidak ada deskripsi' }}</p>
+                        @if($project->goals)
+                            <p class="info-card-goals"><strong>Tujuan:</strong> {{ $project->goals }}</p>
+                        @endif
                     </div>
                 </div>
                 <div class="info-card-badges">
                     @php
                         $statusValue = $project->status->value ?? $project->status;
                         $statusClass = match($statusValue) {
+                            'new' => 'badge-new',
                             'active' => 'badge-active',
                             'completed' => 'badge-completed',
                             'on_hold' => 'badge-hold',
@@ -48,7 +54,8 @@
                             default => 'badge-hold'
                         };
                         $statusLabel = match($statusValue) {
-                            'active' => 'Aktif',
+                            'new' => 'Baru',
+                            'active' => 'Sedang Berjalan',
                             'completed' => 'Selesai',
                             'on_hold' => 'Ditunda',
                             'cancelled' => 'Dibatalkan',
@@ -289,6 +296,28 @@
             color: white;
         }
 
+        .btn-delete {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-delete:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        }
+
         /* Overview Grid */
         .overview-grid {
             display: grid;
@@ -354,6 +383,17 @@
             line-height: 1.5;
         }
 
+        .info-card-goals {
+            color: #475569;
+            font-size: 0.875rem;
+            margin: 0.5rem 0 0 0;
+            line-height: 1.5;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 3px solid #6366f1;
+        }
+
         .info-card-badges {
             display: flex;
             gap: 0.75rem;
@@ -372,6 +412,11 @@
 
         .badge-status i {
             font-size: 0.5rem;
+        }
+
+        .badge-new {
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            color: #4338ca;
         }
 
         .badge-active {

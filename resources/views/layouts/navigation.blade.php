@@ -11,6 +11,11 @@
     </div>
 
     <div class="navbar-right">
+        <div class="navbar-date">
+            <i class="fas fa-calendar-alt"></i>
+            <span>{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</span>
+        </div>
+
         <button class="navbar-btn" title="Notifications">
             <i class="fas fa-bell"></i>
             <span class="notification-badge">3</span>
@@ -130,6 +135,27 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
+    }
+
+    .navbar-date {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: #f8fafc;
+        border-radius: 10px;
+        margin-right: 0.5rem;
+    }
+
+    .navbar-date i {
+        color: #6366f1;
+        font-size: 0.875rem;
+    }
+
+    .navbar-date span {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #475569;
     }
 
     .navbar-btn {

@@ -33,6 +33,13 @@
                 placeholder="Describe the project scope and objectives..."
             />
 
+            <x-forms.input-label 
+                label="Tujuan Proyek" 
+                name="goals" 
+                type="textarea"
+                placeholder="Jelaskan tujuan yang ingin dicapai dari proyek ini..."
+            />
+
             <div class="grid grid-cols-2">
                 <x-forms.input-label 
                     label="Start Date" 
