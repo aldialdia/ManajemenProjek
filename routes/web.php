@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\CommentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ReportController;
@@ -70,15 +73,24 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
-    // Comments (nested under tasks)
-    Route::post('/tasks/{task}/comments', function (\App\Models\Task $task, \Illuminate\Http\Request $request) {
-        $request->validate(['body' => 'required|string']);
+    // Comments
+    Route::post('/tasks/{task}/comments', [CommentController::class, 'storeForTask'])->name('tasks.comments.store');
+    Route::post('/projects/{project}/comments', [CommentController::class, 'storeForProject'])->name('projects.comments.store');
+    Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 
-        $task->comments()->create([
-            'body' => $request->body,
-            'user_id' => auth()->id(),
-        ]);
+    // Attachments
+    Route::post('/tasks/{task}/attachments', [AttachmentController::class, 'storeForTask'])->name('tasks.attachments.store');
+    Route::post('/projects/{project}/attachments', [AttachmentController::class, 'storeForProject'])->name('projects.attachments.store');
+    Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download'])->name('attachments.download');
+    Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('attachments.destroy');
 
-        return back()->with('success', 'Comment added successfully.');
-    })->name('comments.store');
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/unread', [NotificationController::class, 'getUnread'])->name('notifications.unread');
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllRead');
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
+
+    // API - Search users for @mentions
+    Route::get('/api/users/search', [UserController::class, 'search'])->name('api.users.search');
 });

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Comment extends Model
 {
@@ -13,7 +14,9 @@ class Comment extends Model
     protected $fillable = [
         'body',
         'user_id',
-        'task_id',
+        'task_id', // Keep for backward compatibility
+        'commentable_type',
+        'commentable_id',
     ];
 
     /**
@@ -25,7 +28,15 @@ class Comment extends Model
     }
 
     /**
-     * Get the task this comment belongs to.
+     * Get the parent commentable model (Task or Project).
+     */
+    public function commentable(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
+    /**
+     * Get the task this comment belongs to (backward compatibility).
      */
     public function task(): BelongsTo
     {

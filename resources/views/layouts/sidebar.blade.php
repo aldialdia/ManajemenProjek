@@ -22,7 +22,14 @@
             </div>
 
             @php
-                $allProjects = \App\Models\Project::latest()->get();
+                $user = auth()->user();
+                // Jika admin, ambil semua project. Jika bukan, ambil project user saja.
+                // Sesuai request: "project pada sistem hanya akan ada pada orang memiliki peran didalamnya"
+                // Maka admin pun jika tidak diajak tidak melihat di sidebar?
+                // "jika user tersebut tidak memiliki peran apapun dalam suatu project maka , project tersebut juga tidak akan muncul di side bar"
+                // Ini berarti logic strict: hanya yang direlasikan.
+
+                $allProjects = $user->projects()->latest()->get();
                 $currentProjectId = request()->route('project')?->id ?? request('project_id') ?? (request()->is('projects/*') ? request()->segment(2) : null);
             @endphp
 

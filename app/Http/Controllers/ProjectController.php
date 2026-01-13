@@ -8,12 +8,15 @@ use App\Models\Client;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\ProjectService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ProjectController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(
         protected ProjectService $projectService
     ) {
@@ -22,7 +25,15 @@ class ProjectController extends Controller
 
     public function index(Request $request): View
     {
+        $user = auth()->user();
         $query = Project::with(['client', 'users', 'tasks']);
+
+        // Jika bukan admin, hanya tampilkan project dimana user terdaftar (sebagai manager atau member)
+        if (!$user->isAdmin()) {
+            $query->whereHas('users', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        }
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -56,6 +67,15 @@ class ProjectController extends Controller
     {
         $project = $this->projectService->create($request->validated());
 
+        // Assign pembuat project sebagai Manager otomatis
+        // Cek jika user belum terdaftar di project (untuk menghindari duplikasi jika dia memilih dirinya sendiri di form)
+        if (!$project->users()->where('user_id', auth()->id())->exists()) {
+            $project->users()->attach(auth()->id(), ['role' => 'manager']);
+        } else {
+            // Jika sudah terdaftar (misal dipilih sbg member), update jadi manager
+            $project->users()->updateExistingPivot(auth()->id(), ['role' => 'manager']);
+        }
+
         return redirect()
             ->route('projects.show', $project)
             ->with('success', 'Project created successfully.');
@@ -63,7 +83,9 @@ class ProjectController extends Controller
 
     public function show(Project $project): View
     {
-        $project->load(['client', 'users', 'tasks.assignee', 'attachments']);
+        $this->authorize('view', $project);
+
+        $project->load(['client', 'users', 'tasks.assignee', 'attachments', 'comments.user']);
 
         $tasksByStatus = $project->tasks->groupBy('status');
 
@@ -72,6 +94,8 @@ class ProjectController extends Controller
 
     public function edit(Project $project): View
     {
+        $this->authorize('update', $project);
+
         $users = User::orderBy('name')->get();
 
         return view('projects.edit', compact('project', 'users'));
@@ -79,6 +103,8 @@ class ProjectController extends Controller
 
     public function update(UpdateProjectRequest $request, Project $project): RedirectResponse
     {
+        $this->authorize('update', $project);
+
         $this->projectService->update($project, $request->validated());
 
         return redirect()
@@ -91,6 +117,8 @@ class ProjectController extends Controller
      */
     public function destroy(Project $project): RedirectResponse
     {
+        $this->authorize('delete', $project);
+
         $project->delete();
 
         return redirect()
