@@ -21,7 +21,8 @@ class VerificationController extends Controller
         $verify = Verification::whereUserId(Auth::user()->id)->whereUniqueId($unique_id)
             ->whereStatus('active')->count();
 
-        if (!$verify) abort(404);
+        if (!$verify)
+            abort(404);
         return view('verification.show', compact('unique_id'));
     }
 
@@ -29,38 +30,52 @@ class VerificationController extends Controller
     {
         $verify = Verification::whereUserId(Auth::user()->id)->whereUniqueId($unique_id)
             ->whereStatus('active')->first();
-        
-        if (!$verify) abort (404); 
+
+        if (!$verify)
+            abort(404);
         if (md5($request->otp) != $verify->otp) {
             $verify->update(['status' => 'invalid']);
-            return redirect ('/verify');
+            return redirect('/verify')->with('Failed', 'Kode OTP salah!');
         }
         $verify->update(['status' => 'valid']);
         User::find($verify->user_id)->update(['status' => 'active']);
-        return redirect('/dashboard');
+        return redirect('/dashboard')->with('Success', 'Email berhasil diverifikasi!');
     }
 
     public function store(Request $request)
     {
-        if ($request->type == 'register') {
+        $user = null;
+
+        if ($request->type == 'register' || $request->type == 'resend') {
             $user = User::find($request->user()->id);
         } else {
             // $user = reset password logic
         }
-        if (!$user) return back()->with('Failed', 'User tidak ditemukan!');
+
+        if (!$user) {
+            return back()->with('Failed', 'User tidak ditemukan!');
+        }
+
+        // Invalidate previous OTP
+        Verification::where('user_id', $user->id)
+            ->where('status', 'active')
+            ->update(['status' => 'invalid']);
+
         $otp = rand(100000, 999999);
         $verify = Verification::create([
             'user_id' => $user->id,
             'unique_id' => uniqid(),
             'otp' => md5($otp),
-            'type' => $request->type,
+            'type' => $request->type == 'resend' ? 'register' : $request->type,
             'send_via' => 'email',
         ]);
-        Mail::to($user->email)->queue(new OtpEmail($otp));
 
-        if ($request->type == 'register') {
-            return redirect('/verify' . $verify->unique_id);
+        try {
+            Mail::to($user->email)->send(new OtpEmail($otp));
+        } catch (\Exception $e) {
+            return redirect('/verify/' . $verify->unique_id)->with('Failed', 'Gagal mengirim email: ' . $e->getMessage());
         }
-        // return redirect('/reset-password/');
+
+        return redirect('/verify/' . $verify->unique_id)->with('Success', 'Kode OTP telah dikirim ke email Anda!');
     }
 }

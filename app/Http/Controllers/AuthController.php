@@ -34,12 +34,12 @@ class AuthController extends Controller
         $request['status'] = 'verify';
         $user = User::create($request->all());
         Auth::login($user);
-        return redirect('/dashboard');
+        return redirect('/verify');
     }
 
     public function logout()
     {
-        Auth::logout(Auth::user());
+        Auth::logout();
         return redirect('/login');
     }
 }

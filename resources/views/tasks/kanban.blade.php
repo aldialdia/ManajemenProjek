@@ -1,0 +1,404 @@
+@extends('layouts.app')
+
+@section('title', 'Kanban Board')
+
+@section('content')
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Kanban Board</h1>
+            <p class="page-subtitle">Drag and drop tasks to update status</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <select id="projectFilter" class="form-control" style="width: 200px;" onchange="filterByProject()">
+                <option value="">All Projects</option>
+                @foreach(\App\Models\Project::where('status', 'active')->get() as $project)
+                    <option value="{{ $project->id }}">{{ $project->name }}</option>
+                @endforeach
+            </select>
+            <a href="{{ route('tasks.index') }}" class="btn btn-secondary">
+                <i class="fas fa-list"></i>
+                List View
+            </a>
+            <a href="{{ route('tasks.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i>
+                New Task
+            </a>
+        </div>
+    </div>
+
+    <div class="kanban-board">
+        <!-- To Do Column -->
+        <div class="kanban-column" data-status="todo">
+            <div class="kanban-column-header todo">
+                <span class="column-title">
+                    <i class="fas fa-circle"></i>
+                    To Do
+                </span>
+                <span class="column-count" id="count-todo">0</span>
+            </div>
+            <div class="kanban-cards" id="column-todo">
+                <!-- Cards will be loaded here -->
+            </div>
+        </div>
+
+        <!-- In Progress Column -->
+        <div class="kanban-column" data-status="in_progress">
+            <div class="kanban-column-header in-progress">
+                <span class="column-title">
+                    <i class="fas fa-spinner"></i>
+                    In Progress
+                </span>
+                <span class="column-count" id="count-in_progress">0</span>
+            </div>
+            <div class="kanban-cards" id="column-in_progress">
+                <!-- Cards will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Review Column -->
+        <div class="kanban-column" data-status="review">
+            <div class="kanban-column-header review">
+                <span class="column-title">
+                    <i class="fas fa-eye"></i>
+                    Review
+                </span>
+                <span class="column-count" id="count-review">0</span>
+            </div>
+            <div class="kanban-cards" id="column-review">
+                <!-- Cards will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Done Column -->
+        <div class="kanban-column" data-status="done">
+            <div class="kanban-column-header done">
+                <span class="column-title">
+                    <i class="fas fa-check-circle"></i>
+                    Done
+                </span>
+                <span class="column-count" id="count-done">0</span>
+            </div>
+            <div class="kanban-cards" id="column-done">
+                <!-- Cards will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .kanban-board {
+            display: flex;
+            gap: 1.5rem;
+            overflow-x: auto;
+            padding-bottom: 1rem;
+            min-height: 70vh;
+        }
+
+        .kanban-column {
+            flex: 1;
+            min-width: 280px;
+            max-width: 320px;
+            background: #f1f5f9;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .kanban-column-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-radius: 16px 16px 0 0;
+            font-weight: 600;
+        }
+
+        .kanban-column-header.todo {
+            background: linear-gradient(135deg, #94a3b8, #64748b);
+            color: white;
+        }
+
+        .kanban-column-header.in-progress {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+        }
+
+        .kanban-column-header.review {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .kanban-column-header.done {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+        }
+
+        .column-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .column-count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+        }
+
+        .kanban-cards {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            min-height: 200px;
+        }
+
+        .kanban-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            cursor: grab;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .kanban-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .kanban-card.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .kanban-card.drag-over {
+            border-color: #6366f1;
+        }
+
+        .card-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #1e293b;
+        }
+
+        .card-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .card-title a:hover {
+            color: #6366f1;
+        }
+
+        .card-project {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-priority {
+            padding: 0.2rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .priority-low {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .priority-medium {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .priority-high {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .priority-urgent {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .card-due {
+            font-size: 0.75rem;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .card-due.overdue {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .drop-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            color: #94a3b8;
+            display: none;
+        }
+
+        .kanban-cards.drag-over .drop-zone {
+            display: block;
+        }
+    </style>
+
+    @push('scripts')
+        <script>
+            // Sample task data - Replace with actual data from backend
+            const tasks = @json(\App\Models\Task::with(['project', 'assignee'])->get());
+
+            function renderTasks() {
+                const columns = ['todo', 'in_progress', 'review', 'done'];
+
+                columns.forEach(status => {
+                    const column = document.getElementById(`column-${status}`);
+                    const statusTasks = tasks.filter(t => t.status === status);
+
+                    document.getElementById(`count-${status}`).textContent = statusTasks.length;
+
+                    column.innerHTML = statusTasks.map(task => `
+                        <div class="kanban-card" draggable="true" data-task-id="${task.id}">
+                            <div class="card-title">
+                                <a href="/tasks/${task.id}">${task.title}</a>
+                            </div>
+                            <div class="card-project">
+                                <i class="fas fa-folder"></i>
+                                ${task.project?.name || 'No Project'}
+                            </div>
+                            <div class="card-meta">
+                                <span class="card-priority priority-${task.priority}">
+                                    ${task.priority}
+                                </span>
+                                ${task.assignee ? `
+                                    <div class="avatar avatar-sm" style="width: 28px; height: 28px; font-size: 0.7rem;">
+                                        ${getInitials(task.assignee.name)}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            ${task.due_date ? `
+                                <div class="card-footer">
+                                    <span class="card-due ${isOverdue(task.due_date) ? 'overdue' : ''}">
+                                        <i class="fas fa-calendar"></i>
+                                        ${formatDate(task.due_date)}
+                                    </span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('');
+                });
+
+                initDragAndDrop();
+            }
+
+            function getInitials(name) {
+                return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
+            }
+
+            function formatDate(date) {
+                return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }
+
+            function isOverdue(date) {
+                return new Date(date) < new Date() && new Date(date).toDateString() !== new Date().toDateString();
+            }
+
+            function initDragAndDrop() {
+                const cards = document.querySelectorAll('.kanban-card');
+                const columns = document.querySelectorAll('.kanban-cards');
+
+                cards.forEach(card => {
+                    card.addEventListener('dragstart', () => {
+                        card.classList.add('dragging');
+                    });
+
+                    card.addEventListener('dragend', () => {
+                        card.classList.remove('dragging');
+                    });
+                });
+
+                columns.forEach(column => {
+                    column.addEventListener('dragover', e => {
+                        e.preventDefault();
+                        column.classList.add('drag-over');
+                    });
+
+                    column.addEventListener('dragleave', () => {
+                        column.classList.remove('drag-over');
+                    });
+
+                    column.addEventListener('drop', e => {
+                        e.preventDefault();
+                        column.classList.remove('drag-over');
+
+                        const card = document.querySelector('.dragging');
+                        const taskId = card.dataset.taskId;
+                        const newStatus = column.id.replace('column-', '');
+
+                        // Update task status via API
+                        updateTaskStatus(taskId, newStatus);
+
+                        column.appendChild(card);
+                        updateCounts();
+                    });
+                });
+            }
+
+            function updateTaskStatus(taskId, status) {
+                fetch(`/tasks/${taskId}/status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ status })
+                });
+            }
+
+            function updateCounts() {
+                const columns = ['todo', 'in_progress', 'review', 'done'];
+                columns.forEach(status => {
+                    const count = document.querySelectorAll(`#column-${status} .kanban-card`).length;
+                    document.getElementById(`count-${status}`).textContent = count;
+                });
+            }
+
+            function filterByProject() {
+                const projectId = document.getElementById('projectFilter').value;
+                if (projectId) {
+                    window.location.href = `/tasks?project_id=${projectId}`;
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', renderTasks);
+        </script>
+    @endpush
+@endsection
