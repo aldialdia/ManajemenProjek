@@ -70,6 +70,14 @@ class Project extends Model
     }
 
     /**
+     * Get all comments for this project.
+     */
+    public function comments(): MorphMany
+    {
+        return $this->morphMany(Comment::class, 'commentable');
+    }
+
+    /**
      * Get project managers.
      */
     public function managers(): BelongsToMany

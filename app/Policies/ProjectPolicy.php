@@ -21,12 +21,7 @@ class ProjectPolicy
      */
     public function view(User $user, Project $project): bool
     {
-        // Admin can view all projects
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        // User must be a member of the project
+        // User must be a member of the project (manager or member)
         return $project->users->contains($user->id);
     }
 
@@ -35,8 +30,8 @@ class ProjectPolicy
      */
     public function create(User $user): bool
     {
-        // Admin and managers can create projects
-        return $user->isAdmin() || $user->isManager();
+        // Siapapun yang login bisa buat project (nanti otomatis jadi manager)
+        return true;
     }
 
     /**
@@ -44,13 +39,13 @@ class ProjectPolicy
      */
     public function update(User $user, Project $project): bool
     {
-        // Admin can update all projects
-        if ($user->isAdmin()) {
-            return true;
-        }
+        // Only project manager can update
+        // Cek pivot role via relation yang sudah di-load atau query ulang
+        // Karena $project->managers adalah collection dari relationship users() dengan wherePivot
+        // Kita cek manual aja biar aman
 
-        // Project manager can update
-        return $project->managers->contains($user->id);
+        $member = $project->users()->where('user_id', $user->id)->first();
+        return $member && $member->pivot->role === 'manager';
     }
 
     /**
@@ -58,8 +53,9 @@ class ProjectPolicy
      */
     public function delete(User $user, Project $project): bool
     {
-        // Only admin can delete projects
-        return $user->isAdmin();
+        // Only project manager can delete
+        $member = $project->users()->where('user_id', $user->id)->first();
+        return $member && $member->pivot->role === 'manager';
     }
 
     /**
@@ -67,7 +63,8 @@ class ProjectPolicy
      */
     public function restore(User $user, Project $project): bool
     {
-        return $user->isAdmin();
+        $member = $project->users()->where('user_id', $user->id)->first();
+        return $member && $member->pivot->role === 'manager';
     }
 
     /**
@@ -75,7 +72,8 @@ class ProjectPolicy
      */
     public function forceDelete(User $user, Project $project): bool
     {
-        return $user->isAdmin();
+        $member = $project->users()->where('user_id', $user->id)->first();
+        return $member && $member->pivot->role === 'manager';
     }
 
     /**
@@ -83,10 +81,7 @@ class ProjectPolicy
      */
     public function manageTeam(User $user, Project $project): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        return $project->managers->contains($user->id);
+        $member = $project->users()->where('user_id', $user->id)->first();
+        return $member && $member->pivot->role === 'manager';
     }
 }

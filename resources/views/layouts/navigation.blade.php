@@ -16,14 +16,69 @@
             <span>{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</span>
         </div>
 
-        <button class="navbar-btn" title="Notifications">
-            <i class="fas fa-bell"></i>
-            <span class="notification-badge">3</span>
-        </button>
-
-        <button class="navbar-btn" title="Messages">
-            <i class="fas fa-envelope"></i>
-        </button>
+        <!-- Notifications Dropdown -->
+        @auth
+        <div class="dropdown" id="notificationDropdown">
+            <button class="navbar-btn" title="Notifikasi" onclick="toggleDropdown('notificationDropdown')">
+                <i class="fas fa-bell"></i>
+                @if(auth()->user()->unreadNotifications->count() > 0)
+                    <span class="notification-badge">{{ auth()->user()->unreadNotifications->count() > 9 ? '9+' : auth()->user()->unreadNotifications->count() }}</span>
+                @endif
+            </button>
+            <div class="dropdown-menu notification-dropdown">
+                <div class="notification-dropdown-header">
+                    <span class="notification-dropdown-title">Notifikasi</span>
+                    @if(auth()->user()->unreadNotifications->count() > 0)
+                        <form action="{{ route('notifications.markAllRead') }}" method="POST" style="display: inline;">
+                            @csrf
+                            <button type="submit" class="notification-mark-all">Tandai dibaca</button>
+                        </form>
+                    @endif
+                </div>
+                <div class="notification-dropdown-list">
+                    @forelse(auth()->user()->notifications()->take(5)->get() as $notification)
+                        <a href="{{ route('notifications.read', $notification->id) }}" 
+                           class="notification-dropdown-item {{ $notification->read_at ? '' : 'unread' }}"
+                           onclick="event.preventDefault(); document.getElementById('notif-form-{{ $notification->id }}').submit();">
+                            <div class="notification-dropdown-icon {{ $notification->data['type'] ?? 'default' }}">
+                                @switch($notification->data['type'] ?? '')
+                                    @case('task_assigned')
+                                        <i class="fas fa-user-plus"></i>
+                                        @break
+                                    @case('task_completed')
+                                        <i class="fas fa-check-circle"></i>
+                                        @break
+                                    @case('new_comment')
+                                        <i class="fas fa-comment"></i>
+                                        @break
+                                    @case('user_mentioned')
+                                        <i class="fas fa-at"></i>
+                                        @break
+                                    @default
+                                        <i class="fas fa-bell"></i>
+                                @endswitch
+                            </div>
+                            <div class="notification-dropdown-content">
+                                <span class="notification-dropdown-message">{{ Str::limit($notification->data['message'] ?? 'Notifikasi baru', 50) }}</span>
+                                <span class="notification-dropdown-time">{{ $notification->created_at->diffForHumans() }}</span>
+                            </div>
+                        </a>
+                        <form id="notif-form-{{ $notification->id }}" action="{{ route('notifications.read', $notification->id) }}" method="POST" style="display: none;">
+                            @csrf
+                        </form>
+                    @empty
+                        <div class="notification-dropdown-empty">
+                            <i class="fas fa-bell-slash"></i>
+                            <p>Tidak ada notifikasi</p>
+                        </div>
+                    @endforelse
+                </div>
+                <a href="{{ route('notifications.index') }}" class="notification-dropdown-footer">
+                    Lihat Semua Notifikasi
+                </a>
+            </div>
+        </div>
+        @endauth
 
         <div class="dropdown" id="userDropdown">
             <button class="user-menu" onclick="toggleDropdown('userDropdown')">
@@ -230,6 +285,149 @@
         .search-box {
             display: none;
         }
+    }
+
+    /* Notification Dropdown */
+    .notification-dropdown {
+        width: 360px;
+        padding: 0;
+        right: 0;
+    }
+
+    .notification-dropdown-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .notification-dropdown-title {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 0.9rem;
+    }
+
+    .notification-mark-all {
+        background: none;
+        border: none;
+        color: #6366f1;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    .notification-mark-all:hover {
+        text-decoration: underline;
+    }
+
+    .notification-dropdown-list {
+        max-height: 320px;
+        overflow-y: auto;
+    }
+
+    .notification-dropdown-item {
+        display: flex;
+        gap: 0.75rem;
+        padding: 0.875rem 1.25rem;
+        text-decoration: none;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.15s;
+    }
+
+    .notification-dropdown-item:hover {
+        background: #f8fafc;
+    }
+
+    .notification-dropdown-item.unread {
+        background: #eef2ff;
+    }
+
+    .notification-dropdown-item.unread:hover {
+        background: #e0e7ff;
+    }
+
+    .notification-dropdown-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+    }
+
+    .notification-dropdown-icon.task_assigned {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    }
+
+    .notification-dropdown-icon.task_completed {
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    }
+
+    .notification-dropdown-icon.new_comment {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    }
+
+    .notification-dropdown-icon.user_mentioned {
+        background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+    }
+
+    .notification-dropdown-icon.default {
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    }
+
+    .notification-dropdown-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .notification-dropdown-message {
+        display: block;
+        font-size: 0.8rem;
+        color: #1e293b;
+        line-height: 1.4;
+        margin-bottom: 0.25rem;
+    }
+
+    .notification-dropdown-time {
+        font-size: 0.7rem;
+        color: #94a3b8;
+    }
+
+    .notification-dropdown-empty {
+        padding: 2rem;
+        text-align: center;
+        color: #94a3b8;
+    }
+
+    .notification-dropdown-empty i {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.5;
+    }
+
+    .notification-dropdown-empty p {
+        margin: 0;
+        font-size: 0.8rem;
+    }
+
+    .notification-dropdown-footer {
+        display: block;
+        padding: 0.875rem;
+        text-align: center;
+        background: #f8fafc;
+        color: #6366f1;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-decoration: none;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .notification-dropdown-footer:hover {
+        background: #f1f5f9;
     }
 </style>
 

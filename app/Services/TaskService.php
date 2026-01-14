@@ -4,6 +4,9 @@ namespace App\Services;
 
 use App\Enums\TaskStatus;
 use App\Models\Task;
+use App\Models\User;
+use App\Notifications\TaskAssigned;
+use App\Notifications\TaskCompleted;
 use Illuminate\Support\Facades\DB;
 
 class TaskService
@@ -13,7 +16,14 @@ class TaskService
      */
     public function create(array $data): Task
     {
-        return Task::create($data);
+        $task = Task::create($data);
+
+        // Send notification if task is assigned to someone
+        if (isset($data['assigned_to']) && $data['assigned_to']) {
+            $this->notifyTaskAssigned($task);
+        }
+
+        return $task;
     }
 
     /**
@@ -21,7 +31,16 @@ class TaskService
      */
     public function update(Task $task, array $data): Task
     {
+        $oldAssignee = $task->assigned_to;
+
         $task->update($data);
+
+        // If assignee changed, notify new assignee
+        if (isset($data['assigned_to']) && $data['assigned_to'] !== $oldAssignee && $data['assigned_to']) {
+            $task->refresh();
+            $this->notifyTaskAssigned($task);
+        }
+
         return $task->fresh();
     }
 
@@ -37,8 +56,10 @@ class TaskService
         $oldStatus = $task->status;
         $task->update(['status' => $status]);
 
-        // You can add notification logic here
-        // $this->notifyStatusChange($task, $oldStatus, $status);
+        // Send notification if task is completed
+        if ($status === TaskStatus::DONE && $oldStatus !== TaskStatus::DONE) {
+            $this->notifyTaskCompleted($task);
+        }
 
         return $task->fresh();
     }
@@ -50,12 +71,52 @@ class TaskService
     {
         $task->update(['assigned_to' => $userId]);
 
-        // You can add notification logic here
-        // if ($userId) {
-        //     $this->notifyAssignment($task);
-        // }
+        if ($userId) {
+            $task->refresh();
+            $this->notifyTaskAssigned($task);
+        }
 
         return $task->fresh();
+    }
+
+    /**
+     * Notify user when task is assigned to them.
+     */
+    protected function notifyTaskAssigned(Task $task): void
+    {
+        if (!$task->assignee) {
+            return;
+        }
+
+        // Don't notify if user assigns task to themselves
+        if ($task->assignee->id === auth()->id()) {
+            return;
+        }
+
+        $task->load('project');
+        $assignedBy = auth()->user() ?? User::first(); // Fallback for seeding
+
+        $task->assignee->notify(new TaskAssigned($task, $assignedBy));
+    }
+
+    /**
+     * Notify project managers when task is completed.
+     */
+    protected function notifyTaskCompleted(Task $task): void
+    {
+        $task->load(['project.users', 'assignee']);
+
+        // Notify project managers
+        $managers = $task->project->users()
+            ->wherePivot('role', 'manager')
+            ->get();
+
+        foreach ($managers as $manager) {
+            // Don't notify if the manager completed it themselves
+            if ($manager->id !== auth()->id()) {
+                $manager->notify(new TaskCompleted($task));
+            }
+        }
     }
 
     /**

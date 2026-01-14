@@ -3,76 +3,68 @@
 @section('title', $project->name . ' - Overview Proyek')
 
 @section('content')
-    <!-- Page Header -->
-    <div class="page-header-overview">
-        <a href="{{ route('projects.index') }}" class="back-link">
-            <i class="fas fa-arrow-left"></i>
-        </a>
-        <div class="header-actions">
-            <a href="{{ route('projects.edit', $project) }}" class="btn btn-edit">
-                <i class="fas fa-edit"></i>
-                Edit Project
-            </a>
-            <form action="{{ route('projects.destroy', $project) }}" method="POST" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus project ini? Semua tugas dalam project juga akan terhapus.');">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn btn-delete">
-                    <i class="fas fa-trash"></i>
-                    Hapus Project
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Main Content Grid -->
-    <div class="overview-grid">
-        <!-- Left Column -->
-        <div class="overview-main">
-            <!-- Project Info Card -->
-            <div class="info-card">
-                <div class="info-card-header">
-                    <div class="project-icon">
-                        <i class="fas fa-folder-open"></i>
-                    </div>
-                    <div class="info-card-content">
+    <!-- Main Content -->
+    <div class="overview-container">
+        <!-- Project Info Card -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <a href="{{ route('projects.index') }}" class="back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <div class="info-card-content">
+                    <div class="info-card-title-row">
                         <h2 class="info-card-title">{{ $project->name }}</h2>
-                        <p class="info-card-desc">{{ $project->description ?? 'Tidak ada deskripsi' }}</p>
-                        @if($project->goals)
-                            <p class="info-card-goals"><strong>Tujuan:</strong> {{ $project->goals }}</p>
-                        @endif
+                        <div class="info-card-actions">
+                            <a href="{{ route('projects.edit', $project) }}" class="btn-sm btn-edit-sm">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form action="{{ route('projects.destroy', $project) }}" method="POST" style="display: inline;"
+                                onsubmit="return confirm('Apakah Anda yakin ingin menghapus project ini? Semua tugas dalam project juga akan terhapus.');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn-sm btn-delete-sm">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                </div>
-                <div class="info-card-badges">
-                    @php
-                        $statusValue = $project->status->value ?? $project->status;
-                        $statusClass = match($statusValue) {
-                            'new' => 'badge-new',
-                            'active' => 'badge-active',
-                            'completed' => 'badge-completed',
-                            'on_hold' => 'badge-hold',
-                            'cancelled' => 'badge-cancelled',
-                            default => 'badge-hold'
-                        };
-                        $statusLabel = match($statusValue) {
-                            'new' => 'Baru',
-                            'active' => 'Sedang Berjalan',
-                            'completed' => 'Selesai',
-                            'on_hold' => 'Ditunda',
-                            'cancelled' => 'Dibatalkan',
-                            default => 'Unknown'
-                        };
-                    @endphp
-                    <span class="badge-status {{ $statusClass }}">
-                        <i class="fas fa-circle"></i>
-                        {{ $statusLabel }}
-                    </span>
-                    <span class="badge-date">
-                        <i class="fas fa-calendar"></i>
-                        {{ $project->start_date?->format('d M Y') ?? 'TBD' }} -
-                        {{ $project->end_date?->format('d M Y') ?? 'TBD' }}
-                    </span>
+                    <p class="info-card-desc">{{ $project->description ?? 'Tidak ada deskripsi' }}</p>
+                    @if($project->goals)
+                        <p class="info-card-goals"><strong>Tujuan:</strong> {{ $project->goals }}</p>
+                    @endif
+                    <div class="info-card-badges">
+                        @php
+                            $statusValue = $project->status->value ?? $project->status;
+                            $statusClass = match ($statusValue) {
+                                'new' => 'badge-new',
+                                'active' => 'badge-active',
+                                'completed' => 'badge-completed',
+                                'on_hold' => 'badge-hold',
+                                'cancelled' => 'badge-cancelled',
+                                default => 'badge-hold'
+                            };
+                            $statusLabel = match ($statusValue) {
+                                'new' => 'Baru',
+                                'active' => 'Sedang Berjalan',
+                                'completed' => 'Selesai',
+                                'on_hold' => 'Ditunda',
+                                'cancelled' => 'Dibatalkan',
+                                default => 'Unknown'
+                            };
+                        @endphp
+                        <span class="badge-status {{ $statusClass }}">
+                            <i class="fas fa-circle"></i>
+                            {{ $statusLabel }}
+                        </span>
+                        <span class="badge-date">
+                            <i class="fas fa-calendar"></i>
+                            {{ $project->start_date?->format('d M Y') ?? 'TBD' }} -
+                            {{ $project->end_date?->format('d M Y') ?? 'TBD' }}
+                        </span>
+                    </div>
                 </div>
             </div>
+        </div>
 
             <!-- Stats Grid -->
             <div class="stats-row">
@@ -185,157 +177,107 @@
                     @endforelse
                 </div>
             </div>
+
+        <!-- Diskusi Card -->
+        <div class="discussion-card">
+            <div class="discussion-card-header">
+                <h3 class="discussion-card-title">
+                    <i class="fas fa-comments"></i>
+                    Diskusi Proyek
+                </h3>
+                <span class="discussion-card-count">{{ $project->comments->count() }} komentar</span>
+            </div>
+            <div class="chat-container">
+                @forelse($project->comments()->with('user')->oldest()->get() as $comment)
+                    @php $isOwn = $comment->user_id === auth()->id(); @endphp
+                    <div class="chat-message {{ $isOwn ? 'own' : 'other' }}">
+                        @if(!$isOwn)
+                            <div class="chat-avatar"
+                                style="background: linear-gradient(135deg, {{ ['#6366f1', '#f97316', '#22c55e', '#ec4899'][($loop->index % 4)] }} 0%, {{ ['#4f46e5', '#ea580c', '#16a34a', '#db2777'][($loop->index % 4)] }} 100%);">
+                                {{ $comment->user->initials }}
+                            </div>
+                        @endif
+                        <div class="chat-bubble {{ $isOwn ? 'own' : 'other' }}">
+                            @if(!$isOwn)
+                                <span class="chat-author">{{ $comment->user->name }}</span>
+                            @endif
+                            <p class="chat-text">{!! preg_replace('/@\[([^\]]+)\]\(\d+\)/', '<span class="mention-text">@$1</span>', e($comment->body)) !!}</p>
+                            <div class="chat-meta">
+                                <span class="chat-time">{{ $comment->created_at->format('H:i') }}</span>
+                                @if($isOwn)
+                                    <form action="{{ route('comments.destroy', $comment) }}" method="POST" style="display: inline;"
+                                        onsubmit="return confirm('Hapus komentar ini?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="chat-delete" title="Hapus">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="chat-empty">
+                        <i class="fas fa-comment-dots"></i>
+                        <p>Belum ada diskusi</p>
+                        <span>Mulai diskusi tentang proyek ini</span>
+                    </div>
+                @endforelse
+            </div>
+            
+            <!-- Add Comment Form with @mention -->
+            @auth
+                <div class="chat-input-area">
+                    @include('components.mention-comment-box', [
+                        'action' => route('projects.comments.store', $project),
+                        'id' => 'project-' . $project->id,
+                        'placeholder' => 'Tulis pesan... (@ untuk mention)'
+                    ])
+                </div>
+            @endauth
         </div>
 
-        <!-- Right Column - Team -->
-        <div class="overview-sidebar">
-            <div class="team-card">
-                <div class="team-card-header">
-                    <h3 class="team-card-title">
-                        <i class="fas fa-users"></i>
-                        Anggota Tim
-                    </h3>
-                    <span class="team-card-count">{{ $project->users->count() }} anggota</span>
-                </div>
-                <div class="team-list">
-                    @forelse($project->users as $user)
-                        <div class="team-member">
-                            <div class="team-member-avatar"
-                                style="background: linear-gradient(135deg, {{ ['#6366f1', '#f97316', '#22c55e', '#ec4899'][($loop->index % 4)] }} 0%, {{ ['#4f46e5', '#ea580c', '#16a34a', '#db2777'][($loop->index % 4)] }} 100%);">
-                                {{ $user->initials }}
-                            </div>
-                            <div class="team-member-info">
-                                <span class="team-member-name">{{ $user->name }}</span>
-                                <span
-                                    class="team-member-role">{{ ucfirst($user->pivot->role ?? $user->role ?? 'Member') }}</span>
-                            </div>
+
+
+        <!-- Team Card - di bagian bawah -->
+        <div class="team-card">
+            <div class="team-card-header">
+                <h3 class="team-card-title">
+                    <i class="fas fa-users"></i>
+                    Anggota Tim
+                </h3>
+                <span class="team-card-count">{{ $project->users->count() }} anggota</span>
+            </div>
+            <div class="team-list">
+                @forelse($project->users as $user)
+                    <div class="team-member">
+                        <div class="team-member-avatar"
+                            style="background: linear-gradient(135deg, {{ ['#6366f1', '#f97316', '#22c55e', '#ec4899'][($loop->index % 4)] }} 0%, {{ ['#4f46e5', '#ea580c', '#16a34a', '#db2777'][($loop->index % 4)] }} 100%);">
+                            {{ $user->initials }}
                         </div>
-                    @empty
-                        <div class="team-empty">
-                            <i class="fas fa-user-plus"></i>
-                            <p>Belum ada anggota</p>
+                        <div class="team-member-info">
+                            <span class="team-member-name">{{ $user->name }}</span>
+                            <span
+                                class="team-member-role">{{ ucfirst($user->pivot->role ?? $user->role ?? 'Member') }}</span>
                         </div>
-                    @endforelse
-                </div>
+                    </div>
+                @empty
+                    <div class="team-empty">
+                        <i class="fas fa-user-plus"></i>
+                        <p>Belum ada anggota</p>
+                    </div>
+                @endforelse
             </div>
         </div>
     </div>
 
     <style>
-        /* Page Header */
-        .page-header-overview {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .back-link {
-            width: 42px;
-            height: 42px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
-            background: white;
-            color: #475569;
-            text-decoration: none;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-            transition: all 0.2s;
-        }
-
-        .back-link:hover {
-            background: #f1f5f9;
-            color: #1e293b;
-        }
-
-        .project-main-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin: 0;
-        }
-
-        .project-date {
-            color: #64748b;
-            font-size: 0.875rem;
-            margin: 0.25rem 0 0 0;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        .btn-edit {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.25rem;
-            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-        }
-
-        .btn-edit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
-            color: white;
-        }
-
-        .btn-delete {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.25rem;
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-        }
-
-        .btn-delete:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-        }
-
-        /* Overview Grid */
-        .overview-grid {
-            display: grid;
-            grid-template-columns: 1fr 300px;
-            gap: 1.5rem;
-            align-items: start;
-        }
-
-        .overview-main {
+        /* Overview Container */
+        .overview-container {
             display: flex;
             flex-direction: column;
             gap: 1.25rem;
-            min-width: 0;
-        }
-
-        .overview-sidebar {
-            position: sticky;
-            top: 1rem;
         }
 
         /* Info Card */
@@ -350,30 +292,92 @@
             display: flex;
             gap: 1rem;
             margin-bottom: 1rem;
+            align-items: flex-start;
         }
 
-        .project-icon {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            border-radius: 14px;
+        .back-btn {
+            width: 44px;
+            height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-size: 1.25rem;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            color: #475569;
+            text-decoration: none;
+            transition: all 0.2s;
             flex-shrink: 0;
+        }
+
+        .back-btn:hover {
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            color: #1e293b;
+            transform: translateX(-2px);
+        }
+
+        .back-btn i {
+            font-size: 1rem;
         }
 
         .info-card-content {
             flex: 1;
         }
 
+        .info-card-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
         .info-card-title {
             font-size: 1.25rem;
             font-weight: 700;
             color: #1e293b;
-            margin: 0 0 0.25rem 0;
+            margin: 0;
+        }
+
+        .info-card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-sm {
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+
+        .btn-edit-sm {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            text-decoration: none;
+            box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-edit-sm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);
+            color: white;
+        }
+
+        .btn-delete-sm {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-delete-sm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
         }
 
         .info-card-desc {
@@ -386,7 +390,7 @@
         .info-card-goals {
             color: #475569;
             font-size: 0.875rem;
-            margin: 0.5rem 0 0 0;
+            margin: 0.75rem 0 0 0;
             line-height: 1.5;
             padding: 0.75rem;
             background: #f8fafc;
@@ -398,6 +402,7 @@
             display: flex;
             gap: 0.75rem;
             flex-wrap: wrap;
+            margin-top: 1rem;
         }
 
         .badge-status {
@@ -784,25 +789,25 @@
         }
 
         .team-list {
-            max-height: 450px;
-            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
         }
 
         .team-member {
             display: flex;
             align-items: center;
-            gap: 0.875rem;
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid #f1f5f9;
-            transition: background 0.15s;
-        }
-
-        .team-member:last-child {
-            border-bottom: none;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            background: #f8fafc;
+            border-radius: 12px;
+            transition: all 0.2s;
         }
 
         .team-member:hover {
-            background: #f8fafc;
+            background: #f1f5f9;
+            transform: translateY(-1px);
         }
 
         .team-member-avatar {
@@ -851,6 +856,201 @@
             font-size: 0.875rem;
         }
 
+        /* Discussion Card */
+        .discussion-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        .discussion-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .discussion-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0;
+        }
+
+        .discussion-card-title i {
+            color: #6366f1;
+        }
+
+        .discussion-card-count {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6366f1;
+            background: #eef2ff;
+            padding: 0.375rem 0.75rem;
+            border-radius: 20px;
+        }
+
+        /* Chat Container - WhatsApp Style */
+        .chat-container {
+            padding: 1rem 1.5rem;
+            max-height: 450px;
+            overflow-y: auto;
+            /* Berikan background unik */
+            background-color: #f1effe;
+            background-image:  radial-gradient(#6366f1 0.5px, transparent 0.5px), radial-gradient(#6366f1 0.5px, #f1effe 0.5px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .chat-message {
+            display: flex;
+            gap: 0.5rem;
+            max-width: 75%;
+        }
+
+        .chat-message.own {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .chat-message.other {
+            align-self: flex-start;
+        }
+
+        .chat-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .chat-bubble {
+            padding: 0.625rem 0.875rem;
+            border-radius: 16px;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        .chat-bubble.own {
+            background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-bubble.other {
+            background: white;
+            color: #1e293b;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .chat-author {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #6366f1;
+            margin-bottom: 0.25rem;
+        }
+
+        .chat-text {
+            margin: 0;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+
+        .chat-meta {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .chat-time {
+            font-size: 0.65rem;
+            opacity: 0.7;
+        }
+
+        .chat-bubble.own .chat-time {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .chat-bubble.other .chat-time {
+            color: #94a3b8;
+        }
+
+        .chat-delete {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            font-size: 0.65rem;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        .chat-bubble.own .chat-delete {
+            color: white;
+        }
+
+        .chat-delete:hover {
+            opacity: 1;
+        }
+
+        .chat-empty {
+            padding: 3rem 1.5rem;
+            text-align: center;
+            color: #94a3b8;
+            background: linear-gradient(135deg, #e8f0fe 0%, #f0f4ff 100%);
+        }
+
+        .chat-empty i {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.5;
+        }
+
+        .chat-empty p {
+            font-weight: 600;
+            color: #64748b;
+            margin: 0 0 0.25rem 0;
+        }
+
+        .chat-empty span {
+            font-size: 0.8rem;
+        }
+
+        .chat-input-area {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e2e8f0;
+            background: white;
+        }
+
+        /* Mention text - hanya warna, tanpa background */
+        .mention-text {
+            color: #6366f1;
+            font-weight: 600;
+        }
+
+        .chat-bubble.own .mention-text {
+            color: #fde047;
+            font-weight: 700;
+        }
+
         /* Responsive */
         @media (max-width: 1024px) {
             .overview-grid {
@@ -864,6 +1064,10 @@
             .team-card {
                 position: static;
             }
+
+            .chat-message {
+                max-width: 85%;
+            }
         }
 
         @media (max-width: 640px) {
@@ -876,6 +1080,185 @@
                 align-items: flex-start;
                 gap: 1rem;
             }
+
+            .chat-message {
+                max-width: 90%;
+            }
+        }
+
+        /* Attachments */
+        .attachments-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        .attachments-list {
+            padding: 0.5rem 1.5rem;
+        }
+
+        .attachment-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .attachment-item:last-child {
+            border-bottom: none;
+        }
+
+        .attachment-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .attachment-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .attachment-name {
+            display: block;
+            font-weight: 500;
+            color: #1e293b;
+            text-decoration: none;
+            margin-bottom: 0.125rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .attachment-name:hover {
+            color: #6366f1;
+        }
+
+        .attachment-meta {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .attachment-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-icon-action {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+
+        .btn-icon-action:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .btn-icon-action.delete:hover {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        .attachment-empty {
+            text-align: center;
+            padding: 2rem;
+            color: #94a3b8;
+        }
+
+        .attachment-empty i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.5;
+        }
+        
+        .attachment-empty p {
+            margin: 0;
+            font-size: 0.875rem;
+        }
+
+        .attachment-form-wrapper {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #f1f5f9;
+            background: #f8fafc;
+        }
+
+        .attachment-form {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .file-input-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            color: #64748b;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-label:hover {
+            border-color: #cbd5e1;
+            color: #1e293b;
+        }
+
+        .file-name-display {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .btn-upload {
+            padding: 0.5rem 1rem;
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-upload:hover {
+            background: #4f46e5;
         }
     </style>
 @endsection
