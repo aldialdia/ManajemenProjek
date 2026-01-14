@@ -8,9 +8,6 @@
         <!-- Project Info Card -->
         <div class="info-card">
             <div class="info-card-header">
-                <a href="{{ route('projects.index') }}" class="back-btn">
-                    <i class="fas fa-arrow-left"></i>
-                </a>
                 <div class="info-card-content">
                     <div class="info-card-title-row">
                         <h2 class="info-card-title">{{ $project->name }}</h2>
@@ -130,10 +127,12 @@
                         <i class="fas fa-tasks"></i>
                         Daftar Tugas
                     </h3>
-                    <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" class="btn-add-task">
-                        <i class="fas fa-plus"></i>
-                        Tambah Tugas
-                    </a>
+                    @if(auth()->user()->isManagerInProject($project))
+                        <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" class="btn-add-task">
+                            <i class="fas fa-plus"></i>
+                            Tambah Tugas
+                        </a>
+                    @endif
                 </div>
                 <div class="tasks-list">
                     @forelse($project->tasks as $task)
@@ -225,7 +224,7 @@
                     </div>
                 @endforelse
             </div>
-            
+
             <!-- Add Comment Form with @mention -->
             @auth
                 <div class="chat-input-area">
@@ -259,7 +258,7 @@
                         <div class="team-member-info">
                             <span class="team-member-name">{{ $user->name }}</span>
                             <span
-                                class="team-member-role">{{ ucfirst($user->pivot->role ?? $user->role ?? 'Member') }}</span>
+                                class="team-member-role">{{ ucfirst($user->pivot->role ?? 'Member') }}</span>
                         </div>
                     </div>
                 @empty
@@ -1191,7 +1190,7 @@
             margin-bottom: 0.5rem;
             opacity: 0.5;
         }
-        
+
         .attachment-empty p {
             margin: 0;
             font-size: 0.875rem;

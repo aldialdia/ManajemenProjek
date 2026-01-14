@@ -39,7 +39,8 @@ class VerificationController extends Controller
         }
         $verify->update(['status' => 'valid']);
         User::find($verify->user_id)->update(['status' => 'active']);
-        return redirect('/dashboard')->with('Success', 'Email berhasil diverifikasi!');
+        Auth::logout();
+        return redirect('/login')->with('Success', 'Email berhasil diverifikasi! Silakan login.');
     }
 
     public function store(Request $request)

@@ -23,6 +23,15 @@
                     <!-- Left Column -->
                     <div>
                         <div class="form-group">
+                            <label class="form-label">Project</label>
+                            <div class="project-display">
+                                <i class="fas fa-folder"></i>
+                                <span>{{ $task->project->name }}</span>
+                            </div>
+                            <input type="hidden" name="project_id" value="{{ $task->project_id }}">
+                        </div>
+
+                        <div class="form-group">
                             <label for="title" class="form-label">Task Title <span class="text-danger">*</span></label>
                             <input type="text" id="title" name="title" class="form-control" placeholder="Enter task title"
                                 value="{{ old('title', $task->title ?? '') }}" required>
@@ -36,21 +45,6 @@
                             <textarea id="description" name="description" class="form-control" rows="4"
                                 placeholder="Describe the task...">{{ old('description', $task->description ?? '') }}</textarea>
                             @error('description')
-                                <span class="error-message">{{ $message }}</span>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="project_id" class="form-label">Project <span class="text-danger">*</span></label>
-                            <select id="project_id" name="project_id" class="form-control" required>
-                                <option value="">Select a project</option>
-                                @foreach($projects ?? [] as $project)
-                                    <option value="{{ $project->id }}" {{ old('project_id', $task->project_id ?? '') == $project->id ? 'selected' : '' }}>
-                                        {{ $project->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('project_id')
                                 <span class="error-message">{{ $message }}</span>
                             @enderror
                         </div>
@@ -77,21 +71,21 @@
                             <div class="form-group">
                                 <label for="priority" class="form-label">Priority</label>
                                 <select id="priority" name="priority" class="form-control">
-                                    <option value="low" {{ old('priority', $task->priority ?? '') == 'low' ? 'selected' : '' }}>Low</option>
-                                    <option value="medium" {{ old('priority', $task->priority ?? 'medium') == 'medium' ? 'selected' : '' }}>Medium</option>
-                                    <option value="high" {{ old('priority', $task->priority ?? '') == 'high' ? 'selected' : '' }}>High</option>
-                                    <option value="urgent" {{ old('priority', $task->priority ?? '') == 'urgent' ? 'selected' : '' }}>Urgent</option>
+                                    <option value="low" {{ old('priority', $task->priority?->value ?? '') == 'low' ? 'selected' : '' }}>Low</option>
+                                    <option value="medium" {{ old('priority', $task->priority?->value ?? 'medium') == 'medium' ? 'selected' : '' }}>Medium</option>
+                                    <option value="high" {{ old('priority', $task->priority?->value ?? '') == 'high' ? 'selected' : '' }}>High</option>
+                                    <option value="urgent" {{ old('priority', $task->priority?->value ?? '') == 'urgent' ? 'selected' : '' }}>Urgent</option>
                                 </select>
                             </div>
 
                             <div class="form-group">
                                 <label for="status" class="form-label">Status</label>
                                 <select id="status" name="status" class="form-control">
-                                    <option value="todo" {{ old('status', $task->status ?? '') == 'todo' ? 'selected' : '' }}>
+                                    <option value="todo" {{ old('status', $task->status?->value ?? '') == 'todo' ? 'selected' : '' }}>
                                         To Do</option>
-                                    <option value="in_progress" {{ old('status', $task->status ?? '') == 'in_progress' ? 'selected' : '' }}>In Progress</option>
-                                    <option value="review" {{ old('status', $task->status ?? '') == 'review' ? 'selected' : '' }}>Review</option>
-                                    <option value="done" {{ old('status', $task->status ?? '') == 'done' ? 'selected' : '' }}>
+                                    <option value="in_progress" {{ old('status', $task->status?->value ?? '') == 'in_progress' ? 'selected' : '' }}>In Progress</option>
+                                    <option value="review" {{ old('status', $task->status?->value ?? '') == 'review' ? 'selected' : '' }}>Review</option>
+                                    <option value="done" {{ old('status', $task->status?->value ?? '') == 'done' ? 'selected' : '' }}>
                                         Done</option>
                                 </select>
                             </div>
@@ -100,32 +94,60 @@
                         <div class="form-group">
                             <label for="due_date" class="form-label">Due Date</label>
                             <input type="date" id="due_date" name="due_date" class="form-control"
-                                value="{{ old('due_date', $task->due_date?->format('Y-m-d') ?? '') }}">
+                                value="{{ old('due_date', $task->due_date?->format('Y-m-d') ?? '') }}"
+                                min="{{ date('Y-m-d') }}">
                             @error('due_date')
                                 <span class="error-message">{{ $message }}</span>
                             @enderror
                         </div>
+
+                        @if($parentTasks->count() > 0 && !$task->subtasks->count())
+                            <div class="form-group">
+                                <label for="parent_task_id" class="form-label">Sub-task dari</label>
+                                <select id="parent_task_id" name="parent_task_id" class="form-control">
+                                    <option value="">-- Tidak ada (Task utama) --</option>
+                                    @foreach($parentTasks as $parentTask)
+                                        <option value="{{ $parentTask->id }}" {{ old('parent_task_id', $task->parent_task_id) == $parentTask->id ? 'selected' : '' }}>
+                                            {{ $parentTask->title }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">Pilih jika task ini merupakan bagian dari task lain</small>
+                            </div>
+                        @endif
                     </div>
                 </div>
 
                 <div
-                    style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; display: flex; gap: 1rem; justify-content: space-between;">
-                    <div style="display: flex; gap: 1rem;">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Save Changes
-                        </button>
-                        <a href="{{ route('tasks.show', $task ?? 1) }}" class="btn btn-secondary">Cancel</a>
-                    </div>
-                    <form action="{{ route('tasks.destroy', $task ?? 1) }}" method="POST"
-                        onsubmit="return confirm('Are you sure you want to delete this task?');">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-trash"></i> Delete Task
-                        </button>
-                    </form>
+                    style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; display: flex; gap: 1rem;">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                    <a href="{{ route('tasks.show', $task ?? 1) }}" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>
     </div>
+
+    <style>
+        .project-display {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .project-display i {
+            color: #6366f1;
+            font-size: 1rem;
+        }
+
+        .project-display span {
+            font-weight: 600;
+            color: #1e293b;
+        }
+    </style>
 @endsection

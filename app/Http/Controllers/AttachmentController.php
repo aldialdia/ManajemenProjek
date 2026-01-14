@@ -75,8 +75,34 @@ class AttachmentController extends Controller
      */
     public function destroy(Attachment $attachment): RedirectResponse
     {
-        // Only allow uploader or admin to delete
-        if ($attachment->uploaded_by !== auth()->id() && auth()->user()->role !== 'admin') {
+        $user = auth()->user();
+        $canDelete = false;
+
+        // Uploader can always delete their own files
+        if ($attachment->uploaded_by === $user->id) {
+            $canDelete = true;
+        }
+
+        // Get the project from the attachment's parent (task or project)
+        $project = null;
+        if ($attachment->attachable_type === 'App\\Models\\Task') {
+            $task = $attachment->attachable;
+            $project = $task->project;
+
+            // Task assignee can delete attachments on their task
+            if ($task->assigned_to === $user->id) {
+                $canDelete = true;
+            }
+        } elseif ($attachment->attachable_type === 'App\\Models\\Project') {
+            $project = $attachment->attachable;
+        }
+
+        // Project manager/admin can delete any attachment in the project
+        if ($project && $user->isManagerInProject($project)) {
+            $canDelete = true;
+        }
+
+        if (!$canDelete) {
             abort(403, 'Anda tidak memiliki izin untuk menghapus file ini.');
         }
 

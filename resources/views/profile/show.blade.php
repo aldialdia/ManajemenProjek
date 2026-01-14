@@ -32,11 +32,6 @@
                 <p class="text-muted" style="font-size: 0.875rem;">
                     {{ auth()->user()->email ?? 'user@example.com' }}
                 </p>
-                <div style="margin-top: 1rem;">
-                    <span class="badge badge-primary">
-                        {{ ucfirst(auth()->user()->role ?? 'member') }}
-                    </span>
-                </div>
             </div>
         </div>
 
@@ -56,10 +51,6 @@
                         <label class="text-muted text-sm" style="display: block; margin-bottom: 0.25rem;">Email
                             Address</label>
                         <p style="font-weight: 500;">{{ auth()->user()->email ?? 'Not set' }}</p>
-                    </div>
-                    <div>
-                        <label class="text-muted text-sm" style="display: block; margin-bottom: 0.25rem;">Role</label>
-                        <p style="font-weight: 500;">{{ ucfirst(auth()->user()->role ?? 'Member') }}</p>
                     </div>
                     <div>
                         <label class="text-muted text-sm" style="display: block; margin-bottom: 0.25rem;">Member

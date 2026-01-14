@@ -55,12 +55,14 @@
             margin-left: var(--sidebar-width);
             display: flex;
             flex-direction: column;
+            overflow-x: hidden;
         }
 
         .content-wrapper {
             flex: 1;
             padding: 2rem;
             overflow-y: auto;
+            overflow-x: hidden;
         }
 
         /* Cards */
