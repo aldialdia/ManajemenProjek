@@ -24,7 +24,6 @@ class User extends Authenticatable
         'email',
         'status',
         'password',
-        'role',
         'avatar',
     ];
 
@@ -94,27 +93,45 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is admin.
+     * Get all time entries for this user.
      */
-    public function isAdmin(): bool
+    public function timeEntries(): HasMany
     {
-        return $this->role === 'admin';
+        return $this->hasMany(TimeEntry::class);
     }
 
     /**
-     * Check if user is manager.
+     * Get user's role in a specific project.
      */
-    public function isManager(): bool
+    public function getRoleInProject(Project $project): ?string
     {
-        return $this->role === 'manager';
+        $pivotData = $this->projects()->where('project_id', $project->id)->first();
+        return $pivotData?->pivot?->role;
     }
 
     /**
-     * Check if user is member.
+     * Check if user is manager or admin in a specific project.
      */
-    public function isMember(): bool
+    public function isManagerInProject(Project $project): bool
     {
-        return $this->role === 'member';
+        $role = $this->getRoleInProject($project);
+        return in_array($role, ['manager', 'admin']);
+    }
+
+    /**
+     * Check if user is admin in a specific project.
+     */
+    public function isAdminInProject(Project $project): bool
+    {
+        return $this->getRoleInProject($project) === 'admin';
+    }
+
+    /**
+     * Check if user is member of a specific project.
+     */
+    public function isMemberOfProject(Project $project): bool
+    {
+        return $this->projects()->where('project_id', $project->id)->exists();
     }
 
     /**

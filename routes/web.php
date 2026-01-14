@@ -8,8 +8,11 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectInvitationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TeamController;
+use App\Http\Controllers\TimeTrackingController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
 use Illuminate\Support\Facades\Route;
@@ -61,9 +64,6 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     // Clients
     Route::resource('clients', ClientController::class);
 
-    // Users (Team Management)
-    Route::resource('users', UserController::class);
-
     // Reports
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 
@@ -90,6 +90,26 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllRead');
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
+
+    // Team Management
+    Route::get('/projects/{project}/team', [TeamController::class, 'index'])->name('projects.team.index');
+    Route::patch('/projects/{project}/team/{user}/role', [TeamController::class, 'updateRole'])->name('projects.team.updateRole');
+    Route::delete('/projects/{project}/team/{user}', [TeamController::class, 'remove'])->name('projects.team.remove');
+    Route::delete('/invitations/{invitation}/cancel', [TeamController::class, 'cancelInvitation'])->name('projects.team.cancelInvitation');
+
+    // Project Invitations
+    Route::post('/projects/{project}/invitations', [ProjectInvitationController::class, 'store'])->name('projects.invitations.store');
+    Route::get('/invitations/{token}', [ProjectInvitationController::class, 'show'])->name('invitations.show');
+    Route::post('/invitations/{token}/accept', [ProjectInvitationController::class, 'accept'])->name('invitations.accept');
+    Route::post('/invitations/{token}/decline', [ProjectInvitationController::class, 'decline'])->name('invitations.decline');
+
+    // Time Tracking
+    Route::get('/time-tracking', [TimeTrackingController::class, 'index'])->name('time-tracking.index');
+    Route::post('/time-tracking/start', [TimeTrackingController::class, 'start'])->name('time-tracking.start');
+    Route::post('/time-tracking/{timeEntry}/stop', [TimeTrackingController::class, 'stop'])->name('time-tracking.stop');
+    Route::post('/time-tracking', [TimeTrackingController::class, 'store'])->name('time-tracking.store');
+    Route::delete('/time-tracking/{timeEntry}', [TimeTrackingController::class, 'destroy'])->name('time-tracking.destroy');
+    Route::get('/time-tracking/status', [TimeTrackingController::class, 'status'])->name('time-tracking.status');
 
     // API - Search users for @mentions
     Route::get('/api/users/search', [UserController::class, 'search'])->name('api.users.search');

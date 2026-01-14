@@ -7,6 +7,7 @@ use App\Enums\TaskStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Task extends Model
@@ -18,6 +19,8 @@ class Task extends Model
         'description',
         'project_id',
         'assigned_to',
+        'created_by',
+        'parent_task_id',
         'priority',
         'status',
         'due_date',
@@ -49,6 +52,14 @@ class Task extends Model
     }
 
     /**
+     * Get the user who created this task.
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
      * Get all comments for this task.
      */
     public function comments(): MorphMany
@@ -62,6 +73,38 @@ class Task extends Model
     public function attachments(): MorphMany
     {
         return $this->morphMany(Attachment::class, 'attachable');
+    }
+
+    /**
+     * Get the parent task (if this is a subtask).
+     */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Task::class, 'parent_task_id');
+    }
+
+    /**
+     * Get all subtasks of this task.
+     */
+    public function subtasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'parent_task_id');
+    }
+
+    /**
+     * Get all time entries for this task.
+     */
+    public function timeEntries(): HasMany
+    {
+        return $this->hasMany(TimeEntry::class);
+    }
+
+    /**
+     * Check if this is a subtask.
+     */
+    public function isSubtask(): bool
+    {
+        return $this->parent_task_id !== null;
     }
 
     /**

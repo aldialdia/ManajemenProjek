@@ -5,17 +5,12 @@
 @section('content')
     <div class="page-header">
         <div>
-            <div class="breadcrumb" style="margin-bottom: 0.5rem;">
-                <a href="{{ route('projects.show', $task->project) }}">{{ $task->project->name }}</a>
-                <i class="fas fa-chevron-right" style="margin: 0 0.5rem; font-size: 0.75rem; color: #94a3b8;"></i>
-                <span>Task</span>
-            </div>
             <h1 class="page-title">{{ $task->title }}</h1>
         </div>
         <div style="display: flex; gap: 0.5rem;">
-            <a href="{{ route('tasks.edit', $task) }}" class="btn btn-secondary">
-                <i class="fas fa-edit"></i>
-                Edit Task
+            <a href="{{ route('tasks.index', ['project_id' => $task->project_id]) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i>
+                Back
             </a>
         </div>
     </div>
@@ -80,7 +75,12 @@
                                 <a href="{{ route('attachments.download', $attachment) }}" class="btn-icon-action" title="Download">
                                     <i class="fas fa-download"></i>
                                 </a>
-                                @if($attachment->uploaded_by === auth()->id() || auth()->user()->role === 'admin')
+                                @php
+                                    $canDeleteAttachment = $attachment->uploaded_by === auth()->id() 
+                                        || $task->assigned_to === auth()->id()
+                                        || auth()->user()->isManagerInProject($task->project);
+                                @endphp
+                                @if($canDeleteAttachment)
                                     <form action="{{ route('attachments.destroy', $attachment) }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus file ini?')">
                                         @csrf
                                         @method('DELETE')

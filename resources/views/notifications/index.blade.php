@@ -52,6 +52,9 @@
                     @case('user_mentioned')
                         <i class="fas fa-at"></i>
                         @break
+                    @case('project_invitation')
+                        <i class="fas fa-envelope-open-text"></i>
+                        @break
                     @default
                         <i class="fas fa-bell"></i>
                 @endswitch
@@ -69,7 +72,11 @@
                         </button>
                     </form>
                 @else
-                    @if(isset($notification->data['task_id']))
+                    @if(isset($notification->data['type']) && $notification->data['type'] === 'project_invitation' && isset($notification->data['invitation_token']))
+                        <a href="{{ route('invitations.show', $notification->data['invitation_token']) }}" class="btn-notification-action" title="Lihat undangan">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    @elseif(isset($notification->data['task_id']))
                         <a href="{{ route('tasks.show', $notification->data['task_id']) }}" class="btn-notification-action" title="Lihat tugas">
                             <i class="fas fa-external-link-alt"></i>
                         </a>
@@ -219,6 +226,10 @@
 
     .notification-icon.user_mentioned {
         background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+    }
+
+    .notification-icon.project_invitation {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
     }
 
     .notification-icon.default {
