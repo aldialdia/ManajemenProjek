@@ -367,7 +367,7 @@
             min-width: 200px;
             padding: 0.5rem;
             display: none;
-            z-index: 1000;
+            z-index: 9999;
         }
 
         .dropdown.active .dropdown-menu {

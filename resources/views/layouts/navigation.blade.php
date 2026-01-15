@@ -143,6 +143,8 @@
         background: rgba(255, 255, 255, 0.8);
         backdrop-filter: blur(10px);
         border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        position: relative;
+        z-index: 100;
     }
 
     .navbar-left {
@@ -296,6 +298,7 @@
         width: 360px;
         padding: 0;
         right: 0;
+        z-index: 9999;
     }
 
     .notification-dropdown-header {
