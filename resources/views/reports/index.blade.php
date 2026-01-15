@@ -16,11 +16,12 @@
             <p class="page-subtitle">Laporan kinerja {{ $project ? $project->name : 'Anda' }}</p>
         </div>
         <div class="filter-dropdown">
-            <select class="form-control" style="width: 180px;">
-                <option>30 Hari Terakhir</option>
-                <option>7 Hari Terakhir</option>
-                <option>Bulan Ini</option>
-                <option>Tahun Ini</option>
+            <select class="form-control" id="periodFilter" style="width: 180px;" onchange="filterByPeriod()">
+                <option value="30" {{ ($period ?? '30') == '30' ? 'selected' : '' }}>30 Hari Terakhir</option>
+                <option value="7" {{ ($period ?? '30') == '7' ? 'selected' : '' }}>7 Hari Terakhir</option>
+                <option value="today" {{ ($period ?? '30') == 'today' ? 'selected' : '' }}>Hari Ini</option>
+                <option value="month" {{ ($period ?? '30') == 'month' ? 'selected' : '' }}>Bulan Ini</option>
+                <option value="year" {{ ($period ?? '30') == 'year' ? 'selected' : '' }}>Tahun Ini</option>
             </select>
         </div>
     </div>
@@ -29,14 +30,16 @@
     <div class="stats-row-report">
         <div class="stat-card-report">
             <div class="stat-icon-sm stat-blue">
-                <i class="fas fa-folder-open"></i>
+                <i class="fas fa-tasks"></i>
             </div>
             <div class="stat-content">
-                <span class="stat-label">Total Proyek</span>
-                <span class="stat-value">{{ $totalProjects }}</span>
-                <span class="stat-change positive">
-                    <i class="fas fa-arrow-up"></i> +12% dari bulan lalu
+                <span class="stat-label">Total Tugas</span>
+                <span class="stat-value">{{ $totalTasks }}</span>
+                @if($taskChange != 0)
+                <span class="stat-change {{ $taskChange >= 0 ? 'positive' : 'negative' }}">
+                    <i class="fas fa-arrow-{{ $taskChange >= 0 ? 'up' : 'down' }}"></i> {{ $taskChange >= 0 ? '+' : '' }}{{ $taskChange }}% dari bulan lalu
                 </span>
+                @endif
             </div>
         </div>
 
@@ -47,9 +50,11 @@
             <div class="stat-content">
                 <span class="stat-label">Tugas Selesai</span>
                 <span class="stat-value">{{ $completedTasks }}</span>
-                <span class="stat-change positive">
-                    <i class="fas fa-arrow-up"></i> +8% dari bulan lalu
+                @if($taskChange != 0)
+                <span class="stat-change {{ $taskChange >= 0 ? 'positive' : 'negative' }}">
+                    <i class="fas fa-arrow-{{ $taskChange >= 0 ? 'up' : 'down' }}"></i> {{ $taskChange >= 0 ? '+' : '' }}{{ $taskChange }}% dari bulan lalu
                 </span>
+                @endif
             </div>
         </div>
 
@@ -60,9 +65,11 @@
             <div class="stat-content">
                 <span class="stat-label">Total Jam Kerja</span>
                 <span class="stat-value">{{ $totalHours }}</span>
-                <span class="stat-change positive">
-                    <i class="fas fa-arrow-up"></i> +15% dari bulan lalu
+                @if($hoursChange != 0)
+                <span class="stat-change {{ $hoursChange >= 0 ? 'positive' : 'negative' }}">
+                    <i class="fas fa-arrow-{{ $hoursChange >= 0 ? 'up' : 'down' }}"></i> {{ $hoursChange >= 0 ? '+' : '' }}{{ $hoursChange }}% dari bulan lalu
                 </span>
+                @endif
             </div>
         </div>
 
@@ -73,9 +80,11 @@
             <div class="stat-content">
                 <span class="stat-label">Anggota Tim</span>
                 <span class="stat-value">{{ $totalMembers }}</span>
-                <span class="stat-change positive">
-                    <i class="fas fa-arrow-up"></i> +2 dari bulan lalu
+                @if($memberChange != 0)
+                <span class="stat-change {{ $memberChange >= 0 ? 'positive' : 'negative' }}">
+                    <i class="fas fa-arrow-{{ $memberChange >= 0 ? 'up' : 'down' }}"></i> {{ $memberChange >= 0 ? '+' : '' }}{{ $memberChange }} dari bulan lalu
                 </span>
+                @endif
             </div>
         </div>
     </div>
@@ -103,7 +112,8 @@
             <!-- Distribusi Waktu Pie Chart -->
             <div class="card">
                 <div class="card-header">
-                    <span>Distribusi Waktu</span>
+                    <span>Distribusi Waktu Kerja</span>
+                    <span class="text-muted text-sm">Berdasarkan status tugas</span>
                 </div>
                 <div class="card-body">
                     <canvas id="distribusiWaktuChart" height="280"></canvas>
@@ -176,6 +186,14 @@
             event.target.classList.add('active');
         }
 
+        // Period filter
+        function filterByPeriod() {
+            const period = document.getElementById('periodFilter').value;
+            const url = new URL(window.location.href);
+            url.searchParams.set('period', period);
+            window.location.href = url.toString();
+        }
+
         // Status Proyek Pie Chart
         const statusCtx = document.getElementById('statusProyekChart').getContext('2d');
         new Chart(statusCtx, {
@@ -216,16 +234,15 @@
         new Chart(waktuCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Development', 'Meetings', 'Review', 'Planning', 'Admin'],
+                labels: ['Selesai', 'Dikerjakan', 'Review', 'Pending'],
                 datasets: [{
                     data: [
-                            {{ $timeDistribution['development'] ?? 40 }},
-                            {{ $timeDistribution['meetings'] ?? 20 }},
-                            {{ $timeDistribution['review'] ?? 15 }},
-                            {{ $timeDistribution['planning'] ?? 15 }},
-                        {{ $timeDistribution['admin'] ?? 10 }}
+                            {{ $timeDistribution['done'] ?? 0 }},
+                            {{ $timeDistribution['in_progress'] ?? 0 }},
+                            {{ $timeDistribution['review'] ?? 0 }},
+                        {{ $timeDistribution['todo'] ?? 0 }}
                     ],
-                    backgroundColor: ['#3b82f6', '#f59e0b', '#8b5cf6', '#22c55e', '#ef4444'],
+                    backgroundColor: ['#22c55e', '#3b82f6', '#8b5cf6', '#f59e0b'],
                     borderWidth: 0
                 }]
             },
@@ -355,10 +372,17 @@
 
         .stat-change {
             font-size: 0.7rem;
-            color: #22c55e;
             display: flex;
             align-items: center;
             gap: 0.25rem;
+        }
+
+        .stat-change.positive {
+            color: #22c55e;
+        }
+
+        .stat-change.negative {
+            color: #ef4444;
         }
 
         .report-tabs {

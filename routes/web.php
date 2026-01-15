@@ -14,6 +14,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TimeTrackingController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\VerificationController;
 use Illuminate\Support\Facades\Route;
 
@@ -55,6 +56,16 @@ Route::middleware(['auth', 'check_status'])->group(function () {
 
     // Projects
     Route::resource('projects', ProjectController::class);
+
+    // Documents (Module 8)
+    Route::get('/projects/{project}/documents', [DocumentController::class, 'index'])->name('projects.documents.index');
+    Route::get('/projects/{project}/documents/create', [DocumentController::class, 'create'])->name('projects.documents.create');
+    Route::post('/projects/{project}/documents', [DocumentController::class, 'store'])->name('projects.documents.store');
+    Route::get('/documents/{document}', [DocumentController::class, 'show'])->name('documents.show');
+    Route::post('/documents/{document}/versions', [DocumentController::class, 'storeVersion'])->name('documents.add-version');
+    Route::get('/document-versions/{version}/download', [DocumentController::class, 'download'])->name('documents.download');
+    Route::delete('/document-versions/{version}', [DocumentController::class, 'destroyVersion'])->name('document-versions.destroy');
+    Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy');
 
     // Tasks
     Route::get('/tasks/calendar', [TaskController::class, 'calendar'])->name('tasks.calendar');
