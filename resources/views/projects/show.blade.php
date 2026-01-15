@@ -240,6 +240,119 @@
 
 
 
+        <!-- Attachments Card -->
+        <div class="attachments-card" style="margin-top: 1.5rem;" x-data="{ tab: 'file' }">
+            <div class="discussion-card-header">
+                <h3 class="discussion-card-title">
+                    <i class="fas fa-paperclip"></i>
+                    File Attachments & Links
+                </h3>
+                <span class="discussion-card-count">{{ $project->attachments->count() }} item</span>
+            </div>
+            
+            <!-- File/Link List -->
+            <div class="attachments-list">
+                @forelse($project->attachments as $attachment)
+                    <div class="attachment-item">
+                        <div class="attachment-icon">
+                            @if($attachment->isLink())
+                                <i class="fas fa-link" style="color: #6366f1;"></i>
+                            @elseif($attachment->isImage())
+                                <i class="fas fa-image" style="color: #6366f1;"></i>
+                            @elseif($attachment->mime_type === 'application/pdf')
+                                <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
+                            @elseif(str_contains($attachment->mime_type ?? '', 'word'))
+                                <i class="fas fa-file-word" style="color: #2563eb;"></i>
+                            @elseif(str_contains($attachment->mime_type ?? '', 'excel') || str_contains($attachment->mime_type ?? '', 'spreadsheet'))
+                                <i class="fas fa-file-excel" style="color: #16a34a;"></i>
+                            @else
+                                <i class="fas fa-file-alt" style="color: #64748b;"></i>
+                            @endif
+                        </div>
+                        <div class="attachment-info">
+                            @if($attachment->isLink())
+                                <a href="{{ route('attachments.download', $attachment) }}" class="attachment-name" target="_blank">{{ $attachment->filename }}</a>
+                            @else
+                                <a href="{{ route('attachments.download', $attachment) }}" class="attachment-name" target="_blank">{{ $attachment->filename }}</a>
+                            @endif
+                            
+                            <div class="attachment-meta">
+                                <span>{{ $attachment->human_size }}</span>
+                                <span>•</span>
+                                <span>{{ $attachment->uploader->name }}</span>
+                                <span>•</span>
+                                <span>{{ $attachment->created_at->diffForHumans() }}</span>
+                            </div>
+                        </div>
+                        <div class="attachment-actions">
+                            <a href="{{ route('attachments.download', $attachment) }}" class="btn-icon-action" title="Download/Open" target="_blank">
+                                <i class="fas fa-{{ $attachment->isLink() ? 'external-link-alt' : 'download' }}"></i>
+                            </a>
+                            @if($attachment->uploaded_by === auth()->id() || auth()->user()->role === 'admin')
+                                <form action="{{ route('attachments.destroy', $attachment) }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus file ini?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn-icon-action delete" title="Hapus">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <div class="attachment-empty">
+                        <i class="fas fa-folder-open"></i>
+                        <p>Belum ada file atau link</p>
+                    </div>
+                @endforelse
+            </div>
+
+            <!-- Upload Form / Add Link -->
+            @auth
+                <div class="attachment-form-wrapper">
+                    <!-- Tabs -->
+                    <div class="attachment-tabs">
+                        <button class="tab-btn" :class="{ 'active': tab === 'file' }" @click="tab = 'file'">
+                            <i class="fas fa-cloud-upload-alt"></i> Upload File
+                        </button>
+                        <button class="tab-btn" :class="{ 'active': tab === 'link' }" @click="tab = 'link'">
+                            <i class="fas fa-link"></i> Add Link
+                        </button>
+                    </div>
+
+                    <!-- File Form -->
+                    <form x-show="tab === 'file'" action="{{ route('projects.attachments.store', $project) }}" method="POST" enctype="multipart/form-data" class="attachment-form">
+                        @csrf
+                        <input type="hidden" name="type" value="file">
+                        <div class="file-input-wrapper">
+                            <input type="file" name="file" id="file" class="file-input" required onchange="document.getElementById('file-name').textContent = this.files[0].name">
+                            <label for="file" class="file-label">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <span>Pilih file</span>
+                            </label>
+                            <span class="file-name-display" id="file-name">Tidak ada file dipilih</span>
+                        </div>
+                        <button type="submit" class="btn-upload">
+                            Upload
+                        </button>
+                    </form>
+
+                    <!-- Link Form -->
+                    <form x-show="tab === 'link'" action="{{ route('projects.attachments.store', $project) }}" method="POST" class="attachment-form">
+                        @csrf
+                        <input type="hidden" name="type" value="link">
+                        <div class="link-input-group">
+                            <input type="url" name="link_url" class="form-input" placeholder="https://example.com" required style="width: 100%; margin-bottom: 0.5rem;">
+                            <input type="text" name="link_name" class="form-input" placeholder="Nama Link (Opsional)" style="width: 100%; margin-bottom: 0.5rem;">
+                        </div>
+                        <button type="submit" class="btn-upload">
+                            Simpan Link
+                        </button>
+                    </form>
+                </div>
+            @endauth
+        </div>
+
         <!-- Team Card - di bagian bawah -->
         <div class="team-card">
             <div class="team-card-header">
@@ -1259,6 +1372,62 @@
 
         .btn-upload:hover {
             background: #4f46e5;
+        }
+
+        /* Tabs Style */
+        .attachment-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748b;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .tab-btn.active {
+            background: #eef2ff;
+            color: #6366f1;
+            font-weight: 600;
+        }
+
+        /* Link Input Group */
+        .link-input-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-input {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
     </style>
 @endsection

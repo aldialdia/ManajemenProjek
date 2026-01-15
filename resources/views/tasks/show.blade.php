@@ -43,31 +43,38 @@
             </div>
 
             <!-- Attachments -->
-            <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="card" style="margin-bottom: 1.5rem;" x-data="{ tab: 'file' }">
                 <div class="card-header">
                     <i class="fas fa-paperclip"></i>
-                    Attachments ({{ $task->attachments->count() }})
+                    Attachments & Links ({{ $task->attachments->count() }})
                 </div>
                 
-                <!-- File List -->
+                <!-- File/Link List -->
                 <div class="attachments-list">
                     @forelse($task->attachments as $attachment)
                         <div class="attachment-item">
                             <div class="attachment-icon">
-                                @if($attachment->isImage())
+                                @if($attachment->isLink())
+                                    <i class="fas fa-link" style="color: #6366f1;"></i>
+                                @elseif($attachment->isImage())
                                     <i class="fas fa-image" style="color: #6366f1;"></i>
                                 @elseif($attachment->mime_type === 'application/pdf')
                                     <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
-                                @elseif(str_contains($attachment->mime_type, 'word'))
+                                @elseif(str_contains($attachment->mime_type ?? '', 'word'))
                                     <i class="fas fa-file-word" style="color: #2563eb;"></i>
-                                @elseif(str_contains($attachment->mime_type, 'excel') || str_contains($attachment->mime_type, 'spreadsheet'))
+                                @elseif(str_contains($attachment->mime_type ?? '', 'excel') || str_contains($attachment->mime_type ?? '', 'spreadsheet'))
                                     <i class="fas fa-file-excel" style="color: #16a34a;"></i>
                                 @else
                                     <i class="fas fa-file-alt" style="color: #64748b;"></i>
                                 @endif
                             </div>
                             <div class="attachment-info">
-                                <a href="{{ route('attachments.download', $attachment) }}" class="attachment-name" target="_blank">{{ $attachment->filename }}</a>
+                                @if($attachment->isLink())
+                                    <a href="{{ route('attachments.download', $attachment) }}" class="attachment-name" target="_blank">{{ $attachment->filename }}</a>
+                                @else
+                                    <a href="{{ route('attachments.download', $attachment) }}" class="attachment-name" target="_blank">{{ $attachment->filename }}</a>
+                                @endif
+                                
                                 <div class="attachment-meta">
                                     <span>{{ $attachment->human_size }}</span>
                                     <span>•</span>
@@ -77,8 +84,8 @@
                                 </div>
                             </div>
                             <div class="attachment-actions">
-                                <a href="{{ route('attachments.download', $attachment) }}" class="btn-icon-action" title="Download">
-                                    <i class="fas fa-download"></i>
+                                <a href="{{ route('attachments.download', $attachment) }}" class="btn-icon-action" title="Download/Open" target="_blank">
+                                    <i class="fas fa-{{ $attachment->isLink() ? 'external-link-alt' : 'download' }}"></i>
                                 </a>
                                 @if($attachment->uploaded_by === auth()->id() || auth()->user()->role === 'admin')
                                     <form action="{{ route('attachments.destroy', $attachment) }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus file ini?')">
@@ -94,28 +101,62 @@
                     @empty
                         <div class="attachment-empty">
                             <i class="fas fa-folder-open"></i>
-                            <p>Belum ada file</p>
+                            <p>Belum ada file atau link</p>
                         </div>
                     @endforelse
                 </div>
 
-                <!-- Upload Form -->
+                <!-- Upload Form / Add Link -->
                 @auth
-                    <div class="attachment-form-wrapper">
-                        <form action="{{ route('tasks.attachments.store', $task) }}" method="POST" enctype="multipart/form-data" class="attachment-form">
-                            @csrf
-                            <div class="file-input-wrapper">
-                                <input type="file" name="file" id="task-file" class="file-input" required onchange="document.getElementById('task-file-name').textContent = this.files[0].name">
-                                <label for="task-file" class="file-label">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <span>Pilih file</span>
-                                </label>
-                                <span class="file-name-display" id="task-file-name">Tidak ada file dipilih</span>
-                            </div>
-                            <button type="submit" class="btn-upload">
-                                Upload
+                    <div class="attachment-form-wrapper" x-data="{ mode: null }">
+                        <!-- Dua Tombol -->
+                        <div x-show="mode === null" class="attachment-buttons">
+                            <button @click="mode = 'file'" class="option-btn file">
+                                <i class="fas fa-folder-open"></i> Unggah dari perangkat
                             </button>
-                        </form>
+                            <button @click="mode = 'link'" class="option-btn link">
+                                <i class="fas fa-link"></i> Tautan
+                            </button>
+                        </div>
+
+                        <!-- Form File -->
+                        <template x-if="mode === 'file'">
+                            <div class="inline-form-card">
+                                <div class="inline-form-header">
+                                    <span><i class="fas fa-folder-open"></i> Unggah File</span>
+                                    <button type="button" @click="mode = null" class="btn-cancel"><i class="fas fa-times"></i></button>
+                                </div>
+                                <form action="{{ route('tasks.attachments.store', $task) }}" method="POST" enctype="multipart/form-data" class="attachment-form">
+                                    @csrf
+                                    <input type="hidden" name="type" value="file">
+                                    <div class="file-input-wrapper">
+                                        <input type="file" name="file" id="task-file" class="file-input" required onchange="document.getElementById('task-file-name').textContent = this.files[0].name">
+                                        <label for="task-file" class="file-label">
+                                            <i class="fas fa-cloud-upload-alt"></i> Pilih file
+                                        </label>
+                                        <span class="file-name-display" id="task-file-name">Tidak ada file dipilih</span>
+                                    </div>
+                                    <button type="submit" class="btn-upload">Upload</button>
+                                </form>
+                            </div>
+                        </template>
+
+                        <!-- Form Link -->
+                        <template x-if="mode === 'link'">
+                            <div class="inline-form-card">
+                                <div class="inline-form-header">
+                                    <span><i class="fas fa-link"></i> Tambah Tautan</span>
+                                    <button type="button" @click="mode = null" class="btn-cancel"><i class="fas fa-times"></i></button>
+                                </div>
+                                <form action="{{ route('tasks.attachments.store', $task) }}" method="POST" class="attachment-form link-form">
+                                    @csrf
+                                    <input type="hidden" name="type" value="link">
+                                    <input type="url" name="link_url" class="form-input" placeholder="https://example.com" required>
+                                    <input type="text" name="link_name" class="form-input" placeholder="Nama Link (Opsional)">
+                                    <button type="submit" class="btn-upload">Simpan Link</button>
+                                </form>
+                            </div>
+                        </template>
                     </div>
                 @endauth
             </div>
@@ -672,6 +713,138 @@
 
         .btn-upload:hover {
             background: #4f46e5;
+        }
+
+        /* Attachment Options */
+        .btn-lampirkan {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1rem;
+            background: #6366f1;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-lampirkan:hover {
+            background: #4f46e5;
+        }
+
+        .attachment-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .attachment-options-row {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn-cancel-text {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .btn-cancel-text:hover {
+            color: #64748b;
+            text-decoration: underline;
+        }
+
+        .option-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1rem;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            color: #475569;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-btn:hover {
+            border-color: #6366f1;
+            color: #6366f1;
+        }
+
+        .option-btn.file i { color: #6366f1; }
+        .option-btn.link i { color: #22c55e; }
+
+        .inline-form-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .inline-form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: #f8fafc;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .inline-form-header span {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-cancel {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 0.25rem;
+        }
+
+        .btn-cancel:hover {
+            color: #ef4444;
+        }
+
+        .inline-form-card .attachment-form {
+            padding: 1rem;
+        }
+
+        .link-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
     </style>
 @endsection

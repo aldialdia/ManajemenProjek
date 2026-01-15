@@ -18,21 +18,34 @@ class AttachmentController extends Controller
     public function storeForTask(Request $request, Task $task): RedirectResponse
     {
         $request->validate([
-            'file' => 'required|file|max:10240', // Max 10MB
+            'type' => 'required|in:file,link',
+            'file' => 'required_if:type,file|file|max:10240', // Max 10MB
+            'link_url' => 'required_if:type,link|nullable|url',
+            'link_name' => 'required_if:type,link|nullable|string|max:255',
         ]);
 
-        $file = $request->file('file');
-        $path = $file->store('attachments/tasks/' . $task->id, 'public');
+        if ($request->type === 'link') {
+            $task->attachments()->create([
+                'filename' => $request->link_name,
+                'path' => $request->link_url,
+                'mime_type' => 'external-link',
+                'size' => 0,
+                'uploaded_by' => auth()->id(),
+            ]);
+        } else {
+            $file = $request->file('file');
+            $path = $file->store('attachments/tasks/' . $task->id, 'public');
 
-        $task->attachments()->create([
-            'filename' => $file->getClientOriginalName(),
-            'path' => $path,
-            'mime_type' => $file->getMimeType(),
-            'size' => $file->getSize(),
-            'uploaded_by' => auth()->id(),
-        ]);
+            $task->attachments()->create([
+                'filename' => $file->getClientOriginalName(),
+                'path' => $path,
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize(),
+                'uploaded_by' => auth()->id(),
+            ]);
+        }
 
-        return back()->with('success', 'File berhasil diunggah.');
+        return back()->with('success', 'Lampiran berhasil ditambahkan.');
     }
 
     /**
@@ -41,28 +54,45 @@ class AttachmentController extends Controller
     public function storeForProject(Request $request, Project $project): RedirectResponse
     {
         $request->validate([
-            'file' => 'required|file|max:10240', // Max 10MB
+            'type' => 'required|in:file,link',
+            'file' => 'required_if:type,file|file|max:10240', // Max 10MB
+            'link_url' => 'required_if:type,link|nullable|url',
+            'link_name' => 'required_if:type,link|nullable|string|max:255',
         ]);
 
-        $file = $request->file('file');
-        $path = $file->store('attachments/projects/' . $project->id, 'public');
+        if ($request->type === 'link') {
+            $project->attachments()->create([
+                'filename' => $request->link_name,
+                'path' => $request->link_url,
+                'mime_type' => 'external-link',
+                'size' => 0,
+                'uploaded_by' => auth()->id(),
+            ]);
+        } else {
+            $file = $request->file('file');
+            $path = $file->store('attachments/projects/' . $project->id, 'public');
 
-        $project->attachments()->create([
-            'filename' => $file->getClientOriginalName(),
-            'path' => $path,
-            'mime_type' => $file->getMimeType(),
-            'size' => $file->getSize(),
-            'uploaded_by' => auth()->id(),
-        ]);
+            $project->attachments()->create([
+                'filename' => $file->getClientOriginalName(),
+                'path' => $path,
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize(),
+                'uploaded_by' => auth()->id(),
+            ]);
+        }
 
-        return back()->with('success', 'File berhasil diunggah.');
+        return back()->with('success', 'Lampiran berhasil ditambahkan.');
     }
 
     /**
      * Download an attachment.
      */
-    public function download(Attachment $attachment): StreamedResponse
+    public function download(Attachment $attachment)
     {
+        if ($attachment->isLink()) {
+            return redirect()->away($attachment->path);
+        }
+
         if (!Storage::disk('public')->exists($attachment->path)) {
             abort(404, 'File tidak ditemukan.');
         }
