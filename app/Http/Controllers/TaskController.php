@@ -10,6 +10,7 @@ use App\Services\TaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class TaskController extends Controller
@@ -104,6 +105,95 @@ class TaskController extends Controller
         $tasks = $query->get();
 
         return view('tasks.kanban', compact('tasks', 'project', 'showSubtasks'));
+    }
+
+    /**
+     * Display Calendar view.
+     */
+    public function calendar(Request $request): View
+    {
+        $user = auth()->user();
+        $project = null;
+
+        $query = Task::with(['project', 'assignee'])
+            ->whereNotNull('due_date');
+
+        if ($request->filled('project_id')) {
+            $project = Project::findOrFail($request->project_id);
+            if (!$user->isMemberOfProject($project)) {
+                abort(403);
+            }
+            $query->where('project_id', $project->id);
+        } else {
+            $query->whereIn('project_id', $user->projects()->pluck('projects.id'));
+        }
+
+        // Color mapping (Hex) for FullCalendar
+        $colorMap = [
+            'secondary' => '#6b7280', // Gray-500 (Todo)
+            'primary' => '#6366f1',   // Indigo-500 (In Progress)
+            'warning' => '#f59e0b',   // Amber-500 (Review)
+            'success' => '#10b981',   // Emerald-500 (Done)
+            'info' => '#0ea5e9',      // Sky-500
+            'danger' => '#f43f5e',    // Rose-500
+        ];
+
+        $calendarTasks = $query->get()->map(function ($task) use ($colorMap) {
+            $colorKey = $task->status->color();
+            $hexColor = $colorMap[$colorKey] ?? '#6b7280';
+            
+            return [
+                'id' => $task->id,
+                'title' => $task->title,
+                'start' => $task->due_date->format('Y-m-d'),
+                'end' => $task->due_date->addDay()->format('Y-m-d'), // Single day event on due date
+                'url' => route('tasks.show', $task),
+                'backgroundColor' => $hexColor,
+                'borderColor' => $hexColor,
+                'textColor' => '#ffffff',
+                'extendedProps' => [
+                    'priority' => $task->priority->label(),
+                    'status' => $task->status->label(),
+                    'assignee' => $task->assignee?->name ?? 'Unassigned',
+                    'description' => Str::limit($task->description, 50),
+                ]
+            ];
+        });
+
+        // Gantt Data - All tasks with actual dates
+        $ganttTasks = $query->get()->map(function($task) {
+            return [
+                'id' => (string) $task->id,
+                'name' => $task->title,
+                'start' => $task->start_date ? $task->start_date->format('Y-m-d') : now()->format('Y-m-d'),
+                'end' => $task->due_date ? $task->due_date->format('Y-m-d') : now()->addDay()->format('Y-m-d'),
+                'progress' => $task->status === \App\Enums\TaskStatus::DONE ? 100 : ($task->status === \App\Enums\TaskStatus::IN_PROGRESS ? 50 : 0),
+                'dependencies' => $task->parent_task_id ? (string) $task->parent_task_id : null,
+                'custom_class' => 'bar-' . $task->status->value,
+            ];
+        });
+
+        return view('tasks.calendar', compact('calendarTasks', 'ganttTasks', 'project'));
+    }
+
+    /**
+     * Update task dates via AJAX (Drag & Drop).
+     */
+    public function updateDates(Request $request, Task $task): JsonResponse
+    {
+        $this->authorize('update', $task);
+
+        $validated = $request->validate([
+            'start_date' => 'nullable|date',
+            'due_date' => 'required|date|after_or_equal:start_date',
+        ]);
+
+        $task->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tanggal task berhasil diperbarui.',
+        ]);
     }
 
     /**

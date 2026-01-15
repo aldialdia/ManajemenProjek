@@ -1,0 +1,392 @@
+@extends('layouts.app')
+
+@section('title', 'Kalender & Timeline')
+
+@section('content')
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Kalender & Timeline</h1>
+            <p class="page-subtitle">Lihat jadwal, deadline, dan timeline proyek</p>
+        </div>
+    </div>
+
+    <!-- Calendar Section -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-body">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+                <div style="position: relative;">
+                    <div id="calendar-title-btn" style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 600; color: #1e293b; cursor: pointer;">
+                        <i class="far fa-calendar-alt"></i>
+                        <span id="calendar-title">Loading...</span>
+                        <i class="fas fa-chevron-down" style="font-size: 0.75rem; color: #64748b;"></i>
+                    </div>
+                    <!-- Dropdown Menu -->
+                    <div id="month-dropdown" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 0.5rem; background: white; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 100; min-width: 200px; padding: 0.5rem 0;">
+                        <div style="padding: 0.5rem 1rem; border-bottom: 1px solid #e2e8f0;">
+                            <select id="cal-year" class="form-control" style="width: 100%;">
+                                @for($y = date('Y') - 2; $y <= date('Y') + 3; $y++)
+                                    <option value="{{ $y }}" {{ $y == date('Y') ? 'selected' : '' }}>{{ $y }}</option>
+                                @endfor
+                            </select>
+                        </div>
+                        <div id="month-list" style="max-height: 250px; overflow-y: auto;">
+                            <div class="month-option" data-month="0" style="padding: 0.5rem 1rem; cursor: pointer;">Januari</div>
+                            <div class="month-option" data-month="1" style="padding: 0.5rem 1rem; cursor: pointer;">Februari</div>
+                            <div class="month-option" data-month="2" style="padding: 0.5rem 1rem; cursor: pointer;">Maret</div>
+                            <div class="month-option" data-month="3" style="padding: 0.5rem 1rem; cursor: pointer;">April</div>
+                            <div class="month-option" data-month="4" style="padding: 0.5rem 1rem; cursor: pointer;">Mei</div>
+                            <div class="month-option" data-month="5" style="padding: 0.5rem 1rem; cursor: pointer;">Juni</div>
+                            <div class="month-option" data-month="6" style="padding: 0.5rem 1rem; cursor: pointer;">Juli</div>
+                            <div class="month-option" data-month="7" style="padding: 0.5rem 1rem; cursor: pointer;">Agustus</div>
+                            <div class="month-option" data-month="8" style="padding: 0.5rem 1rem; cursor: pointer;">September</div>
+                            <div class="month-option" data-month="9" style="padding: 0.5rem 1rem; cursor: pointer;">Oktober</div>
+                            <div class="month-option" data-month="10" style="padding: 0.5rem 1rem; cursor: pointer;">November</div>
+                            <div class="month-option" data-month="11" style="padding: 0.5rem 1rem; cursor: pointer;">Desember</div>
+                        </div>
+                    </div>
+                </div>
+                <button id="cal-today" class="btn btn-secondary">
+                    Hari Ini
+                </button>
+            </div>
+
+            <div id="calendar"></div>
+        </div>
+    </div>
+
+    <!-- Gantt Chart Section -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-body">
+            <h3 style="font-size: 1.125rem; font-weight: 600; color: #1e293b; margin-bottom: 1.5rem;">Gantt Chart</h3>
+            
+            @if($ganttTasks->count() > 0)
+                <div style="overflow-x: auto;">
+                    <svg id="gantt"></svg>
+                </div>
+            @else
+                <div style="text-align: center; padding: 2rem; color: #64748b;">
+                    <i class="fas fa-info-circle" style="font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+                    <p>Belum ada tugas dengan tanggal mulai dan selesai untuk ditampilkan.</p>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <!-- Legend Section -->
+    <div class="card">
+        <div class="card-body">
+            <div style="display: flex; align-items: center; gap: 2rem; flex-wrap: wrap;">
+                <span style="font-size: 0.875rem; font-weight: 600; color: #475569;">Keterangan Status:</span>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="width: 1rem; height: 1rem; border-radius: 4px; background-color: #6b7280;"></div>
+                    <span style="font-size: 0.875rem; color: #64748b;">Todo</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="width: 1rem; height: 1rem; border-radius: 4px; background-color: #6366f1;"></div>
+                    <span style="font-size: 0.875rem; color: #64748b;">In Progress</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="width: 1rem; height: 1rem; border-radius: 4px; background-color: #f59e0b;"></div>
+                    <span style="font-size: 0.875rem; color: #64748b;">Review</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="width: 1rem; height: 1rem; border-radius: 4px; background-color: #10b981;"></div>
+                    <span style="font-size: 0.875rem; color: #64748b;">Done</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Popup Modal -->
+    <div id="deadline-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: popIn 0.3s ease-out;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-radius: 50%; margin: 0 auto 1.5rem; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-calendar-times" style="font-size: 2rem; color: #ef4444;"></i>
+            </div>
+            <h3 style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 0.75rem;">Tanggal Tidak Valid</h3>
+            <p style="color: #64748b; margin-bottom: 1.5rem; line-height: 1.6;">
+                <strong style="color: #ef4444;">Deadline tidak bisa diubah ke tanggal yang sudah lewat.</strong><br>
+                <span style="font-size: 0.875rem;">Silakan pilih tanggal hari ini atau setelahnya.</span>
+            </p>
+            <button onclick="closeDeadlinePopup()" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                <i class="fas fa-check" style="margin-right: 0.5rem;"></i>Mengerti
+            </button>
+        </div>
+    </div>
+
+    @push('styles')
+        <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.css" />
+        <style>
+            /* Calendar Customization */
+            .fc-header-toolbar { display: none !important; } /* Hide default toolbar */
+            .fc-theme-standard td, .fc-theme-standard th { border-color: #f3f4f6; }
+            .fc-col-header-cell { padding: 12px 0; background: #fff; }
+            .fc-daygrid-day-frame { padding: 8px; }
+            .fc-event { border-radius: 4px; border: none; font-size: 11px; padding: 2px 4px; margin-bottom: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+            
+            /* Gantt Customization */
+            .bar-wrapper { cursor: pointer; }
+            .bar-progress { fill: #6366f1 !important; }
+            
+            /* Gantt Header - Month sections more visible */
+            .gantt .grid-header { background: #f8fafc; }
+            .gantt .upper-header rect { fill: #e0e7ff !important; }
+            .gantt .upper-header text { fill: #4338ca !important; font-weight: 600 !important; font-size: 14px !important; }
+            .gantt .lower-header rect { fill: #f1f5f9 !important; }
+            .gantt .lower-header text { fill: #64748b !important; }
+            .gantt .grid-row { fill: #ffffff; }
+            .gantt .grid-row:nth-child(even) { fill: #fafafa; }
+            .gantt .row-line { stroke: #e2e8f0; }
+            .gantt .tick { stroke: #e2e8f0; stroke-dasharray: 5,5; }
+            .gantt .today-highlight { fill: #dbeafe !important; opacity: 0.5; }
+            
+            /* Gantt Status Colors */
+            .bar-todo .bar { fill: #d1d5db !important; } .bar-todo .bar-progress { fill: #9ca3af !important; }
+            .bar-in_progress .bar { fill: #a5b4fc !important; } .bar-in_progress .bar-progress { fill: #6366f1 !important; }
+            .bar-review .bar { fill: #fcd34d !important; } .bar-review .bar-progress { fill: #f59e0b !important; }
+            .bar-done .bar { fill: #6ee7b7 !important; } .bar-done .bar-progress { fill: #10b981 !important; }
+            
+            /* Popup Animation */
+            @keyframes popIn {
+                0% { transform: scale(0.8); opacity: 0; }
+                100% { transform: scale(1); opacity: 1; }
+            }
+            
+            #deadline-popup button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+            }
+        </style>
+    @endpush
+
+    @push('scripts')
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+        
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var calendarEl = document.getElementById('calendar');
+                var titleEl = document.getElementById('calendar-title');
+                
+                var calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    contentHeight: 'auto',
+                    aspectRatio: 1.6,
+                    headerToolbar: false, // We use custom toolbar
+                    events: @json($calendarTasks),
+                    editable: true,
+                    droppable: true,
+                    dayMaxEvents: 3,
+                    eventContent: function(arg) {
+                         let title = arg.event.title;
+                         return { html: `<div class="font-medium truncate">${title}</div>` };
+                    },
+                    datesSet: function(info) {
+                        titleEl.textContent = info.view.title;
+                    },
+                    eventClick: function(info) {
+                        if (info.event.url) {
+                            window.location.href = info.event.url;
+                            info.jsEvent.preventDefault();
+                        }
+                    },
+                    eventDrop: handleDateUpdate,
+                    eventResize: handleDateUpdate
+                });
+                calendar.render();
+
+                // Dropdown elements
+                const titleBtn = document.getElementById('calendar-title-btn');
+                const dropdown = document.getElementById('month-dropdown');
+                const yearSelect = document.getElementById('cal-year');
+                const monthOptions = document.querySelectorAll('.month-option');
+                
+                // Toggle dropdown on title click
+                titleBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function() {
+                    dropdown.style.display = 'none';
+                });
+                
+                // Prevent dropdown close when clicking inside
+                dropdown.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+                
+                // Month option click handler
+                monthOptions.forEach(function(option) {
+                    option.addEventListener('mouseover', function() {
+                        this.style.background = '#f1f5f9';
+                    });
+                    option.addEventListener('mouseout', function() {
+                        this.style.background = 'transparent';
+                    });
+                    option.addEventListener('click', function() {
+                        const month = parseInt(this.dataset.month);
+                        const year = parseInt(yearSelect.value);
+                        calendar.gotoDate(new Date(year, month, 1));
+                        dropdown.style.display = 'none';
+                    });
+                });
+                
+                // Year select change
+                yearSelect.addEventListener('change', function() {
+                    const year = parseInt(this.value);
+                    const currentDate = calendar.getDate();
+                    calendar.gotoDate(new Date(year, currentDate.getMonth(), 1));
+                });
+                
+                // Today button
+                document.getElementById('cal-today').addEventListener('click', function() { 
+                    calendar.today();
+                    yearSelect.value = new Date().getFullYear();
+                });
+
+                // Gantt Initialization
+                const ganttTasks = @json($ganttTasks);
+                
+                if (ganttTasks.length > 0) {
+                    new Gantt("#gantt", ganttTasks, {
+                        header_height: 50,
+                        column_width: 30,
+                        step: 24,
+                        view_modes: ['Day', 'Week', 'Month'],
+                        bar_height: 25,
+                        bar_corner_radius: 4,
+                        arrow_curve: 5,
+                        padding: 18,
+                        view_mode: 'Day',
+                        date_format: 'YYYY-MM-DD',
+                        on_date_change: function(task, start, end) {
+                            updateTaskDates(task.id, moment(start).format('YYYY-MM-DD'), moment(end).format('YYYY-MM-DD'), null, true);
+                        },
+                        on_click: function (task) {
+                            window.location.href = `/tasks/${task.id}`;
+                        },
+                    });
+                    
+                    // Add month start markers
+                    setTimeout(function() {
+                        const svg = document.querySelector('#gantt');
+                        if (svg) {
+                            const dates = svg.querySelectorAll('.lower-text');
+                            dates.forEach(function(dateText) {
+                                const text = dateText.textContent;
+                                // Check if it's the 1st of a month
+                                if (text === '1' || text === '01') {
+                                    const x = parseFloat(dateText.getAttribute('x'));
+                                    const gridHeight = svg.querySelector('.grid-background').getBBox().height;
+                                    const headerHeight = 50;
+                                    
+                                    // Create vertical line
+                                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                                    line.setAttribute('x1', x);
+                                    line.setAttribute('y1', headerHeight);
+                                    line.setAttribute('x2', x);
+                                    line.setAttribute('y2', gridHeight + headerHeight);
+                                    line.setAttribute('stroke', '#ef4444');
+                                    line.setAttribute('stroke-width', '2');
+                                    line.setAttribute('stroke-dasharray', '4,4');
+                                    line.classList.add('month-start-line');
+                                    svg.appendChild(line);
+                                }
+                            });
+                        }
+                    }, 500);
+                }
+
+                function handleDateUpdate(info) {
+                    // Calendar only shows due_date, so we only update due_date when dragging
+                    var newDueDate = info.event.startStr; // The new position is the new due_date
+                    
+                    // Validate: due date cannot be in the past
+                    var today = moment().startOf('day');
+                    if (moment(newDueDate).isBefore(today)) {
+                        info.revert();
+                        showDeadlinePopup();
+                        return;
+                    }
+                    
+                    fetch(`/tasks/${info.event.id}/dates`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({ due_date: newDueDate })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Reload to sync both Calendar and Gantt
+                            window.location.reload();
+                        } else {
+                            info.revert();
+                            alert('Gagal memperbarui tanggal.');
+                        }
+                    })
+                    .catch(error => {
+                        info.revert();
+                        alert('Terjadi kesalahan.');
+                    });
+                }
+
+                function updateTaskDates(taskId, start, end, info = null, reloadAfter = false) {
+                    // Validate: due date (end) cannot be in the past
+                    var today = moment().startOf('day');
+                    if (moment(end).isBefore(today)) {
+                        showDeadlinePopup();
+                        if (reloadAfter) {
+                            setTimeout(() => window.location.reload(), 2000); // Reload after popup
+                        }
+                        return;
+                    }
+                    
+                    fetch(`/tasks/${taskId}/dates`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({ start_date: start, due_date: end })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && reloadAfter) {
+                            // Reload page to sync calendar with Gantt changes
+                            window.location.reload();
+                        } else if (!data.success && info) {
+                            info.revert();
+                            alert('Gagal memperbarui tanggal.');
+                        }
+                    })
+                    .catch(error => {
+                        if (info) info.revert();
+                        alert('Terjadi kesalahan.');
+                    });
+                }
+            });
+            
+            // Popup Functions
+            function showDeadlinePopup() {
+                document.getElementById('deadline-popup').style.display = 'flex';
+            }
+            
+            function closeDeadlinePopup() {
+                document.getElementById('deadline-popup').style.display = 'none';
+            }
+            
+            // Close popup on background click
+            document.getElementById('deadline-popup').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeDeadlinePopup();
+                }
+            });
+        </script>
+    @endpush
+@endsection

@@ -23,6 +23,7 @@ class Task extends Model
         'parent_task_id',
         'priority',
         'status',
+        'start_date',
         'due_date',
     ];
 
@@ -31,9 +32,10 @@ class Task extends Model
         return [
             'priority' => TaskPriority::class,
             'status' => TaskStatus::class,
+            'start_date' => 'date',
             'due_date' => 'date',
         ];
-    }
+        }
 
     /**
      * Get the project this task belongs to.

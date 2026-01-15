@@ -12,6 +12,10 @@
                 <i class="fas fa-arrow-left"></i>
                 Back
             </a>
+            <a href="{{ route('tasks.calendar', ['project_id' => $task->project_id]) }}" class="btn btn-secondary">
+                <i class="fas fa-calendar-alt"></i>
+                Kalender
+            </a>
         </div>
     </div>
 
