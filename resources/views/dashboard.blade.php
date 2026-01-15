@@ -4,42 +4,88 @@
 
 @section('content')
     @php
-        $totalProjects = \App\Models\Project::count();
-        $activeProjects = \App\Models\Project::where('status', 'active')->count();
-        $totalTasks = \App\Models\Task::count();
-        $completedTasks = \App\Models\Task::where('status', 'done')->count();
-        $pendingTasks = \App\Models\Task::whereIn('status', ['todo', 'in_progress'])->count();
-        $totalUsers = \App\Models\User::count();
+        $user = auth()->user();
+        $userProjectIds = $user->projects()->pluck('projects.id')->toArray();
+        
+        // Check if user can create projects (is admin or manager in any project)
+        $canCreateProject = $user->projects()
+            ->wherePivotIn('role', ['admin', 'manager'])
+            ->exists();
+        
+        // User-specific stats
+        $totalProjects = count($userProjectIds);
+        $activeProjects = \App\Models\Project::whereIn('id', $userProjectIds)->where('status', 'active')->count();
+        $totalTasks = \App\Models\Task::where('assigned_to', $user->id)->count();
+        $completedTasks = \App\Models\Task::where('assigned_to', $user->id)->where('status', 'done')->count();
+        $pendingTasks = \App\Models\Task::where('assigned_to', $user->id)->whereIn('status', ['todo', 'in_progress'])->count();
+        
+        // Team members in user's projects
+        $totalTeamMembers = \App\Models\User::whereHas('projects', function($q) use ($userProjectIds) {
+            $q->whereIn('projects.id', $userProjectIds);
+        })->count();
 
-        // Tasks by status for pie chart
+        // Calculate actual work hours from TimeEntry (user's own hours)
+        $totalHoursThisMonth = \App\Models\TimeEntry::where('user_id', $user->id)
+            ->whereMonth('started_at', now()->month)
+            ->whereYear('started_at', now()->year)
+            ->sum('duration_seconds') / 3600;
+        $totalHoursLastMonth = \App\Models\TimeEntry::where('user_id', $user->id)
+            ->whereMonth('started_at', now()->subMonth()->month)
+            ->whereYear('started_at', now()->subMonth()->year)
+            ->sum('duration_seconds') / 3600;
+        
+        // Calculate percentage changes (user-specific)
+        $projectsLastMonth = \App\Models\Project::whereIn('id', $userProjectIds)
+            ->whereMonth('created_at', now()->subMonth()->month)->count();
+        $projectsThisMonth = \App\Models\Project::whereIn('id', $userProjectIds)
+            ->whereMonth('created_at', now()->month)->count();
+        $projectChange = $projectsLastMonth > 0 ? round((($projectsThisMonth - $projectsLastMonth) / $projectsLastMonth) * 100) : ($projectsThisMonth > 0 ? 100 : 0);
+        
+        $tasksCompletedLastMonth = \App\Models\Task::where('assigned_to', $user->id)
+            ->where('status', 'done')
+            ->whereMonth('updated_at', now()->subMonth()->month)->count();
+        $tasksCompletedThisMonth = \App\Models\Task::where('assigned_to', $user->id)
+            ->where('status', 'done')
+            ->whereMonth('updated_at', now()->month)->count();
+        $taskChange = $tasksCompletedLastMonth > 0 ? round((($tasksCompletedThisMonth - $tasksCompletedLastMonth) / $tasksCompletedLastMonth) * 100) : ($tasksCompletedThisMonth > 0 ? 100 : 0);
+        
+        $hoursChange = $totalHoursLastMonth > 0 ? round((($totalHoursThisMonth - $totalHoursLastMonth) / $totalHoursLastMonth) * 100) : ($totalHoursThisMonth > 0 ? 100 : 0);
+
+        // Tasks by status for pie chart (user's tasks only)
         $tasksByStatus = [
-            'todo' => \App\Models\Task::where('status', 'todo')->count(),
-            'in_progress' => \App\Models\Task::where('status', 'in_progress')->count(),
-            'review' => \App\Models\Task::where('status', 'review')->count(),
-            'done' => \App\Models\Task::where('status', 'done')->count(),
+            'todo' => \App\Models\Task::where('assigned_to', $user->id)->where('status', 'todo')->count(),
+            'in_progress' => \App\Models\Task::where('assigned_to', $user->id)->where('status', 'in_progress')->count(),
+            'review' => \App\Models\Task::where('assigned_to', $user->id)->where('status', 'review')->count(),
+            'done' => \App\Models\Task::where('assigned_to', $user->id)->where('status', 'done')->count(),
         ];
 
-        // Weekly productivity (last 7 days)
+        // Weekly productivity (last 7 days) - User's data
         $weeklyData = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i);
+            $hoursOnDay = \App\Models\TimeEntry::where('user_id', $user->id)
+                ->whereDate('started_at', $date->toDateString())
+                ->sum('duration_seconds') / 3600;
             $weeklyData[] = [
                 'day' => $date->locale('id')->isoFormat('ddd'),
-                'completed' => \App\Models\Task::where('status', 'done')
+                'hours' => round($hoursOnDay, 1),
+                'completed' => \App\Models\Task::where('assigned_to', $user->id)
+                    ->where('status', 'done')
                     ->whereDate('updated_at', $date->toDateString())->count(),
-                'created' => \App\Models\Task::whereDate('created_at', $date->toDateString())->count(),
             ];
         }
 
-        // Active projects
-        $activeProjectsList = \App\Models\Project::where('status', 'active')
+        // Active projects (user's projects only)
+        $activeProjectsList = \App\Models\Project::whereIn('id', $userProjectIds)
+            ->where('status', 'active')
             ->with(['tasks'])
             ->latest()
             ->take(5)
             ->get();
 
-        // Upcoming deadlines
-        $upcomingDeadlines = \App\Models\Task::whereNotNull('due_date')
+        // Upcoming deadlines (user's tasks only)
+        $upcomingDeadlines = \App\Models\Task::where('assigned_to', $user->id)
+            ->whereNotNull('due_date')
             ->where('due_date', '>=', now())
             ->where('status', '!=', 'done')
             ->orderBy('due_date')
@@ -58,10 +104,12 @@
             <h1 class="welcome-title">Selamat Datang Kembali, {{ auth()->user()->name ?? 'Guest' }}!</h1>
             <p class="welcome-subtitle">Berikut adalah ringkasan aktivitas proyek Anda hari ini.</p>
         </div>
+        @if($canCreateProject)
         <a href="{{ route('projects.create') }}" class="btn btn-welcome">
             <i class="fas fa-plus"></i>
             Tambah Proyek Baru
         </a>
+        @endif
     </div>
 
     <!-- Stats Cards -->
@@ -73,9 +121,11 @@
             <div class="stat-info">
                 <span class="stat-label">Total Proyek</span>
                 <span class="stat-value">{{ $totalProjects }}</span>
-                <span class="stat-change positive">
-                    <i class="fas fa-arrow-up"></i> +12%
+                @if($projectChange != 0)
+                <span class="stat-change {{ $projectChange >= 0 ? 'positive' : 'negative' }}">
+                    <i class="fas fa-arrow-{{ $projectChange >= 0 ? 'up' : 'down' }}"></i> {{ $projectChange >= 0 ? '+' : '' }}{{ $projectChange }}%
                 </span>
+                @endif
             </div>
             <span class="stat-note">{{ $activeProjects }} proyek aktif</span>
         </div>
@@ -87,9 +137,11 @@
             <div class="stat-info">
                 <span class="stat-label">Tugas Selesai</span>
                 <span class="stat-value">{{ $completedTasks }}</span>
-                <span class="stat-change positive">
-                    <i class="fas fa-arrow-up"></i> +8%
+                @if($taskChange != 0)
+                <span class="stat-change {{ $taskChange >= 0 ? 'positive' : 'negative' }}">
+                    <i class="fas fa-arrow-{{ $taskChange >= 0 ? 'up' : 'down' }}"></i> {{ $taskChange >= 0 ? '+' : '' }}{{ $taskChange }}%
                 </span>
+                @endif
             </div>
             <span class="stat-note">{{ $pendingTasks }} tugas tertunda</span>
         </div>
@@ -100,10 +152,12 @@
             </div>
             <div class="stat-info">
                 <span class="stat-label">Jam Kerja</span>
-                <span class="stat-value">640h</span>
-                <span class="stat-change positive">
-                    <i class="fas fa-arrow-up"></i> +15%
+                <span class="stat-value">{{ number_format($totalHoursThisMonth, 0) }}h</span>
+                @if($hoursChange != 0)
+                <span class="stat-change {{ $hoursChange >= 0 ? 'positive' : 'negative' }}">
+                    <i class="fas fa-arrow-{{ $hoursChange >= 0 ? 'up' : 'down' }}"></i> {{ $hoursChange >= 0 ? '+' : '' }}{{ $hoursChange }}%
                 </span>
+                @endif
             </div>
             <span class="stat-note">Bulan ini</span>
         </div>
@@ -114,12 +168,9 @@
             </div>
             <div class="stat-info">
                 <span class="stat-label">Anggota Tim</span>
-                <span class="stat-value">{{ $totalUsers }}</span>
-                <span class="stat-change positive">
-                    <i class="fas fa-arrow-up"></i> +2
-                </span>
+                <span class="stat-value">{{ $totalTeamMembers }}</span>
             </div>
-            <span class="stat-note">Aktif bekerja</span>
+            <span class="stat-note">Di proyek Anda</span>
         </div>
     </div>
 
@@ -247,7 +298,7 @@
                 labels: {!! json_encode(array_column($weeklyData, 'day')) !!},
                 datasets: [{
                     label: 'Jam Kerja',
-                    data: [8, 6, 10, 9, 7, 11, 8],
+                    data: {!! json_encode(array_column($weeklyData, 'hours')) !!},
                     borderColor: '#3b82f6',
                     borderWidth: 3,
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -259,7 +310,7 @@
                     pointBorderWidth: 2
                 }, {
                     label: 'Tugas Selesai',
-                    data: [2, 3, 1, 4, 2, 3, 2],
+                    data: {!! json_encode(array_column($weeklyData, 'completed')) !!},
                     borderColor: '#22c55e',
                     borderWidth: 3,
                     backgroundColor: 'rgba(34, 197, 94, 0.1)',

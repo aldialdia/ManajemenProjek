@@ -72,7 +72,7 @@
                             <i class="fas fa-clock icon-time"></i>
                             <span>Time Tracking</span>
                         </a>
-                        <a href="#" class="submenu-item">
+                        <a href="{{ route('projects.documents.index', $project) }}" class="submenu-item {{ request()->routeIs('projects.documents.*') && request()->segment(2) == $project->id ? 'active' : '' }}">
                             <i class="fas fa-file-alt icon-dokumen"></i>
                             <span>Dokumen</span>
                         </a>

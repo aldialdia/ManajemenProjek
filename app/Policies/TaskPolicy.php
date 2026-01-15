@@ -35,7 +35,7 @@ class TaskPolicy
 
     /**
      * Determine whether the user can update the task.
-     * Manager, Admin, or Creator can update.
+     * Manager, Admin, Creator, or Assignee can update.
      */
     public function update(User $user, Task $task): bool
     {
@@ -51,6 +51,11 @@ class TaskPolicy
 
         // Creator can update their own task
         if ($task->created_by === $user->id) {
+            return true;
+        }
+
+        // Assignee can update their assigned task
+        if ($task->assigned_to === $user->id) {
             return true;
         }
 

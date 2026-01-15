@@ -237,6 +237,7 @@
             @endauth
         </div>
 
+
         <!-- Team Card - di bagian bawah -->
         <div class="team-card">
             <div class="team-card-header">
@@ -1257,61 +1258,232 @@
         .btn-upload:hover {
             background: #4f46e5;
         }
-
-        /* Tabs Style */
-        .attachment-tabs {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 0.5rem;
+        /* Documents Card */
+        .documents-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            margin-bottom: 1.25rem;
         }
 
-        .tab-btn {
-            background: none;
-            border: none;
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #64748b;
-            cursor: pointer;
-            border-radius: 6px;
-            transition: all 0.2s;
+        .documents-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .documents-card-title {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-        }
-
-        .tab-btn:hover {
-            background: #f1f5f9;
-            color: #1e293b;
-        }
-
-        .tab-btn.active {
-            background: #eef2ff;
-            color: #6366f1;
+            font-size: 1rem;
             font-weight: 600;
+            color: #1e293b;
+            margin: 0;
         }
 
-        /* Link Input Group */
-        .link-input-group {
+        .documents-card-title i {
+            color: #ef4444; /* Red for PDF/Files */
+        }
+
+        .btn-view-docs {
+            font-size: 0.8rem;
+            color: #6366f1;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .documents-list-preview {
+            padding: 1rem;
+        }
+
+        .doc-preview-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            border-radius: 12px;
+            transition: background 0.2s;
+            text-decoration: none;
+        }
+
+        .doc-preview-item:hover {
+            background: #f8fafc;
+        }
+
+        .doc-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .doc-file {
+            background: #fef2f2;
+            color: #ef4444;
+        }
+
+        .doc-content {
+            background: #eff6ff;
+            color: #3b82f6;
+        }
+
+        .doc-info {
             flex: 1;
             display: flex;
             flex-direction: column;
         }
 
-        .form-input {
-            padding: 0.5rem 0.75rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            outline: none;
-            transition: border-color 0.2s;
+        .doc-title {
+            font-weight: 500;
+            color: #1e293b;
+            font-size: 0.9rem;
+            text-decoration: none;
         }
 
-        .form-input:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        .doc-meta {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .btn-doc-arrow {
+            color: #cbd5e1;
+            font-size: 0.8rem;
+        }
+
+        .docs-empty {
+            text-align: center;
+            padding: 2rem;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .docs-empty i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.5;
+        }
+
+        .documents-card-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn-upload-doc {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.5rem 0.875rem;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-upload-doc:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            color: white;
+        }
+
+        .btn-upload-first {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.5rem 1rem;
+            background: #6366f1;
+            color: white;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-upload-first:hover {
+            background: #4f46e5;
+            color: white;
+        }
+
+        /* Simplified Document Item for Overview */
+        .doc-preview-item-simple {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            border-radius: 12px;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .doc-preview-item-simple:last-child {
+            border-bottom: none;
+        }
+
+        .doc-preview-item-simple:hover {
+            background: #f8fafc;
+        }
+
+        .doc-preview-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .doc-preview-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .doc-action-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: #f1f5f9;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            font-size: 0.8rem;
+        }
+
+        .doc-action-btn.download {
+            color: #6366f1;
+        }
+
+        .doc-action-btn.download:hover {
+            background: #eef2ff;
+            color: #4f46e5;
+        }
+
+        .doc-action-btn.delete {
+            color: #94a3b8;
+        }
+
+        .doc-action-btn.delete:hover {
+            background: #fee2e2;
+            color: #ef4444;
         }
     </style>
 @endsection
