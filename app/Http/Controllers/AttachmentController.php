@@ -17,33 +17,34 @@ class AttachmentController extends Controller
      */
     public function storeForTask(Request $request, Task $task): RedirectResponse
     {
+        // Authorization: User harus member dari project task ini
+        $project = $task->project;
+        if (!auth()->user()->isMemberOfProject($project)) {
+            abort(403, 'Anda tidak memiliki akses ke task ini.');
+        }
+
         $request->validate([
-            'type' => 'required|in:file,link',
-            'file' => 'required_if:type,file|file|max:10240', // Max 10MB
-            'link_url' => 'required_if:type,link|nullable|url',
-            'link_name' => 'required_if:type,link|nullable|string|max:255',
+            'file' => [
+                'required',
+                'file',
+                'max:10240', // Max 10MB
+                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg,gif,txt,zip,rar', // Whitelist ekstensi
+            ],
         ]);
 
-        if ($request->type === 'link') {
-            $task->attachments()->create([
-                'filename' => $request->link_name,
-                'path' => $request->link_url,
-                'mime_type' => 'external-link',
-                'size' => 0,
-                'uploaded_by' => auth()->id(),
-            ]);
-        } else {
-            $file = $request->file('file');
-            $path = $file->store('attachments/tasks/' . $task->id, 'public');
+        $file = $request->file('file');
 
-            $task->attachments()->create([
-                'filename' => $file->getClientOriginalName(),
-                'path' => $path,
-                'mime_type' => $file->getMimeType(),
-                'size' => $file->getSize(),
-                'uploaded_by' => auth()->id(),
-            ]);
-        }
+        // Generate nama file yang aman untuk mencegah path traversal
+        $safeName = \Illuminate\Support\Str::uuid() . '.' . $file->getClientOriginalExtension();
+        $path = $file->storeAs('attachments/tasks/' . $task->id, $safeName, 'public');
+
+        $task->attachments()->create([
+            'filename' => $file->getClientOriginalName(),
+            'path' => $path,
+            'mime_type' => $file->getMimeType(),
+            'size' => $file->getSize(),
+            'uploaded_by' => auth()->id(),
+        ]);
 
         return back()->with('success', 'Lampiran berhasil ditambahkan.');
     }
@@ -105,8 +106,34 @@ class AttachmentController extends Controller
      */
     public function destroy(Attachment $attachment): RedirectResponse
     {
-        // Only allow uploader or admin to delete
-        if ($attachment->uploaded_by !== auth()->id() && auth()->user()->role !== 'admin') {
+        $user = auth()->user();
+        $canDelete = false;
+
+        // Uploader can always delete their own files
+        if ($attachment->uploaded_by === $user->id) {
+            $canDelete = true;
+        }
+
+        // Get the project from the attachment's parent (task or project)
+        $project = null;
+        if ($attachment->attachable_type === 'App\\Models\\Task') {
+            $task = $attachment->attachable;
+            $project = $task->project;
+
+            // Task assignee can delete attachments on their task
+            if ($task->assigned_to === $user->id) {
+                $canDelete = true;
+            }
+        } elseif ($attachment->attachable_type === 'App\\Models\\Project') {
+            $project = $attachment->attachable;
+        }
+
+        // Project manager/admin can delete any attachment in the project
+        if ($project && $user->isManagerInProject($project)) {
+            $canDelete = true;
+        }
+
+        if (!$canDelete) {
             abort(403, 'Anda tidak memiliki izin untuk menghapus file ini.');
         }
 

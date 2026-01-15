@@ -54,12 +54,16 @@
                                     @case('user_mentioned')
                                         <i class="fas fa-at"></i>
                                         @break
+                                    @case('deadline_warning')
+                                        <i class="fas fa-clock"></i>
+                                        @break
                                     @default
                                         <i class="fas fa-bell"></i>
                                 @endswitch
                             </div>
                             <div class="notification-dropdown-content">
-                                <span class="notification-dropdown-message">{{ Str::limit($notification->data['message'] ?? 'Notifikasi baru', 50) }}</span>
+                                <span class="notification-dropdown-title-text">{{ Str::limit($notification->data['title'] ?? 'Notifikasi', 40) }}</span>
+                                <span class="notification-dropdown-message">{{ Str::limit($notification->data['message'] ?? 'Notifikasi baru', 60) }}</span>
                                 <span class="notification-dropdown-time">{{ $notification->created_at->diffForHumans() }}</span>
                             </div>
                         </a>
@@ -379,15 +383,30 @@
         background: linear-gradient(135deg, #64748b 0%, #475569 100%);
     }
 
+    .notification-dropdown-icon.deadline_warning {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
     .notification-dropdown-content {
         flex: 1;
         min-width: 0;
     }
 
-    .notification-dropdown-message {
+    .notification-dropdown-title-text {
         display: block;
         font-size: 0.8rem;
+        font-weight: 600;
         color: #1e293b;
+        margin-bottom: 0.125rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .notification-dropdown-message {
+        display: block;
+        font-size: 0.75rem;
+        color: #64748b;
         line-height: 1.4;
         margin-bottom: 0.25rem;
     }

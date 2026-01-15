@@ -8,9 +8,6 @@
         <!-- Project Info Card -->
         <div class="info-card">
             <div class="info-card-header">
-                <a href="{{ route('projects.index') }}" class="back-btn">
-                    <i class="fas fa-arrow-left"></i>
-                </a>
                 <div class="info-card-content">
                     <div class="info-card-title-row">
                         <h2 class="info-card-title">{{ $project->name }}</h2>
@@ -130,10 +127,12 @@
                         <i class="fas fa-tasks"></i>
                         Daftar Tugas
                     </h3>
-                    <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" class="btn-add-task">
-                        <i class="fas fa-plus"></i>
-                        Tambah Tugas
-                    </a>
+                    @if(auth()->user()->isManagerInProject($project))
+                        <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" class="btn-add-task">
+                            <i class="fas fa-plus"></i>
+                            Tambah Tugas
+                        </a>
+                    @endif
                 </div>
                 <div class="tasks-list">
                     @forelse($project->tasks as $task)
@@ -225,7 +224,7 @@
                     </div>
                 @endforelse
             </div>
-            
+
             <!-- Add Comment Form with @mention -->
             @auth
                 <div class="chat-input-area">
@@ -234,121 +233,6 @@
                         'id' => 'project-' . $project->id,
                         'placeholder' => 'Tulis pesan... (@ untuk mention)'
                     ])
-                </div>
-            @endauth
-        </div>
-
-
-
-        <!-- Attachments Card -->
-        <div class="attachments-card" style="margin-top: 1.5rem;" x-data="{ tab: 'file' }">
-            <div class="discussion-card-header">
-                <h3 class="discussion-card-title">
-                    <i class="fas fa-paperclip"></i>
-                    File Attachments & Links
-                </h3>
-                <span class="discussion-card-count">{{ $project->attachments->count() }} item</span>
-            </div>
-            
-            <!-- File/Link List -->
-            <div class="attachments-list">
-                @forelse($project->attachments as $attachment)
-                    <div class="attachment-item">
-                        <div class="attachment-icon">
-                            @if($attachment->isLink())
-                                <i class="fas fa-link" style="color: #6366f1;"></i>
-                            @elseif($attachment->isImage())
-                                <i class="fas fa-image" style="color: #6366f1;"></i>
-                            @elseif($attachment->mime_type === 'application/pdf')
-                                <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
-                            @elseif(str_contains($attachment->mime_type ?? '', 'word'))
-                                <i class="fas fa-file-word" style="color: #2563eb;"></i>
-                            @elseif(str_contains($attachment->mime_type ?? '', 'excel') || str_contains($attachment->mime_type ?? '', 'spreadsheet'))
-                                <i class="fas fa-file-excel" style="color: #16a34a;"></i>
-                            @else
-                                <i class="fas fa-file-alt" style="color: #64748b;"></i>
-                            @endif
-                        </div>
-                        <div class="attachment-info">
-                            @if($attachment->isLink())
-                                <a href="{{ route('attachments.download', $attachment) }}" class="attachment-name" target="_blank">{{ $attachment->filename }}</a>
-                            @else
-                                <a href="{{ route('attachments.download', $attachment) }}" class="attachment-name" target="_blank">{{ $attachment->filename }}</a>
-                            @endif
-                            
-                            <div class="attachment-meta">
-                                <span>{{ $attachment->human_size }}</span>
-                                <span>•</span>
-                                <span>{{ $attachment->uploader->name }}</span>
-                                <span>•</span>
-                                <span>{{ $attachment->created_at->diffForHumans() }}</span>
-                            </div>
-                        </div>
-                        <div class="attachment-actions">
-                            <a href="{{ route('attachments.download', $attachment) }}" class="btn-icon-action" title="Download/Open" target="_blank">
-                                <i class="fas fa-{{ $attachment->isLink() ? 'external-link-alt' : 'download' }}"></i>
-                            </a>
-                            @if($attachment->uploaded_by === auth()->id() || auth()->user()->role === 'admin')
-                                <form action="{{ route('attachments.destroy', $attachment) }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus file ini?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn-icon-action delete" title="Hapus">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                            @endif
-                        </div>
-                    </div>
-                @empty
-                    <div class="attachment-empty">
-                        <i class="fas fa-folder-open"></i>
-                        <p>Belum ada file atau link</p>
-                    </div>
-                @endforelse
-            </div>
-
-            <!-- Upload Form / Add Link -->
-            @auth
-                <div class="attachment-form-wrapper">
-                    <!-- Tabs -->
-                    <div class="attachment-tabs">
-                        <button class="tab-btn" :class="{ 'active': tab === 'file' }" @click="tab = 'file'">
-                            <i class="fas fa-cloud-upload-alt"></i> Upload File
-                        </button>
-                        <button class="tab-btn" :class="{ 'active': tab === 'link' }" @click="tab = 'link'">
-                            <i class="fas fa-link"></i> Add Link
-                        </button>
-                    </div>
-
-                    <!-- File Form -->
-                    <form x-show="tab === 'file'" action="{{ route('projects.attachments.store', $project) }}" method="POST" enctype="multipart/form-data" class="attachment-form">
-                        @csrf
-                        <input type="hidden" name="type" value="file">
-                        <div class="file-input-wrapper">
-                            <input type="file" name="file" id="file" class="file-input" required onchange="document.getElementById('file-name').textContent = this.files[0].name">
-                            <label for="file" class="file-label">
-                                <i class="fas fa-cloud-upload-alt"></i>
-                                <span>Pilih file</span>
-                            </label>
-                            <span class="file-name-display" id="file-name">Tidak ada file dipilih</span>
-                        </div>
-                        <button type="submit" class="btn-upload">
-                            Upload
-                        </button>
-                    </form>
-
-                    <!-- Link Form -->
-                    <form x-show="tab === 'link'" action="{{ route('projects.attachments.store', $project) }}" method="POST" class="attachment-form">
-                        @csrf
-                        <input type="hidden" name="type" value="link">
-                        <div class="link-input-group">
-                            <input type="url" name="link_url" class="form-input" placeholder="https://example.com" required style="width: 100%; margin-bottom: 0.5rem;">
-                            <input type="text" name="link_name" class="form-input" placeholder="Nama Link (Opsional)" style="width: 100%; margin-bottom: 0.5rem;">
-                        </div>
-                        <button type="submit" class="btn-upload">
-                            Simpan Link
-                        </button>
-                    </form>
                 </div>
             @endauth
         </div>
@@ -372,7 +256,7 @@
                         <div class="team-member-info">
                             <span class="team-member-name">{{ $user->name }}</span>
                             <span
-                                class="team-member-role">{{ ucfirst($user->pivot->role ?? $user->role ?? 'Member') }}</span>
+                                class="team-member-role">{{ ucfirst($user->pivot->role ?? 'Member') }}</span>
                         </div>
                     </div>
                 @empty
@@ -1304,7 +1188,7 @@
             margin-bottom: 0.5rem;
             opacity: 0.5;
         }
-        
+
         .attachment-empty p {
             margin: 0;
             font-size: 0.875rem;

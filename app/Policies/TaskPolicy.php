@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\Task;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class TaskPolicy
 {
@@ -18,103 +17,89 @@ class TaskPolicy
 
     /**
      * Determine whether the user can view the task.
+     * Only project members can view tasks.
      */
     public function view(User $user, Task $task): bool
     {
-        // Admin can view all tasks
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        // User must be a member of the project
-        return $task->project->users->contains($user->id);
+        return $user->isMemberOfProject($task->project);
     }
 
     /**
      * Determine whether the user can create tasks.
+     * Only Manager or Admin can create tasks.
      */
     public function create(User $user): bool
     {
-        return true;
+        return true; // Will be checked at controller level with project context
     }
 
     /**
      * Determine whether the user can update the task.
+     * Manager, Admin, or Creator can update.
      */
     public function update(User $user, Task $task): bool
     {
-        // Admin can update all tasks
-        if ($user->isAdmin()) {
+        // Must be project member first
+        if (!$user->isMemberOfProject($task->project)) {
+            return false;
+        }
+
+        // Manager or Admin can update any task
+        if ($user->isManagerInProject($task->project)) {
             return true;
         }
 
-        // Task assignee can update
-        if ($task->assigned_to === $user->id) {
+        // Creator can update their own task
+        if ($task->created_by === $user->id) {
             return true;
         }
 
-        // Project manager can update
-        return $task->project->managers->contains($user->id);
+        return false;
     }
 
     /**
      * Determine whether the user can update task status.
+     * All project members can update status (for Kanban).
      */
     public function updateStatus(User $user, Task $task): bool
     {
-        // Admin can update status
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        // Task assignee can update status
-        if ($task->assigned_to === $user->id) {
-            return true;
-        }
-
-        // Project members can update status
-        return $task->project->users->contains($user->id);
+        return $user->isMemberOfProject($task->project);
     }
 
     /**
      * Determine whether the user can delete the task.
+     * Only Manager, Admin, or Creator can delete.
      */
     public function delete(User $user, Task $task): bool
     {
-        // Admin can delete all tasks
-        if ($user->isAdmin()) {
+        // Must be project member first
+        if (!$user->isMemberOfProject($task->project)) {
+            return false;
+        }
+
+        // Manager or Admin can delete any task
+        if ($user->isManagerInProject($task->project)) {
             return true;
         }
 
-        // Project manager can delete
-        return $task->project->managers->contains($user->id);
-    }
+        // Creator can delete their own task
+        if ($task->created_by === $user->id) {
+            return true;
+        }
 
-    /**
-     * Determine whether the user can restore the task.
-     */
-    public function restore(User $user, Task $task): bool
-    {
-        return $user->isAdmin() || $task->project->managers->contains($user->id);
-    }
-
-    /**
-     * Determine whether the user can permanently delete the task.
-     */
-    public function forceDelete(User $user, Task $task): bool
-    {
-        return $user->isAdmin();
+        return false;
     }
 
     /**
      * Determine whether the user can assign the task.
+     * Only Manager or Admin can assign.
      */
     public function assign(User $user, Task $task): bool
     {
-        if ($user->isAdmin()) {
-            return true;
+        if (!$user->isMemberOfProject($task->project)) {
+            return false;
         }
 
-        return $task->project->managers->contains($user->id);
+        return $user->isManagerInProject($task->project);
     }
 }

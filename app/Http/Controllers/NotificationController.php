@@ -62,7 +62,9 @@ class NotificationController extends Controller
         // Redirect based on notification type
         $data = $notification->data;
 
-        if (isset($data['task_id'])) {
+        if (isset($data['type']) && $data['type'] === 'project_invitation' && isset($data['invitation_token'])) {
+            return redirect()->route('invitations.show', $data['invitation_token']);
+        } elseif (isset($data['task_id'])) {
             return redirect()->route('tasks.show', $data['task_id']);
         } elseif (isset($data['project_id']) && $data['type'] === 'new_comment' && $data['target_type'] === 'project') {
             return redirect()->route('projects.show', $data['project_id']);

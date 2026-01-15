@@ -8,8 +8,11 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectInvitationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TeamController;
+use App\Http\Controllers\TimeTrackingController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
 use Illuminate\Support\Facades\Route;
@@ -54,15 +57,14 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::resource('projects', ProjectController::class);
 
     // Tasks
+    Route::get('/tasks/calendar', [TaskController::class, 'calendar'])->name('tasks.calendar');
+    Route::patch('/tasks/{task}/dates', [TaskController::class, 'updateDates'])->name('tasks.update-dates');
     Route::get('/tasks/kanban', [TaskController::class, 'kanban'])->name('tasks.kanban');
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
     Route::resource('tasks', TaskController::class);
 
     // Clients
     Route::resource('clients', ClientController::class);
-
-    // Users (Team Management)
-    Route::resource('users', UserController::class);
 
     // Reports
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
@@ -73,14 +75,14 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
-    // Comments
-    Route::post('/tasks/{task}/comments', [CommentController::class, 'storeForTask'])->name('tasks.comments.store');
-    Route::post('/projects/{project}/comments', [CommentController::class, 'storeForProject'])->name('projects.comments.store');
+    // Comments (dengan rate limiting untuk mencegah spam)
+    Route::post('/tasks/{task}/comments', [CommentController::class, 'storeForTask'])->name('tasks.comments.store')->middleware('throttle:30,1');
+    Route::post('/projects/{project}/comments', [CommentController::class, 'storeForProject'])->name('projects.comments.store')->middleware('throttle:30,1');
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 
-    // Attachments
-    Route::post('/tasks/{task}/attachments', [AttachmentController::class, 'storeForTask'])->name('tasks.attachments.store');
-    Route::post('/projects/{project}/attachments', [AttachmentController::class, 'storeForProject'])->name('projects.attachments.store');
+    // Attachments (dengan rate limiting)
+    Route::post('/tasks/{task}/attachments', [AttachmentController::class, 'storeForTask'])->name('tasks.attachments.store')->middleware('throttle:20,1');
+    Route::post('/projects/{project}/attachments', [AttachmentController::class, 'storeForProject'])->name('projects.attachments.store')->middleware('throttle:20,1');
     Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download'])->name('attachments.download');
     Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('attachments.destroy');
 
@@ -90,6 +92,26 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllRead');
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
+
+    // Team Management
+    Route::get('/projects/{project}/team', [TeamController::class, 'index'])->name('projects.team.index');
+    Route::patch('/projects/{project}/team/{user}/role', [TeamController::class, 'updateRole'])->name('projects.team.updateRole');
+    Route::delete('/projects/{project}/team/{user}', [TeamController::class, 'remove'])->name('projects.team.remove');
+    Route::delete('/invitations/{invitation}/cancel', [TeamController::class, 'cancelInvitation'])->name('projects.team.cancelInvitation');
+
+    // Project Invitations
+    Route::post('/projects/{project}/invitations', [ProjectInvitationController::class, 'store'])->name('projects.invitations.store');
+    Route::get('/invitations/{token}', [ProjectInvitationController::class, 'show'])->name('invitations.show');
+    Route::post('/invitations/{token}/accept', [ProjectInvitationController::class, 'accept'])->name('invitations.accept');
+    Route::post('/invitations/{token}/decline', [ProjectInvitationController::class, 'decline'])->name('invitations.decline');
+
+    // Time Tracking
+    Route::get('/time-tracking', [TimeTrackingController::class, 'index'])->name('time-tracking.index');
+    Route::post('/time-tracking/start', [TimeTrackingController::class, 'start'])->name('time-tracking.start');
+    Route::post('/time-tracking/{timeEntry}/stop', [TimeTrackingController::class, 'stop'])->name('time-tracking.stop');
+    Route::post('/time-tracking', [TimeTrackingController::class, 'store'])->name('time-tracking.store');
+    Route::delete('/time-tracking/{timeEntry}', [TimeTrackingController::class, 'destroy'])->name('time-tracking.destroy');
+    Route::get('/time-tracking/status', [TimeTrackingController::class, 'status'])->name('time-tracking.status');
 
     // API - Search users for @mentions
     Route::get('/api/users/search', [UserController::class, 'search'])->name('api.users.search');

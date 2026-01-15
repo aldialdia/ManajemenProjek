@@ -1,96 +1,158 @@
 @extends('layouts.app')
 
-@section('title', 'Kanban Board')
+@section('title', $project ? 'Kanban Board - ' . $project->name : 'Kanban Board')
 
 @section('content')
     <div class="page-header">
         <div>
             <h1 class="page-title">Kanban Board</h1>
-            <p class="page-subtitle">Drag and drop tasks to update status</p>
+            <p class="page-subtitle">
+                @if($project)
+                    Drag and drop tasks untuk project <strong>{{ $project->name }}</strong>
+                @else
+                    Drag and drop tasks to update status
+                @endif
+            </p>
         </div>
-        <div style="display: flex; gap: 0.5rem;">
-            <select id="projectFilter" class="form-control" style="width: 200px;" onchange="filterByProject()">
-                <option value="">All Projects</option>
-                @foreach(\App\Models\Project::where('status', 'active')->get() as $project)
-                    <option value="{{ $project->id }}">{{ $project->name }}</option>
-                @endforeach
-            </select>
-            <a href="{{ route('tasks.index') }}" class="btn btn-secondary">
-                <i class="fas fa-list"></i>
-                List View
-            </a>
-            <a href="{{ route('tasks.create') }}" class="btn btn-primary">
-                <i class="fas fa-plus"></i>
-                New Task
-            </a>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            @if($project)
+                <label class="subtask-toggle">
+                    <input type="checkbox" id="showSubtasksToggle" {{ $showSubtasks ? 'checked' : '' }}
+                        onchange="toggleSubtasks()">
+                    <span>Tampilkan Sub-task</span>
+                </label>
+                <a href="{{ route('tasks.index', ['project_id' => $project->id]) }}" class="btn btn-secondary">
+                    <i class="fas fa-list"></i>
+                    List View
+                </a>
+                @if(auth()->user()->isManagerInProject($project))
+                    <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        New Task
+                    </a>
+                @endif
+            @else
+                <a href="{{ route('tasks.index') }}" class="btn btn-secondary">
+                    <i class="fas fa-list"></i>
+                    List View
+                </a>
+            @endif
         </div>
     </div>
 
-    <div class="kanban-board">
-        <!-- To Do Column -->
-        <div class="kanban-column" data-status="todo">
-            <div class="kanban-column-header todo">
-                <span class="column-title">
-                    <i class="fas fa-circle"></i>
-                    To Do
-                </span>
-                <span class="column-count" id="count-todo">0</span>
-            </div>
-            <div class="kanban-cards" id="column-todo">
-                <!-- Cards will be loaded here -->
-            </div>
-        </div>
 
-        <!-- In Progress Column -->
-        <div class="kanban-column" data-status="in_progress">
-            <div class="kanban-column-header in-progress">
-                <span class="column-title">
-                    <i class="fas fa-spinner"></i>
-                    In Progress
-                </span>
-                <span class="column-count" id="count-in_progress">0</span>
+    <div class="kanban-wrapper">
+        <div class="kanban-board">
+            <!-- To Do Column -->
+            <div class="kanban-column" data-status="todo">
+                <div class="kanban-column-header todo">
+                    <span class="column-title">
+                        <i class="fas fa-circle"></i>
+                        To Do
+                    </span>
+                    <span class="column-count" id="count-todo">0</span>
+                </div>
+                <div class="kanban-cards" id="column-todo">
+                    <!-- Cards will be loaded here -->
+                </div>
             </div>
-            <div class="kanban-cards" id="column-in_progress">
-                <!-- Cards will be loaded here -->
-            </div>
-        </div>
 
-        <!-- Review Column -->
-        <div class="kanban-column" data-status="review">
-            <div class="kanban-column-header review">
-                <span class="column-title">
-                    <i class="fas fa-eye"></i>
-                    Review
-                </span>
-                <span class="column-count" id="count-review">0</span>
+            <!-- In Progress Column -->
+            <div class="kanban-column" data-status="in_progress">
+                <div class="kanban-column-header in-progress">
+                    <span class="column-title">
+                        <i class="fas fa-spinner"></i>
+                        In Progress
+                    </span>
+                    <span class="column-count" id="count-in_progress">0</span>
+                </div>
+                <div class="kanban-cards" id="column-in_progress">
+                    <!-- Cards will be loaded here -->
+                </div>
             </div>
-            <div class="kanban-cards" id="column-review">
-                <!-- Cards will be loaded here -->
-            </div>
-        </div>
 
-        <!-- Done Column -->
-        <div class="kanban-column" data-status="done">
-            <div class="kanban-column-header done">
-                <span class="column-title">
-                    <i class="fas fa-check-circle"></i>
-                    Done
-                </span>
-                <span class="column-count" id="count-done">0</span>
+            <!-- Review Column -->
+            <div class="kanban-column" data-status="review">
+                <div class="kanban-column-header review">
+                    <span class="column-title">
+                        <i class="fas fa-eye"></i>
+                        Review
+                    </span>
+                    <span class="column-count" id="count-review">0</span>
+                </div>
+                <div class="kanban-cards" id="column-review">
+                    <!-- Cards will be loaded here -->
+                </div>
             </div>
-            <div class="kanban-cards" id="column-done">
-                <!-- Cards will be loaded here -->
+
+            <!-- Done Column -->
+            <div class="kanban-column" data-status="done">
+                <div class="kanban-column-header done">
+                    <span class="column-title">
+                        <i class="fas fa-check-circle"></i>
+                        Done
+                    </span>
+                    <span class="column-count" id="count-done">0</span>
+                </div>
+                <div class="kanban-cards" id="column-done">
+                    <!-- Cards will be loaded here -->
+                </div>
             </div>
         </div>
     </div>
 
     <style>
+        .subtask-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #f1f5f9;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+
+        .subtask-toggle:hover {
+            background: #e2e8f0;
+        }
+
+        .subtask-toggle input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .subtask-indicator {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .subtask-indicator i {
+            font-size: 0.6rem;
+        }
+
+        .kanban-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 180px);
+            overflow: hidden;
+        }
+
         .kanban-board {
             display: flex;
             gap: 1.5rem;
             overflow-x: auto;
+            overflow-y: hidden;
             padding-bottom: 1rem;
-            min-height: 70vh;
+            flex: 1;
+            min-height: 0;
         }
 
         .kanban-column {
@@ -273,8 +335,8 @@
 
     @push('scripts')
         <script>
-            // Sample task data - Replace with actual data from backend
-            const tasks = @json(\App\Models\Task::with(['project', 'assignee'])->get());
+            // Task data from backend
+            const tasks = @json($tasks);
 
             function renderTasks() {
                 const columns = ['todo', 'in_progress', 'review', 'done'];
@@ -286,34 +348,40 @@
                     document.getElementById(`count-${status}`).textContent = statusTasks.length;
 
                     column.innerHTML = statusTasks.map(task => `
-                        <div class="kanban-card" draggable="true" data-task-id="${task.id}">
-                            <div class="card-title">
-                                <a href="/tasks/${task.id}">${task.title}</a>
-                            </div>
-                            <div class="card-project">
-                                <i class="fas fa-folder"></i>
-                                ${task.project?.name || 'No Project'}
-                            </div>
-                            <div class="card-meta">
-                                <span class="card-priority priority-${task.priority}">
-                                    ${task.priority}
-                                </span>
-                                ${task.assignee ? `
-                                    <div class="avatar avatar-sm" style="width: 28px; height: 28px; font-size: 0.7rem;">
-                                        ${getInitials(task.assignee.name)}
-                                    </div>
-                                ` : ''}
-                            </div>
-                            ${task.due_date ? `
-                                <div class="card-footer">
-                                    <span class="card-due ${isOverdue(task.due_date) ? 'overdue' : ''}">
-                                        <i class="fas fa-calendar"></i>
-                                        ${formatDate(task.due_date)}
-                                    </span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    `).join('');
+                                                                                        <div class="kanban-card" draggable="true" data-task-id="${task.id}">
+                                                                                            <div class="card-title">
+                                                                                                <a href="/tasks/${task.id}">${task.title}</a>
+                                                                                            </div>
+                                                                                            ${task.parent ? `
+                                                                                                <div class="subtask-indicator">
+                                                                                                    <i class="fas fa-level-up-alt fa-rotate-90"></i>
+                                                                                                    Sub-task dari: ${task.parent.title}
+                                                                                                </div>
+                                                                                            ` : ''}
+                                                                                            <div class="card-project">
+                                                                                                <i class="fas fa-folder"></i>
+                                                                                                ${task.project?.name || 'No Project'}
+                                                                                            </div>
+                                                                                            <div class="card-meta">
+                                                                                                <span class="card-priority priority-${task.priority}">
+                                                                                                    ${task.priority}
+                                                                                                </span>
+                                                                                                ${task.assignee ? `
+                                                                                                    <div class="avatar avatar-sm" style="width: 28px; height: 28px; font-size: 0.7rem;">
+                                                                                                        ${getInitials(task.assignee.name)}
+                                                                                                    </div>
+                                                                                                ` : ''}
+                                                                                            </div>
+                                                                                            ${task.due_date ? `
+                                                                                                <div class="card-footer">
+                                                                                                    <span class="card-due ${isOverdue(task.due_date) ? 'overdue' : ''}">
+                                                                                                        <i class="fas fa-calendar"></i>
+                                                                                                        ${formatDate(task.due_date)}
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            ` : ''}
+                                                                                        </div>
+                                                                                    `).join('');
                 });
 
                 initDragAndDrop();
@@ -391,11 +459,15 @@
                 });
             }
 
-            function filterByProject() {
-                const projectId = document.getElementById('projectFilter').value;
-                if (projectId) {
-                    window.location.href = `/tasks?project_id=${projectId}`;
+            function toggleSubtasks() {
+                const checkbox = document.getElementById('showSubtasksToggle');
+                const url = new URL(window.location.href);
+                if (checkbox.checked) {
+                    url.searchParams.set('show_subtasks', '1');
+                } else {
+                    url.searchParams.delete('show_subtasks');
                 }
+                window.location.href = url.toString();
             }
 
             document.addEventListener('DOMContentLoaded', renderTasks);

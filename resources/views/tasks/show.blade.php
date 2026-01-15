@@ -5,17 +5,16 @@
 @section('content')
     <div class="page-header">
         <div>
-            <div class="breadcrumb" style="margin-bottom: 0.5rem;">
-                <a href="{{ route('projects.show', $task->project) }}">{{ $task->project->name }}</a>
-                <i class="fas fa-chevron-right" style="margin: 0 0.5rem; font-size: 0.75rem; color: #94a3b8;"></i>
-                <span>Task</span>
-            </div>
             <h1 class="page-title">{{ $task->title }}</h1>
         </div>
         <div style="display: flex; gap: 0.5rem;">
-            <a href="{{ route('tasks.edit', $task) }}" class="btn btn-secondary">
-                <i class="fas fa-edit"></i>
-                Edit Task
+            <a href="{{ route('tasks.index', ['project_id' => $task->project_id]) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i>
+                Back
+            </a>
+            <a href="{{ route('tasks.calendar', ['project_id' => $task->project_id]) }}" class="btn btn-secondary">
+                <i class="fas fa-calendar-alt"></i>
+                Kalender
             </a>
         </div>
     </div>
@@ -43,20 +42,18 @@
             </div>
 
             <!-- Attachments -->
-            <div class="card" style="margin-bottom: 1.5rem;" x-data="{ tab: 'file' }">
+            <div class="card" style="margin-bottom: 1.5rem;">
                 <div class="card-header">
                     <i class="fas fa-paperclip"></i>
-                    Attachments & Links ({{ $task->attachments->count() }})
+                    Dokumen ({{ $task->attachments->count() }})
                 </div>
                 
-                <!-- File/Link List -->
+                <!-- File List -->
                 <div class="attachments-list">
                     @forelse($task->attachments as $attachment)
                         <div class="attachment-item">
                             <div class="attachment-icon">
-                                @if($attachment->isLink())
-                                    <i class="fas fa-link" style="color: #6366f1;"></i>
-                                @elseif($attachment->isImage())
+                                @if($attachment->isImage())
                                     <i class="fas fa-image" style="color: #6366f1;"></i>
                                 @elseif($attachment->mime_type === 'application/pdf')
                                     <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
@@ -69,11 +66,7 @@
                                 @endif
                             </div>
                             <div class="attachment-info">
-                                @if($attachment->isLink())
-                                    <a href="{{ route('attachments.download', $attachment) }}" class="attachment-name" target="_blank">{{ $attachment->filename }}</a>
-                                @else
-                                    <a href="{{ route('attachments.download', $attachment) }}" class="attachment-name" target="_blank">{{ $attachment->filename }}</a>
-                                @endif
+                                <a href="{{ route('attachments.download', $attachment) }}" class="attachment-name" target="_blank">{{ $attachment->filename }}</a>
                                 
                                 <div class="attachment-meta">
                                     <span>{{ $attachment->human_size }}</span>
@@ -84,10 +77,15 @@
                                 </div>
                             </div>
                             <div class="attachment-actions">
-                                <a href="{{ route('attachments.download', $attachment) }}" class="btn-icon-action" title="Download/Open" target="_blank">
-                                    <i class="fas fa-{{ $attachment->isLink() ? 'external-link-alt' : 'download' }}"></i>
+                                <a href="{{ route('attachments.download', $attachment) }}" class="btn-icon-action" title="Download" target="_blank">
+                                    <i class="fas fa-download"></i>
                                 </a>
-                                @if($attachment->uploaded_by === auth()->id() || auth()->user()->role === 'admin')
+                                @php
+                                    $canDeleteAttachment = $attachment->uploaded_by === auth()->id() 
+                                        || $task->assigned_to === auth()->id()
+                                        || auth()->user()->isManagerInProject($task->project);
+                                @endphp
+                                @if($canDeleteAttachment)
                                     <form action="{{ route('attachments.destroy', $attachment) }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus file ini?')">
                                         @csrf
                                         @method('DELETE')
@@ -101,62 +99,25 @@
                     @empty
                         <div class="attachment-empty">
                             <i class="fas fa-folder-open"></i>
-                            <p>Belum ada file atau link</p>
+                            <p>Belum ada dokumen</p>
                         </div>
                     @endforelse
                 </div>
 
-                <!-- Upload Form / Add Link -->
+                <!-- Upload Form - Hanya File -->
                 @auth
-                    <div class="attachment-form-wrapper" x-data="{ mode: null }">
-                        <!-- Dua Tombol -->
-                        <div x-show="mode === null" class="attachment-buttons">
-                            <button @click="mode = 'file'" class="option-btn file">
-                                <i class="fas fa-folder-open"></i> Unggah dari perangkat
-                            </button>
-                            <button @click="mode = 'link'" class="option-btn link">
-                                <i class="fas fa-link"></i> Tautan
-                            </button>
-                        </div>
-
-                        <!-- Form File -->
-                        <template x-if="mode === 'file'">
-                            <div class="inline-form-card">
-                                <div class="inline-form-header">
-                                    <span><i class="fas fa-folder-open"></i> Unggah File</span>
-                                    <button type="button" @click="mode = null" class="btn-cancel"><i class="fas fa-times"></i></button>
-                                </div>
-                                <form action="{{ route('tasks.attachments.store', $task) }}" method="POST" enctype="multipart/form-data" class="attachment-form">
-                                    @csrf
-                                    <input type="hidden" name="type" value="file">
-                                    <div class="file-input-wrapper">
-                                        <input type="file" name="file" id="task-file" class="file-input" required onchange="document.getElementById('task-file-name').textContent = this.files[0].name">
-                                        <label for="task-file" class="file-label">
-                                            <i class="fas fa-cloud-upload-alt"></i> Pilih file
-                                        </label>
-                                        <span class="file-name-display" id="task-file-name">Tidak ada file dipilih</span>
-                                    </div>
-                                    <button type="submit" class="btn-upload">Upload</button>
-                                </form>
+                    <div class="attachment-form-wrapper">
+                        <form action="{{ route('tasks.attachments.store', $task) }}" method="POST" enctype="multipart/form-data" class="attachment-form">
+                            @csrf
+                            <div class="file-input-wrapper">
+                                <input type="file" name="file" id="task-file" class="file-input" required onchange="document.getElementById('task-file-name').textContent = this.files[0].name">
+                                <label for="task-file" class="file-label">
+                                    <i class="fas fa-folder-open"></i> Pilih file
+                                </label>
+                                <span class="file-name-display" id="task-file-name">Tidak ada file dipilih</span>
                             </div>
-                        </template>
-
-                        <!-- Form Link -->
-                        <template x-if="mode === 'link'">
-                            <div class="inline-form-card">
-                                <div class="inline-form-header">
-                                    <span><i class="fas fa-link"></i> Tambah Tautan</span>
-                                    <button type="button" @click="mode = null" class="btn-cancel"><i class="fas fa-times"></i></button>
-                                </div>
-                                <form action="{{ route('tasks.attachments.store', $task) }}" method="POST" class="attachment-form link-form">
-                                    @csrf
-                                    <input type="hidden" name="type" value="link">
-                                    <input type="url" name="link_url" class="form-input" placeholder="https://example.com" required>
-                                    <input type="text" name="link_name" class="form-input" placeholder="Nama Link (Opsional)">
-                                    <button type="submit" class="btn-upload">Simpan Link</button>
-                                </form>
-                            </div>
-                        </template>
+                            <button type="submit" class="btn-upload">Upload</button>
+                        </form>
                     </div>
                 @endauth
             </div>

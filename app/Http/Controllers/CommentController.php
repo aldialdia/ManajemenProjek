@@ -18,10 +18,19 @@ class CommentController extends Controller
      */
     public function storeForTask(Request $request, Task $task): RedirectResponse
     {
+        // Authorization: User harus member dari project task ini
+        $project = $task->project;
+        if (!auth()->user()->isMemberOfProject($project)) {
+            abort(403, 'Anda tidak memiliki akses ke task ini.');
+        }
+
         $request->validate(['body' => 'required|string|max:5000']);
 
+        // Sanitasi input untuk mencegah XSS (preserve @mentions format)
+        $sanitizedBody = $this->sanitizeCommentBody($request->body);
+
         $comment = $task->comments()->create([
-            'body' => $request->body,
+            'body' => $sanitizedBody,
             'user_id' => auth()->id(),
         ]);
 
@@ -39,10 +48,18 @@ class CommentController extends Controller
      */
     public function storeForProject(Request $request, Project $project): RedirectResponse
     {
+        // Authorization: User harus member dari project ini
+        if (!auth()->user()->isMemberOfProject($project)) {
+            abort(403, 'Anda tidak memiliki akses ke project ini.');
+        }
+
         $request->validate(['body' => 'required|string|max:5000']);
 
+        // Sanitasi input untuk mencegah XSS
+        $sanitizedBody = $this->sanitizeCommentBody($request->body);
+
         $comment = $project->comments()->create([
-            'body' => $request->body,
+            'body' => $sanitizedBody,
             'user_id' => auth()->id(),
         ]);
 
@@ -143,5 +160,30 @@ class CommentController extends Controller
                 $notifiedUserIds[] = $userId;
             }
         }
+    }
+
+    /**
+     * Sanitize comment body to prevent XSS while preserving @mention format.
+     * @mention format: @[User Name](user_id)
+     */
+    protected function sanitizeCommentBody(string $body): string
+    {
+        // Temporarily replace @mentions with placeholders
+        $mentions = [];
+        $body = preg_replace_callback('/@\[([^\]]+)\]\((\d+)\)/', function ($match) use (&$mentions) {
+            $placeholder = '{{MENTION_' . count($mentions) . '}}';
+            $mentions[$placeholder] = $match[0]; // Store original @mention
+            return $placeholder;
+        }, $body);
+
+        // Strip HTML tags to prevent XSS
+        $body = strip_tags($body);
+
+        // Restore @mentions
+        foreach ($mentions as $placeholder => $mention) {
+            $body = str_replace($placeholder, $mention, $body);
+        }
+
+        return $body;
     }
 }

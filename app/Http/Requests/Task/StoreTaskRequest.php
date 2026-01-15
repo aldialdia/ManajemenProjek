@@ -26,12 +26,13 @@ class StoreTaskRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
+            'description' => ['required', 'string'],
             'project_id' => ['required', 'exists:projects,id'],
-            'assigned_to' => ['nullable', 'exists:users,id'],
+            'assigned_to' => ['required', 'exists:users,id'],
+            'parent_task_id' => ['nullable', 'exists:tasks,id'],
             'priority' => ['required', Rule::enum(TaskPriority::class)],
             'status' => ['required', Rule::enum(TaskStatus::class)],
-            'due_date' => ['nullable', 'date'],
+            'due_date' => ['required', 'date', 'after_or_equal:today'],
         ];
     }
 
@@ -44,6 +45,16 @@ class StoreTaskRequest extends FormRequest
             'project_id' => 'project',
             'assigned_to' => 'assignee',
             'due_date' => 'due date',
+        ];
+    }
+
+    /**
+     * Get custom error messages.
+     */
+    public function messages(): array
+    {
+        return [
+            'due_date.after_or_equal' => 'Due date tidak boleh sebelum hari ini.',
         ];
     }
 }

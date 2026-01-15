@@ -49,15 +49,16 @@
                             <span>Overview Proyek</span>
                         </a>
                         <a href="{{ route('tasks.index', ['project_id' => $project->id]) }}"
-                            class="submenu-item {{ request()->is('tasks*') && request('project_id') == $project->id ? 'active' : '' }}">
+                            class="submenu-item {{ request()->is('tasks*') && !request()->routeIs('tasks.calendar') && request('project_id') == $project->id ? 'active' : '' }}">
                             <i class="fas fa-check-square icon-tugas"></i>
                             <span>Tugas</span>
                         </a>
-                        <a href="#" class="submenu-item">
+                        <a href="{{ route('tasks.calendar', ['project_id' => $project->id]) }}" class="submenu-item {{ request()->routeIs('tasks.calendar') && request('project_id') == $project->id ? 'active' : '' }}">
                             <i class="fas fa-calendar icon-kalender"></i>
                             <span>Kalender</span>
                         </a>
-                        <a href="{{ route('users.index') }}" class="submenu-item">
+
+                        <a href="{{ route('projects.team.index', $project) }}" class="submenu-item">
                             <i class="fas fa-users icon-tim"></i>
                             <span>Tim</span>
                         </a>
@@ -66,7 +67,8 @@
                             <i class="fas fa-chart-bar icon-laporan"></i>
                             <span>Laporan</span>
                         </a>
-                        <a href="#" class="submenu-item">
+                        <a href="{{ route('time-tracking.index', ['project_id' => $project->id]) }}"
+                            class="submenu-item {{ request()->routeIs('time-tracking.*') && request('project_id') == $project->id ? 'active' : '' }}">
                             <i class="fas fa-clock icon-time"></i>
                             <span>Time Tracking</span>
                         </a>

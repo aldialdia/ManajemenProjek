@@ -40,9 +40,9 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="description" class="form-label">Description</label>
+                            <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
                             <textarea id="description" name="description" class="form-control" rows="4"
-                                placeholder="Describe the task...">{{ old('description') }}</textarea>
+                                placeholder="Describe the task..." required>{{ old('description') }}</textarea>
                             @error('description')
                                 <span class="error-message">{{ $message }}</span>
                             @enderror
@@ -52,9 +52,9 @@
                     <!-- Right Column -->
                     <div>
                         <div class="form-group">
-                            <label for="assigned_to" class="form-label">Assign To</label>
-                            <select id="assigned_to" name="assigned_to" class="form-control">
-                                <option value="">Unassigned</option>
+                            <label for="assigned_to" class="form-label">Assign To <span class="text-danger">*</span></label>
+                            <select id="assigned_to" name="assigned_to" class="form-control" required>
+                                <option value="">-- Pilih anggota --</option>
                                 @foreach($users ?? [] as $user)
                                     <option value="{{ $user->id }}" {{ old('assigned_to') == $user->id ? 'selected' : '' }}>
                                         {{ $user->name }}
@@ -92,13 +92,28 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="due_date" class="form-label">Due Date</label>
+                            <label for="due_date" class="form-label">Due Date <span class="text-danger">*</span></label>
                             <input type="date" id="due_date" name="due_date" class="form-control"
-                                value="{{ old('due_date') }}">
+                                value="{{ old('due_date') }}" min="{{ date('Y-m-d') }}" required>
                             @error('due_date')
                                 <span class="error-message">{{ $message }}</span>
                             @enderror
                         </div>
+
+                        @if($parentTasks->count() > 0)
+                        <div class="form-group">
+                            <label for="parent_task_id" class="form-label">Sub-task dari</label>
+                            <select id="parent_task_id" name="parent_task_id" class="form-control">
+                                <option value="">-- Tidak ada (Task utama) --</option>
+                                @foreach($parentTasks as $parentTask)
+                                    <option value="{{ $parentTask->id }}" {{ old('parent_task_id') == $parentTask->id ? 'selected' : '' }}>
+                                        {{ $parentTask->title }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">Pilih jika task ini merupakan bagian dari task lain</small>
+                        </div>
+                        @endif
                     </div>
                 </div>
 

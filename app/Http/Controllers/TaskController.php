@@ -6,11 +6,11 @@ use App\Http\Requests\Task\StoreTaskRequest;
 use App\Http\Requests\Task\UpdateTaskStatusRequest;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\User;
 use App\Services\TaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class TaskController extends Controller
@@ -22,14 +22,31 @@ class TaskController extends Controller
 
     /**
      * Display a listing of tasks.
+     * Shows tasks from a specific project or all user's projects.
      */
     public function index(Request $request): View
     {
-        $query = Task::with(['project', 'assignee']);
+        $user = auth()->user();
+        $project = null;
 
-        // Filter by project
+        // Only get parent tasks (not subtasks), subtasks will be loaded via relation
+        $query = Task::with(['assignee', 'subtasks.assignee'])
+            ->whereNull('parent_task_id'); // Only parent tasks
+
+        // If project_id is provided, filter by that project
         if ($request->filled('project_id')) {
-            $query->where('project_id', $request->project_id);
+            $project = Project::findOrFail($request->project_id);
+
+            // Check if user is member of this project
+            if (!$user->isMemberOfProject($project)) {
+                abort(403, 'Anda bukan anggota project ini.');
+            }
+
+            $query->where('project_id', $project->id);
+        } else {
+            // If no project specified, show tasks from all user's projects
+            $userProjectIds = $user->projects()->pluck('projects.id');
+            $query->whereIn('project_id', $userProjectIds);
         }
 
         // Filter by status
@@ -42,29 +59,141 @@ class TaskController extends Controller
             $query->where('priority', $request->priority);
         }
 
-        // Filter by assignee
-        if ($request->filled('assigned_to')) {
-            $query->where('assigned_to', $request->assigned_to);
-        }
-
         // Search by title
         if ($request->filled('search')) {
             $query->where('title', 'like', '%' . $request->search . '%');
         }
 
         $tasks = $query->latest()->paginate(15);
-        $projects = Project::orderBy('name')->get();
-        $users = User::orderBy('name')->get();
 
-        return view('tasks.index', compact('tasks', 'projects', 'users'));
+        return view('tasks.index', compact('tasks', 'project'));
     }
 
     /**
      * Display Kanban board view.
      */
-    public function kanban(): View
+    public function kanban(Request $request): View
     {
-        return view('tasks.kanban');
+        $user = auth()->user();
+        $project = null;
+        $showSubtasks = $request->boolean('show_subtasks', false);
+
+        // Build query for tasks
+        $query = Task::with(['project', 'assignee', 'subtasks.assignee', 'parent']);
+
+        // Only show parent tasks unless show_subtasks is enabled
+        if (!$showSubtasks) {
+            $query->whereNull('parent_task_id');
+        }
+
+        // If project_id is provided, filter by that project
+        if ($request->filled('project_id')) {
+            $project = Project::findOrFail($request->project_id);
+
+            // Check if user is member of this project
+            if (!$user->isMemberOfProject($project)) {
+                abort(403, 'Anda bukan anggota project ini.');
+            }
+
+            $query->where('project_id', $project->id);
+        } else {
+            // If no project specified, show tasks from all user's projects
+            $userProjectIds = $user->projects()->pluck('projects.id');
+            $query->whereIn('project_id', $userProjectIds);
+        }
+
+        $tasks = $query->get();
+
+        return view('tasks.kanban', compact('tasks', 'project', 'showSubtasks'));
+    }
+
+    /**
+     * Display Calendar view.
+     */
+    public function calendar(Request $request): View
+    {
+        $user = auth()->user();
+        $project = null;
+
+        $query = Task::with(['project', 'assignee'])
+            ->whereNotNull('due_date');
+
+        if ($request->filled('project_id')) {
+            $project = Project::findOrFail($request->project_id);
+            if (!$user->isMemberOfProject($project)) {
+                abort(403);
+            }
+            $query->where('project_id', $project->id);
+        } else {
+            $query->whereIn('project_id', $user->projects()->pluck('projects.id'));
+        }
+
+        // Color mapping (Hex) for FullCalendar
+        $colorMap = [
+            'secondary' => '#6b7280', // Gray-500 (Todo)
+            'primary' => '#6366f1',   // Indigo-500 (In Progress)
+            'warning' => '#f59e0b',   // Amber-500 (Review)
+            'success' => '#10b981',   // Emerald-500 (Done)
+            'info' => '#0ea5e9',      // Sky-500
+            'danger' => '#f43f5e',    // Rose-500
+        ];
+
+        $calendarTasks = $query->get()->map(function ($task) use ($colorMap) {
+            $colorKey = $task->status->color();
+            $hexColor = $colorMap[$colorKey] ?? '#6b7280';
+            
+            return [
+                'id' => $task->id,
+                'title' => $task->title,
+                'start' => $task->due_date->format('Y-m-d'),
+                'end' => $task->due_date->addDay()->format('Y-m-d'), // Single day event on due date
+                'url' => route('tasks.show', $task),
+                'backgroundColor' => $hexColor,
+                'borderColor' => $hexColor,
+                'textColor' => '#ffffff',
+                'extendedProps' => [
+                    'priority' => $task->priority->label(),
+                    'status' => $task->status->label(),
+                    'assignee' => $task->assignee?->name ?? 'Unassigned',
+                    'description' => Str::limit($task->description, 50),
+                ]
+            ];
+        });
+
+        // Gantt Data - All tasks with actual dates
+        $ganttTasks = $query->get()->map(function($task) {
+            return [
+                'id' => (string) $task->id,
+                'name' => $task->title,
+                'start' => $task->start_date ? $task->start_date->format('Y-m-d') : now()->format('Y-m-d'),
+                'end' => $task->due_date ? $task->due_date->format('Y-m-d') : now()->addDay()->format('Y-m-d'),
+                'progress' => $task->status === \App\Enums\TaskStatus::DONE ? 100 : ($task->status === \App\Enums\TaskStatus::IN_PROGRESS ? 50 : 0),
+                'dependencies' => $task->parent_task_id ? (string) $task->parent_task_id : null,
+                'custom_class' => 'bar-' . $task->status->value,
+            ];
+        });
+
+        return view('tasks.calendar', compact('calendarTasks', 'ganttTasks', 'project'));
+    }
+
+    /**
+     * Update task dates via AJAX (Drag & Drop).
+     */
+    public function updateDates(Request $request, Task $task): JsonResponse
+    {
+        $this->authorize('update', $task);
+
+        $validated = $request->validate([
+            'start_date' => 'nullable|date',
+            'due_date' => 'required|date|after_or_equal:start_date',
+        ]);
+
+        $task->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tanggal task berhasil diperbarui.',
+        ]);
     }
 
     /**
@@ -79,13 +208,23 @@ class TaskController extends Controller
                 ->with('warning', 'Silakan pilih project terlebih dahulu untuk membuat task.');
         }
 
-        // project_id is required - task must be created from within a project
         $project = Project::with('users')->findOrFail($request->project_id);
+
+        // Only Manager or Admin can create tasks
+        if (!auth()->user()->isManagerInProject($project)) {
+            abort(403, 'Hanya Manager atau Admin yang dapat membuat task.');
+        }
 
         // Only get users that are members of this project
         $users = $project->users()->orderBy('name')->get();
 
-        return view('tasks.create', compact('project', 'users'));
+        // Get existing parent tasks for subtask dropdown (only top-level tasks)
+        $parentTasks = Task::where('project_id', $project->id)
+            ->whereNull('parent_task_id')
+            ->orderBy('title')
+            ->get();
+
+        return view('tasks.create', compact('project', 'users', 'parentTasks'));
     }
 
     /**
@@ -93,7 +232,18 @@ class TaskController extends Controller
      */
     public function store(StoreTaskRequest $request): RedirectResponse
     {
-        $task = $this->taskService->create($request->validated());
+        $project = Project::findOrFail($request->project_id);
+
+        // Only Manager or Admin can create tasks
+        if (!auth()->user()->isManagerInProject($project)) {
+            abort(403, 'Hanya Manager atau Admin yang dapat membuat task.');
+        }
+
+        // Add created_by to the validated data
+        $data = $request->validated();
+        $data['created_by'] = auth()->id();
+
+        $task = $this->taskService->create($data);
 
         return redirect()
             ->route('tasks.show', $task)
@@ -105,7 +255,9 @@ class TaskController extends Controller
      */
     public function show(Task $task): View
     {
-        $task->load(['project', 'assignee', 'comments.user', 'attachments']);
+        $this->authorize('view', $task);
+
+        $task->load(['project', 'assignee', 'creator', 'parent', 'subtasks.assignee', 'comments.user', 'attachments']);
 
         return view('tasks.show', compact('task'));
     }
@@ -115,10 +267,19 @@ class TaskController extends Controller
      */
     public function edit(Task $task): View
     {
-        $projects = Project::where('status', 'active')->orderBy('name')->get();
-        $users = User::orderBy('name')->get();
+        $this->authorize('update', $task);
 
-        return view('tasks.edit', compact('task', 'projects', 'users'));
+        // Only get users from this project
+        $users = $task->project->users()->orderBy('name')->get();
+
+        // Get existing parent tasks (exclude current task and its subtasks)
+        $parentTasks = Task::where('project_id', $task->project_id)
+            ->whereNull('parent_task_id')
+            ->where('id', '!=', $task->id)
+            ->orderBy('title')
+            ->get();
+
+        return view('tasks.edit', compact('task', 'users', 'parentTasks'));
     }
 
     /**
@@ -126,6 +287,8 @@ class TaskController extends Controller
      */
     public function update(StoreTaskRequest $request, Task $task): RedirectResponse
     {
+        $this->authorize('update', $task);
+
         $this->taskService->update($task, $request->validated());
 
         return redirect()
@@ -134,17 +297,27 @@ class TaskController extends Controller
     }
 
     /**
-     * Update task status (for Kanban drag & drop).
+     * Update task status (for Kanban drag & drop and form submissions).
      */
-    public function updateStatus(UpdateTaskStatusRequest $request, Task $task): JsonResponse
+    public function updateStatus(UpdateTaskStatusRequest $request, Task $task): JsonResponse|RedirectResponse
     {
+        $this->authorize('updateStatus', $task);
+
         $this->taskService->updateStatus($task, $request->validated('status'));
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Task status updated.',
-            'task' => $task->fresh(),
-        ]);
+        // Return JSON for AJAX requests (Kanban), redirect for form submissions
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Task status updated.',
+                'task' => $task->fresh(),
+            ]);
+        }
+
+        $statusLabel = $task->fresh()->status->value === 'done' ? 'selesai' : 'dibuka kembali';
+        return redirect()
+            ->route('tasks.show', $task)
+            ->with('success', "Task berhasil ditandai $statusLabel.");
     }
 
     /**
@@ -152,11 +325,13 @@ class TaskController extends Controller
      */
     public function destroy(Task $task): RedirectResponse
     {
+        $this->authorize('delete', $task);
+
         $projectId = $task->project_id;
         $task->delete();
 
         return redirect()
-            ->route('projects.show', $projectId)
-            ->with('success', 'Task deleted successfully.');
+            ->route('tasks.index', ['project_id' => $projectId])
+            ->with('success', 'Task berhasil dihapus.');
     }
 }
