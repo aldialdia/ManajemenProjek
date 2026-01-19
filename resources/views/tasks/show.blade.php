@@ -115,6 +115,7 @@
                                     <span>Pilih file</span>
                                 </label>
                                 <span class="file-name-display" id="task-file-name">Tidak ada file dipilih</span>
+                                <span class="file-size-hint">(Max 10MB)</span>
                             </div>
                             <button type="submit" class="btn-upload">
                                 Upload
@@ -660,6 +661,12 @@
         .file-name-display {
             font-size: 0.875rem;
             color: #64748b;
+        }
+
+        .file-size-hint {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-style: italic;
         }
 
         .btn-upload {

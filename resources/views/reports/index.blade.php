@@ -147,6 +147,7 @@
                         <tr>
                             <th>Proyek</th>
                             <th>Aktivitas</th>
+                            <th>Tanggal</th>
                             <th>Waktu</th>
                             <th>Status</th>
                         </tr>
@@ -156,6 +157,7 @@
                             <tr>
                                 <td>{{ $activity['project'] }}</td>
                                 <td>{{ $activity['activity'] }}</td>
+                                <td>{{ $activity['date'] }}</td>
                                 <td>{{ $activity['time'] }}</td>
                                 <td>
                                     <span
@@ -264,22 +266,29 @@
             }
         });
 
-        // Team Productivity Bar Chart
+        // Team Productivity Bar Chart - Completion Percentage
         const teamCtx = document.getElementById('teamProductivityChart').getContext('2d');
+        const completedCounts = {!! json_encode($tasksByUser->pluck('completed_count')->toArray()) !!};
+        const totalCounts = {!! json_encode($tasksByUser->pluck('total_tasks_count')->toArray()) !!};
+        const percentages = {!! json_encode($tasksByUser->pluck('completion_percentage')->toArray()) !!};
+        
+        // Dynamic colors based on percentage
+        const barColors = percentages.map(function(pct) {
+            if (pct >= 80) return '#22c55e'; // Green - Excellent
+            if (pct >= 60) return '#84cc16'; // Lime - Good
+            if (pct >= 30) return '#f59e0b'; // Orange - Needs improvement
+            return '#ef4444'; // Red - Low
+        });
+        
         new Chart(teamCtx, {
             type: 'bar',
             data: {
                 labels: {!! json_encode($tasksByUser->pluck('name')->toArray()) !!},
                 datasets: [{
-                    label: 'Pending',
-                    data: {!! json_encode($tasksByUser->pluck('pending_count')->toArray()) !!},
-                    backgroundColor: '#f59e0b',
-                    borderRadius: 4
-                }, {
-                    label: 'Selesai',
-                    data: {!! json_encode($tasksByUser->pluck('completed_count')->toArray()) !!},
-                    backgroundColor: '#22c55e',
-                    borderRadius: 4
+                    label: 'Tugas Selesai (%)',
+                    data: percentages,
+                    backgroundColor: barColors,
+                    borderRadius: 6
                 }]
             },
             options: {
@@ -288,17 +297,30 @@
                 animation: false,
                 plugins: {
                     legend: {
-                        position: 'bottom',
-                        labels: {
-                            usePointStyle: true,
-                            padding: 20
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const idx = context.dataIndex;
+                                const completed = completedCounts[idx];
+                                const total = totalCounts[idx];
+                                const percentage = context.parsed.y;
+                                return completed + ' / ' + total + ' tugas selesai (' + percentage + '%)';
+                            }
                         }
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        grid: { color: 'rgba(0,0,0,0.05)' }
+                        max: 100,
+                        grid: { color: 'rgba(0,0,0,0.05)' },
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
                     },
                     x: {
                         grid: { display: false }
