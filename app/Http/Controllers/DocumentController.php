@@ -8,9 +8,63 @@ use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Intervention\Image\Laravel\Facades\Image;
 
 class DocumentController extends Controller
 {
+    /**
+     * Compress image file if it's JPG/PNG and larger than 10MB.
+     * Returns the path of the stored file.
+     */
+    private function storeAndCompressFile($file, string $storagePath): string
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+        $mimeType = $file->getMimeType();
+        $fileSize = $file->getSize();
+        $maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        
+        // Check if file is a compressible image AND larger than 10MB
+        $compressibleTypes = ['jpg', 'jpeg', 'png'];
+        $compressibleMimes = ['image/jpeg', 'image/jpg', 'image/png'];
+        
+        $isCompressibleImage = in_array($extension, $compressibleTypes) || in_array($mimeType, $compressibleMimes);
+        
+        // Only compress if it's an image AND file size > 10MB
+        if ($isCompressibleImage && $fileSize > $maxSize) {
+            try {
+                // Generate unique filename
+                $filename = uniqid() . '_' . time() . '.' . $extension;
+                $fullPath = $storagePath . '/' . $filename;
+                
+                // Read and compress image
+                $image = Image::read($file->getRealPath());
+                
+                // Resize if too large (max 1920px width)
+                if ($image->width() > 1920) {
+                    $image->scale(width: 1920);
+                }
+                
+                // Encode with compression
+                if (in_array($extension, ['jpg', 'jpeg']) || $mimeType === 'image/jpeg') {
+                    $encoded = $image->toJpeg(75); // 75% quality
+                } else {
+                    $encoded = $image->toPng(); // PNG compression
+                }
+                
+                // Store compressed image
+                Storage::disk('public')->put($fullPath, (string) $encoded);
+                
+                return $fullPath;
+            } catch (\Exception $e) {
+                // If compression fails, fall back to normal storage
+                return $file->store($storagePath, 'public');
+            }
+        }
+        
+        // Files under 10MB or non-image files, store normally
+        return $file->store($storagePath, 'public');
+    }
+
     /**
      * Display a listing of documents for a project.
      * Includes both Documents (versioned) and Task Attachments.
@@ -77,7 +131,7 @@ class DocumentController extends Controller
         ]);
 
         $file = $request->file('file');
-        $path = $file->store('documents/' . $project->id, 'public');
+        $path = $this->storeAndCompressFile($file, 'documents/' . $project->id);
 
         // Check if upload is from overview
         $fromOverview = $request->input('from_overview', false);
@@ -136,7 +190,7 @@ class DocumentController extends Controller
         $newVersionNum = $currentVersion + 1;
 
         $file = $request->file('file');
-        $path = $file->store('documents/' . $document->project_id, 'public');
+        $path = $this->storeAndCompressFile($file, 'documents/' . $document->project_id);
 
         $version = $document->versions()->create([
             'file_path' => $path,

@@ -72,27 +72,17 @@
         </div>
     </div>
 
-    <!-- Legend Section -->
+    <!-- Legend Section (Dynamic) -->
     <div class="card">
         <div class="card-body">
             <div style="display: flex; align-items: center; gap: 2rem; flex-wrap: wrap;">
                 <span style="font-size: 0.875rem; font-weight: 600; color: #475569;">Keterangan Status:</span>
+                @foreach(\App\Enums\TaskStatus::cases() as $status)
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div style="width: 1rem; height: 1rem; border-radius: 4px; background-color: #6b7280;"></div>
-                    <span style="font-size: 0.875rem; color: #64748b;">Todo</span>
+                    <div style="width: 1rem; height: 1rem; border-radius: 4px; background-color: {{ $status->hexColor() }};"></div>
+                    <span style="font-size: 0.875rem; color: #64748b;">{{ $status->label() }}</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div style="width: 1rem; height: 1rem; border-radius: 4px; background-color: #6366f1;"></div>
-                    <span style="font-size: 0.875rem; color: #64748b;">In Progress</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div style="width: 1rem; height: 1rem; border-radius: 4px; background-color: #f59e0b;"></div>
-                    <span style="font-size: 0.875rem; color: #64748b;">Review</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div style="width: 1rem; height: 1rem; border-radius: 4px; background-color: #10b981;"></div>
-                    <span style="font-size: 0.875rem; color: #64748b;">Done</span>
-                </div>
+                @endforeach
             </div>
         </div>
     </div>
@@ -141,11 +131,11 @@
             .gantt .tick { stroke: #e2e8f0; stroke-dasharray: 5,5; }
             .gantt .today-highlight { fill: #dbeafe !important; opacity: 0.5; }
             
-            /* Gantt Status Colors */
-            .bar-todo .bar { fill: #d1d5db !important; } .bar-todo .bar-progress { fill: #9ca3af !important; }
-            .bar-in_progress .bar { fill: #a5b4fc !important; } .bar-in_progress .bar-progress { fill: #6366f1 !important; }
-            .bar-review .bar { fill: #fcd34d !important; } .bar-review .bar-progress { fill: #f59e0b !important; }
-            .bar-done .bar { fill: #6ee7b7 !important; } .bar-done .bar-progress { fill: #10b981 !important; }
+            /* Gantt Status Colors (Dynamic) */
+            @foreach(\App\Enums\TaskStatus::cases() as $status)
+            .bar-{{ $status->value }} .bar { fill: {{ $status->ganttColors()['bar'] }} !important; }
+            .bar-{{ $status->value }} .bar-progress { fill: {{ $status->ganttColors()['progress'] }} !important; }
+            @endforeach
             
             /* Popup Animation */
             @keyframes popIn {

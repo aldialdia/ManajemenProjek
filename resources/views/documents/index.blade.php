@@ -143,7 +143,7 @@
                         <div class="doc-dropdown-menu">
                             @php $isAttachment = isset($doc->is_attachment) && $doc->is_attachment; @endphp
                             @if($isAttachment)
-                                <a href="{{ asset('storage/' . $doc->latestVersion->file_path) }}" class="doc-dropdown-item" download>
+                                <a href="{{ route('attachments.download', $doc->attachment_id) }}" class="doc-dropdown-item">
                                     <i class="fas fa-download"></i> Download
                                 </a>
                                 @if(isset($doc->source_task) && $doc->source_task)

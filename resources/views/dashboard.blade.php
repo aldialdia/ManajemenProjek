@@ -161,17 +161,6 @@
             </div>
             <span class="stat-note">Bulan ini</span>
         </div>
-
-        <div class="stat-card-dashboard stat-orange">
-            <div class="stat-icon-circle">
-                <i class="fas fa-users"></i>
-            </div>
-            <div class="stat-info">
-                <span class="stat-label">Anggota Tim</span>
-                <span class="stat-value">{{ $totalTeamMembers }}</span>
-            </div>
-            <span class="stat-note">Di proyek Anda</span>
-        </div>
     </div>
 
     <!-- Charts Row -->
@@ -439,7 +428,7 @@
 
             .stats-row {
                 display: grid;
-                grid-template-columns: repeat(4, 1fr);
+                grid-template-columns: repeat(3, 1fr);
                 gap: 1rem;
                 margin-bottom: 1.5rem;
             }

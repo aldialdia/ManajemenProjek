@@ -128,19 +128,8 @@ class TaskController extends Controller
             $query->whereIn('project_id', $user->projects()->pluck('projects.id'));
         }
 
-        // Color mapping (Hex) for FullCalendar
-        $colorMap = [
-            'secondary' => '#6b7280', // Gray-500 (Todo)
-            'primary' => '#6366f1',   // Indigo-500 (In Progress)
-            'warning' => '#f59e0b',   // Amber-500 (Review)
-            'success' => '#10b981',   // Emerald-500 (Done)
-            'info' => '#0ea5e9',      // Sky-500
-            'danger' => '#f43f5e',    // Rose-500
-        ];
-
-        $calendarTasks = $query->get()->map(function ($task) use ($colorMap) {
-            $colorKey = $task->status->color();
-            $hexColor = $colorMap[$colorKey] ?? '#6b7280';
+        $calendarTasks = $query->get()->map(function ($task) {
+            $hexColor = $task->status->hexColor();
             
             return [
                 'id' => $task->id,
