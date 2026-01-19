@@ -483,6 +483,318 @@
     </div>
 
     @stack('scripts')
+
+    <!-- Global Custom Confirm Modal -->
+    <div id="confirmModal" class="confirm-modal-overlay" style="display: none;">
+        <div class="confirm-modal-box">
+            <div class="confirm-modal-header">
+                <div class="confirm-modal-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3 class="confirm-modal-title">Konfirmasi</h3>
+            </div>
+            <div class="confirm-modal-body">
+                <p id="confirmModalMessage">Apakah Anda yakin?</p>
+            </div>
+            <div class="confirm-modal-footer">
+                <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="closeConfirmModal()">
+                    <i class="fas fa-times"></i> Batal
+                </button>
+                <button type="button" class="confirm-modal-btn confirm-modal-btn-confirm" id="confirmModalOkBtn">
+                    <i class="fas fa-check"></i> Ya, Lanjutkan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Info Modal -->
+    <div id="infoModal" class="confirm-modal-overlay" style="display: none;">
+        <div class="confirm-modal-box">
+            <div class="confirm-modal-header">
+                <div class="confirm-modal-icon info">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <h3 class="confirm-modal-title">Informasi</h3>
+            </div>
+            <div class="confirm-modal-body">
+                <p id="infoModalMessage">Pesan informasi</p>
+            </div>
+            <div class="confirm-modal-footer" style="justify-content: center;">
+                <button type="button" class="confirm-modal-btn confirm-modal-btn-confirm" onclick="closeInfoModal()">
+                    <i class="fas fa-check"></i> OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Custom Confirm Modal - Premium Design */
+        .confirm-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: modalFadeIn 0.25s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        @keyframes iconPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .confirm-modal-box {
+            background: white;
+            border-radius: 24px;
+            box-shadow:
+                0 0 0 1px rgba(0, 0, 0, 0.03),
+                0 10px 15px -3px rgba(0, 0, 0, 0.1),
+                0 20px 40px -10px rgba(0, 0, 0, 0.15),
+                0 40px 80px -20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            margin: 1rem;
+            overflow: hidden;
+            animation: modalSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .confirm-modal-header {
+            background: linear-gradient(180deg, #fafafa 0%, white 100%);
+            padding: 2.5rem 2rem 1.25rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .confirm-modal-icon {
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            border: 3px solid #fed7aa;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+            font-size: 2rem;
+            color: #ea580c;
+            box-shadow: 0 8px 24px -4px rgba(249, 115, 22, 0.25);
+            animation: iconPulse 2s ease-in-out infinite;
+        }
+
+        .confirm-modal-icon.info {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-color: #93c5fd;
+            color: #2563eb;
+            box-shadow: 0 8px 24px -4px rgba(37, 99, 235, 0.2);
+        }
+
+        .confirm-modal-icon.success {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-color: #86efac;
+            color: #16a34a;
+            box-shadow: 0 8px 24px -4px rgba(22, 163, 74, 0.2);
+        }
+
+        .confirm-modal-title {
+            font-size: 1.375rem;
+            font-weight: 700;
+            margin: 0;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+
+        .confirm-modal-body {
+            padding: 0.75rem 2rem 1.75rem;
+            text-align: center;
+        }
+
+        .confirm-modal-body p {
+            color: #64748b;
+            font-size: 0.9375rem;
+            line-height: 1.7;
+            margin: 0;
+        }
+
+        .confirm-modal-footer {
+            padding: 0 1.5rem 1.75rem;
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+
+        .confirm-modal-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.75rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 120px;
+        }
+
+        .confirm-modal-btn-cancel {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        .confirm-modal-btn-cancel:hover {
+            background: #e2e8f0;
+            color: #1e293b;
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+        }
+
+        .confirm-modal-btn-cancel:active {
+            transform: translateY(0);
+        }
+
+        .confirm-modal-btn-confirm {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: white;
+            box-shadow: 0 4px 14px -2px rgba(249, 115, 22, 0.4);
+        }
+
+        .confirm-modal-btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -4px rgba(249, 115, 22, 0.5);
+        }
+
+        .confirm-modal-btn-confirm:active {
+            transform: translateY(0);
+        }
+
+        .confirm-modal-btn-confirm.danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            box-shadow: 0 4px 14px -2px rgba(239, 68, 68, 0.4);
+        }
+
+        .confirm-modal-btn-confirm.danger:hover {
+            box-shadow: 0 8px 20px -4px rgba(239, 68, 68, 0.5);
+        }
+    </style>
+
+    <script>
+        // Global confirm modal handler
+        let confirmModalCallback = null;
+
+        function showConfirmModal(message, onConfirm) {
+            const modal = document.getElementById('confirmModal');
+            const messageEl = document.getElementById('confirmModalMessage');
+            const okBtn = document.getElementById('confirmModalOkBtn');
+
+            messageEl.textContent = message;
+            confirmModalCallback = onConfirm;
+
+            // Remove old listener and add new one
+            const newOkBtn = okBtn.cloneNode(true);
+            okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+            newOkBtn.id = 'confirmModalOkBtn';
+            newOkBtn.innerHTML = '<i class="fas fa-check"></i> Ya, Lanjutkan';
+
+            newOkBtn.addEventListener('click', function () {
+                closeConfirmModal();
+                if (confirmModalCallback) {
+                    confirmModalCallback();
+                }
+            });
+
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirmModal');
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+            confirmModalCallback = null;
+        }
+
+        // Close on overlay click
+        document.getElementById('confirmModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeConfirmModal();
+            }
+        });
+
+        // Close on Escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeConfirmModal();
+            }
+        });
+
+        // Helper function for form submission with confirmation
+        function confirmSubmit(form, message) {
+            showConfirmModal(message, function () {
+                form.submit();
+            });
+            return false;
+        }
+
+        // Info modal functions
+        function showInfoModal(message) {
+            const modal = document.getElementById('infoModal');
+            const messageEl = document.getElementById('infoModalMessage');
+            messageEl.textContent = message;
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeInfoModal() {
+            const modal = document.getElementById('infoModal');
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        // Close info modal on overlay click
+        document.getElementById('infoModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeInfoModal();
+            }
+        });
+    </script>
 </body>
 
 </html>

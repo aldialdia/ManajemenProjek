@@ -86,7 +86,7 @@
                                         || auth()->user()->isManagerInProject($task->project);
                                 @endphp
                                 @if($canDeleteAttachment)
-                                    <form action="{{ route('attachments.destroy', $attachment) }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus file ini?')">
+                                    <form action="{{ route('attachments.destroy', $attachment) }}" method="POST" style="display: inline;" onsubmit="return confirmSubmit(this, 'Hapus file ini?')">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn-icon-action delete" title="Hapus">
@@ -110,15 +110,23 @@
                         <form action="{{ route('tasks.attachments.store', $task) }}" method="POST" enctype="multipart/form-data" class="attachment-form">
                             @csrf
                             <div class="file-input-wrapper">
-                                <input type="file" name="file" id="task-file" class="file-input" required onchange="document.getElementById('task-file-name').textContent = this.files[0].name">
+                                <input type="file" name="file" id="task-file" class="file-input" required 
+                                    onchange="handleTaskFileChange(this)" 
+                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt,.zip,.rar,.sql,.js,.php,.html,.css,.json,.py">
                                 <label for="task-file" class="file-label">
                                     <i class="fas fa-folder-open"></i> Pilih file
                                 </label>
                                 <span class="file-name-display" id="task-file-name">Tidak ada file dipilih</span>
-                                <span class="file-size-hint">(Max 10MB)</span>
+                                <button type="button" id="task-file-clear" class="btn-clear-file" onclick="clearTaskFile()" style="display: none;">
+                                    <i class="fas fa-times"></i>
+                                </button>
                             </div>
-                            <button type="submit" class="btn-upload">Upload</button>
+                            <button type="submit" id="task-upload-btn" class="btn-upload" disabled>Upload</button>
                         </form>
+                        <div class="allowed-formats-hint">
+                            <i class="fas fa-info-circle"></i>
+                            <span><strong>Format:</strong> PDF, DOC, XLS, PPT, PNG, JPG, GIF, TXT, ZIP, RAR, SQL, JS, PHP, HTML, CSS, JSON, PY — Max 10MB</span>
+                        </div>
                     </div>
                 @endauth
             </div>
@@ -147,7 +155,7 @@
                                     <span class="chat-time">{{ $comment->created_at->format('H:i') }}</span>
                                     @if($isOwn)
                                         <form action="{{ route('comments.destroy', $comment) }}" method="POST" style="display: inline;"
-                                            onsubmit="return confirm('Hapus komentar ini?')">
+                                            onsubmit="return confirmSubmit(this, 'Hapus komentar ini?')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="chat-delete" title="Hapus">
@@ -266,7 +274,7 @@
                         </a>
 
                         <form action="{{ route('tasks.destroy', $task) }}" method="POST"
-                            onsubmit="return confirm('Are you sure you want to delete this task?')">
+                            onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus tugas ini?')">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-danger" style="width: 100%;">
@@ -683,6 +691,55 @@
             background: #4f46e5;
         }
 
+        .allowed-formats-hint {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            padding: 0.625rem 0.875rem;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: #0369a1;
+        }
+
+        .allowed-formats-hint i {
+            color: #0ea5e9;
+            margin-top: 0.125rem;
+        }
+
+        .btn-upload:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-upload:disabled:hover {
+            background: #cbd5e1;
+        }
+
+        .btn-clear-file {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: #fee2e2;
+            color: #ef4444;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .btn-clear-file:hover {
+            background: #fecaca;
+            color: #dc2626;
+        }
+
         /* Attachment Options */
         .btn-lampirkan {
             display: inline-flex;
@@ -815,4 +872,36 @@
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
     </style>
+
+<script>
+    // Handle file selection
+    function handleTaskFileChange(input) {
+        const fileName = document.getElementById('task-file-name');
+        const uploadBtn = document.getElementById('task-upload-btn');
+        const clearBtn = document.getElementById('task-file-clear');
+        
+        if (input.files && input.files[0]) {
+            fileName.textContent = input.files[0].name;
+            uploadBtn.disabled = false;
+            clearBtn.style.display = 'flex';
+        } else {
+            fileName.textContent = 'Tidak ada file dipilih';
+            uploadBtn.disabled = true;
+            clearBtn.style.display = 'none';
+        }
+    }
+    
+    // Clear file input
+    function clearTaskFile() {
+        const fileInput = document.getElementById('task-file');
+        const fileName = document.getElementById('task-file-name');
+        const uploadBtn = document.getElementById('task-upload-btn');
+        const clearBtn = document.getElementById('task-file-clear');
+        
+        fileInput.value = '';
+        fileName.textContent = 'Tidak ada file dipilih';
+        uploadBtn.disabled = true;
+        clearBtn.style.display = 'none';
+    }
+</script>
 @endsection

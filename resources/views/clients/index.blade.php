@@ -57,7 +57,7 @@
                                     <i class="fas fa-edit"></i> Edit
                                 </a>
                                 <form action="{{ route('clients.destroy', $client) }}" method="POST"
-                                    onsubmit="return confirm('Delete this client?')">
+                                    onsubmit="return confirmSubmit(this, 'Hapus client ini?')">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="dropdown-item text-danger">
