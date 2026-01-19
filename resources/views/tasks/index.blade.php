@@ -132,7 +132,7 @@
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     <form action="{{ route('tasks.destroy', $task) }}" method="POST"
-                                        onsubmit="return confirm('Hapus tugas ini?')">
+                                        onsubmit="return confirmSubmit(this, 'Hapus tugas ini?')">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn-icon text-danger" title="Hapus">
@@ -185,7 +185,7 @@
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         <form action="{{ route('tasks.destroy', $subtask) }}" method="POST"
-                                            onsubmit="return confirm('Hapus sub-task ini?')">
+                                            onsubmit="return confirmSubmit(this, 'Hapus sub-task ini?')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn-icon text-danger" title="Hapus">

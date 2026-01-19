@@ -86,14 +86,14 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
-    // Comments
-    Route::post('/tasks/{task}/comments', [CommentController::class, 'storeForTask'])->name('tasks.comments.store');
-    Route::post('/projects/{project}/comments', [CommentController::class, 'storeForProject'])->name('projects.comments.store');
+    // Comments (dengan rate limiting untuk mencegah spam)
+    Route::post('/tasks/{task}/comments', [CommentController::class, 'storeForTask'])->name('tasks.comments.store')->middleware('throttle:30,1');
+    Route::post('/projects/{project}/comments', [CommentController::class, 'storeForProject'])->name('projects.comments.store')->middleware('throttle:30,1');
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 
-    // Attachments
-    Route::post('/tasks/{task}/attachments', [AttachmentController::class, 'storeForTask'])->name('tasks.attachments.store');
-    Route::post('/projects/{project}/attachments', [AttachmentController::class, 'storeForProject'])->name('projects.attachments.store');
+    // Attachments (dengan rate limiting)
+    Route::post('/tasks/{task}/attachments', [AttachmentController::class, 'storeForTask'])->name('tasks.attachments.store')->middleware('throttle:20,1');
+    Route::post('/projects/{project}/attachments', [AttachmentController::class, 'storeForProject'])->name('projects.attachments.store')->middleware('throttle:20,1');
     Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download'])->name('attachments.download');
     Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('attachments.destroy');
 

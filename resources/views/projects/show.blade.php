@@ -16,7 +16,7 @@
                                 <i class="fas fa-edit"></i>
                             </a>
                             <form action="{{ route('projects.destroy', $project) }}" method="POST" style="display: inline;"
-                                onsubmit="return confirm('Apakah Anda yakin ingin menghapus project ini? Semua tugas dalam project juga akan terhapus.');">
+                                onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus project ini? Semua tugas dalam project juga akan terhapus.')">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn-sm btn-delete-sm">
@@ -205,7 +205,7 @@
                                 <span class="chat-time">{{ $comment->created_at->format('H:i') }}</span>
                                 @if($isOwn)
                                     <form action="{{ route('comments.destroy', $comment) }}" method="POST" style="display: inline;"
-                                        onsubmit="return confirm('Hapus komentar ini?')">
+                                        onsubmit="return confirmSubmit(this, 'Hapus komentar ini?')">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="chat-delete" title="Hapus">

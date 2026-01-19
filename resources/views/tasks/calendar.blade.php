@@ -72,27 +72,17 @@
         </div>
     </div>
 
-    <!-- Legend Section -->
+    <!-- Legend Section (Dynamic) -->
     <div class="card">
         <div class="card-body">
             <div style="display: flex; align-items: center; gap: 2rem; flex-wrap: wrap;">
                 <span style="font-size: 0.875rem; font-weight: 600; color: #475569;">Keterangan Status:</span>
+                @foreach(\App\Enums\TaskStatus::cases() as $status)
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div style="width: 1rem; height: 1rem; border-radius: 4px; background-color: #6b7280;"></div>
-                    <span style="font-size: 0.875rem; color: #64748b;">Todo</span>
+                    <div style="width: 1rem; height: 1rem; border-radius: 4px; background-color: {{ $status->hexColor() }};"></div>
+                    <span style="font-size: 0.875rem; color: #64748b;">{{ $status->label() }}</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div style="width: 1rem; height: 1rem; border-radius: 4px; background-color: #6366f1;"></div>
-                    <span style="font-size: 0.875rem; color: #64748b;">In Progress</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div style="width: 1rem; height: 1rem; border-radius: 4px; background-color: #f59e0b;"></div>
-                    <span style="font-size: 0.875rem; color: #64748b;">Review</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div style="width: 1rem; height: 1rem; border-radius: 4px; background-color: #10b981;"></div>
-                    <span style="font-size: 0.875rem; color: #64748b;">Done</span>
-                </div>
+                @endforeach
             </div>
         </div>
     </div>
@@ -129,6 +119,45 @@
             .bar-wrapper { cursor: pointer; }
             .bar-progress { fill: #6366f1 !important; }
             
+            /* Hide default popup, show on bar hover */
+            .gantt .popup-wrapper { 
+                display: none !important;
+            }
+            
+            /* Custom tooltip on hover */
+            .bar-wrapper {
+                position: relative;
+            }
+            
+            .gantt-tooltip {
+                position: fixed;
+                background: white;
+                border-radius: 8px;
+                padding: 0.75rem 1rem;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+                z-index: 1000;
+                font-size: 0.8rem;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.2s;
+                min-width: 150px;
+            }
+            
+            .gantt-tooltip.show {
+                opacity: 1;
+            }
+            
+            .gantt-tooltip-title {
+                font-weight: 600;
+                color: #1e293b;
+                margin-bottom: 0.25rem;
+            }
+            
+            .gantt-tooltip-dates {
+                color: #64748b;
+                font-size: 0.75rem;
+            }
+            
             /* Gantt Header - Month sections more visible */
             .gantt .grid-header { background: #f8fafc; }
             .gantt .upper-header rect { fill: #e0e7ff !important; }
@@ -141,11 +170,11 @@
             .gantt .tick { stroke: #e2e8f0; stroke-dasharray: 5,5; }
             .gantt .today-highlight { fill: #dbeafe !important; opacity: 0.5; }
             
-            /* Gantt Status Colors */
-            .bar-todo .bar { fill: #d1d5db !important; } .bar-todo .bar-progress { fill: #9ca3af !important; }
-            .bar-in_progress .bar { fill: #a5b4fc !important; } .bar-in_progress .bar-progress { fill: #6366f1 !important; }
-            .bar-review .bar { fill: #fcd34d !important; } .bar-review .bar-progress { fill: #f59e0b !important; }
-            .bar-done .bar { fill: #6ee7b7 !important; } .bar-done .bar-progress { fill: #10b981 !important; }
+            /* Gantt Status Colors (Dynamic) */
+            @foreach(\App\Enums\TaskStatus::cases() as $status)
+            .bar-{{ $status->value }} .bar { fill: {{ $status->ganttColors()['bar'] }} !important; }
+            .bar-{{ $status->value }} .bar-progress { fill: {{ $status->ganttColors()['progress'] }} !important; }
+            @endforeach
             
             /* Popup Animation */
             @keyframes popIn {
@@ -298,6 +327,43 @@
                             });
                         }
                     }, 500);
+                    
+                    // Add custom hover tooltip functionality
+                    setTimeout(function() {
+                        // Create tooltip element
+                        const tooltip = document.createElement('div');
+                        tooltip.className = 'gantt-tooltip';
+                        tooltip.innerHTML = '<div class="gantt-tooltip-title"></div><div class="gantt-tooltip-dates"></div>';
+                        document.body.appendChild(tooltip);
+                        
+                        const bars = document.querySelectorAll('.bar-wrapper');
+                        bars.forEach(function(bar) {
+                            bar.addEventListener('mouseenter', function(e) {
+                                const barLabel = bar.querySelector('.bar-label');
+                                const taskName = barLabel ? barLabel.textContent : 'Task';
+                                
+                                // Get task data from ganttTasks array
+                                const taskId = bar.getAttribute('data-id');
+                                const task = ganttTasks.find(t => t.id == taskId);
+                                
+                                tooltip.querySelector('.gantt-tooltip-title').textContent = taskName;
+                                tooltip.querySelector('.gantt-tooltip-dates').textContent = task 
+                                    ? `${task.start} → ${task.end}` 
+                                    : '';
+                                
+                                tooltip.classList.add('show');
+                            });
+                            
+                            bar.addEventListener('mousemove', function(e) {
+                                tooltip.style.left = (e.clientX + 15) + 'px';
+                                tooltip.style.top = (e.clientY + 15) + 'px';
+                            });
+                            
+                            bar.addEventListener('mouseleave', function() {
+                                tooltip.classList.remove('show');
+                            });
+                        });
+                    }, 600);
                 }
 
                 function handleDateUpdate(info) {
@@ -385,6 +451,17 @@
             document.getElementById('deadline-popup').addEventListener('click', function(e) {
                 if (e.target === this) {
                     closeDeadlinePopup();
+                }
+            });
+            
+            // Hide Gantt popup when clicking outside
+            document.addEventListener('click', function(e) {
+                // Check if click is NOT on a bar or the popup itself
+                if (!e.target.closest('.bar-wrapper') && !e.target.closest('.popup-wrapper')) {
+                    // Remove all Gantt popups
+                    document.querySelectorAll('.popup-wrapper').forEach(function(popup) {
+                        popup.remove();
+                    });
                 }
             });
         </script>

@@ -5,7 +5,7 @@
     'icon' => 'trash',
 ])
 
-<form action="{{ $action }}" method="POST" class="inline-form" onsubmit="return confirm('{{ $confirm }}')">
+<form action="{{ $action }}" method="POST" class="inline-form" onsubmit="return confirmSubmit(this, '{{ $confirm }}')">
     @csrf
     @method($method)
     <button type="submit" {{ $attributes->merge(['class' => 'btn btn-danger']) }}>

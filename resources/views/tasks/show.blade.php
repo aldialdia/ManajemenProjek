@@ -45,7 +45,7 @@
             <div class="card" style="margin-bottom: 1.5rem;">
                 <div class="card-header">
                     <i class="fas fa-paperclip"></i>
-                    Attachments ({{ $task->attachments->count() }})
+                    Dokumen ({{ $task->attachments->count() }})
                 </div>
                 
                 <!-- File List -->
@@ -57,9 +57,9 @@
                                     <i class="fas fa-image" style="color: #6366f1;"></i>
                                 @elseif($attachment->mime_type === 'application/pdf')
                                     <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
-                                @elseif(str_contains($attachment->mime_type, 'word'))
+                                @elseif(str_contains($attachment->mime_type ?? '', 'word'))
                                     <i class="fas fa-file-word" style="color: #2563eb;"></i>
-                                @elseif(str_contains($attachment->mime_type, 'excel') || str_contains($attachment->mime_type, 'spreadsheet'))
+                                @elseif(str_contains($attachment->mime_type ?? '', 'excel') || str_contains($attachment->mime_type ?? '', 'spreadsheet'))
                                     <i class="fas fa-file-excel" style="color: #16a34a;"></i>
                                 @else
                                     <i class="fas fa-file-alt" style="color: #64748b;"></i>
@@ -67,6 +67,7 @@
                             </div>
                             <div class="attachment-info">
                                 <a href="{{ route('attachments.download', $attachment) }}" class="attachment-name" target="_blank">{{ $attachment->filename }}</a>
+                                
                                 <div class="attachment-meta">
                                     <span>{{ $attachment->human_size }}</span>
                                     <span>•</span>
@@ -76,7 +77,7 @@
                                 </div>
                             </div>
                             <div class="attachment-actions">
-                                <a href="{{ route('attachments.download', $attachment) }}" class="btn-icon-action" title="Download">
+                                <a href="{{ route('attachments.download', $attachment) }}" class="btn-icon-action" title="Download" target="_blank">
                                     <i class="fas fa-download"></i>
                                 </a>
                                 @php
@@ -85,7 +86,7 @@
                                         || auth()->user()->isManagerInProject($task->project);
                                 @endphp
                                 @if($canDeleteAttachment)
-                                    <form action="{{ route('attachments.destroy', $attachment) }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus file ini?')">
+                                    <form action="{{ route('attachments.destroy', $attachment) }}" method="POST" style="display: inline;" onsubmit="return confirmSubmit(this, 'Hapus file ini?')">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn-icon-action delete" title="Hapus">
@@ -98,28 +99,34 @@
                     @empty
                         <div class="attachment-empty">
                             <i class="fas fa-folder-open"></i>
-                            <p>Belum ada file</p>
+                            <p>Belum ada dokumen</p>
                         </div>
                     @endforelse
                 </div>
 
-                <!-- Upload Form -->
+                <!-- Upload Form - Hanya File -->
                 @auth
                     <div class="attachment-form-wrapper">
                         <form action="{{ route('tasks.attachments.store', $task) }}" method="POST" enctype="multipart/form-data" class="attachment-form">
                             @csrf
                             <div class="file-input-wrapper">
-                                <input type="file" name="file" id="task-file" class="file-input" required onchange="document.getElementById('task-file-name').textContent = this.files[0].name">
+                                <input type="file" name="file" id="task-file" class="file-input" required 
+                                    onchange="handleTaskFileChange(this)" 
+                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt,.zip,.rar,.sql,.js,.php,.html,.css,.json,.py">
                                 <label for="task-file" class="file-label">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <span>Pilih file</span>
+                                    <i class="fas fa-folder-open"></i> Pilih file
                                 </label>
                                 <span class="file-name-display" id="task-file-name">Tidak ada file dipilih</span>
+                                <button type="button" id="task-file-clear" class="btn-clear-file" onclick="clearTaskFile()" style="display: none;">
+                                    <i class="fas fa-times"></i>
+                                </button>
                             </div>
-                            <button type="submit" class="btn-upload">
-                                Upload
-                            </button>
+                            <button type="submit" id="task-upload-btn" class="btn-upload" disabled>Upload</button>
                         </form>
+                        <div class="allowed-formats-hint">
+                            <i class="fas fa-info-circle"></i>
+                            <span><strong>Format:</strong> PDF, DOC, XLS, PPT, PNG, JPG, GIF, TXT, ZIP, RAR, SQL, JS, PHP, HTML, CSS, JSON, PY — Max 10MB</span>
+                        </div>
                     </div>
                 @endauth
             </div>
@@ -148,7 +155,7 @@
                                     <span class="chat-time">{{ $comment->created_at->format('H:i') }}</span>
                                     @if($isOwn)
                                         <form action="{{ route('comments.destroy', $comment) }}" method="POST" style="display: inline;"
-                                            onsubmit="return confirm('Hapus komentar ini?')">
+                                            onsubmit="return confirmSubmit(this, 'Hapus komentar ini?')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="chat-delete" title="Hapus">
@@ -267,7 +274,7 @@
                         </a>
 
                         <form action="{{ route('tasks.destroy', $task) }}" method="POST"
-                            onsubmit="return confirm('Are you sure you want to delete this task?')">
+                            onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus tugas ini?')">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-danger" style="width: 100%;">
@@ -662,6 +669,12 @@
             color: #64748b;
         }
 
+        .file-size-hint {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
         .btn-upload {
             padding: 0.5rem 1rem;
             background: #6366f1;
@@ -677,5 +690,218 @@
         .btn-upload:hover {
             background: #4f46e5;
         }
+
+        .allowed-formats-hint {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            padding: 0.625rem 0.875rem;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: #0369a1;
+        }
+
+        .allowed-formats-hint i {
+            color: #0ea5e9;
+            margin-top: 0.125rem;
+        }
+
+        .btn-upload:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-upload:disabled:hover {
+            background: #cbd5e1;
+        }
+
+        .btn-clear-file {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: #fee2e2;
+            color: #ef4444;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .btn-clear-file:hover {
+            background: #fecaca;
+            color: #dc2626;
+        }
+
+        /* Attachment Options */
+        .btn-lampirkan {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1rem;
+            background: #6366f1;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-lampirkan:hover {
+            background: #4f46e5;
+        }
+
+        .attachment-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .attachment-options-row {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn-cancel-text {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .btn-cancel-text:hover {
+            color: #64748b;
+            text-decoration: underline;
+        }
+
+        .option-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1rem;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            color: #475569;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-btn:hover {
+            border-color: #6366f1;
+            color: #6366f1;
+        }
+
+        .option-btn.file i { color: #6366f1; }
+        .option-btn.link i { color: #22c55e; }
+
+        .inline-form-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .inline-form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: #f8fafc;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .inline-form-header span {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-cancel {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 0.25rem;
+        }
+
+        .btn-cancel:hover {
+            color: #ef4444;
+        }
+
+        .inline-form-card .attachment-form {
+            padding: 1rem;
+        }
+
+        .link-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
     </style>
+
+<script>
+    // Handle file selection
+    function handleTaskFileChange(input) {
+        const fileName = document.getElementById('task-file-name');
+        const uploadBtn = document.getElementById('task-upload-btn');
+        const clearBtn = document.getElementById('task-file-clear');
+        
+        if (input.files && input.files[0]) {
+            fileName.textContent = input.files[0].name;
+            uploadBtn.disabled = false;
+            clearBtn.style.display = 'flex';
+        } else {
+            fileName.textContent = 'Tidak ada file dipilih';
+            uploadBtn.disabled = true;
+            clearBtn.style.display = 'none';
+        }
+    }
+    
+    // Clear file input
+    function clearTaskFile() {
+        const fileInput = document.getElementById('task-file');
+        const fileName = document.getElementById('task-file-name');
+        const uploadBtn = document.getElementById('task-upload-btn');
+        const clearBtn = document.getElementById('task-file-clear');
+        
+        fileInput.value = '';
+        fileName.textContent = 'Tidak ada file dipilih';
+        uploadBtn.disabled = true;
+        clearBtn.style.display = 'none';
+    }
+</script>
 @endsection

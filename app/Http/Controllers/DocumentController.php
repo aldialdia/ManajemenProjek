@@ -8,9 +8,63 @@ use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Intervention\Image\Laravel\Facades\Image;
 
 class DocumentController extends Controller
 {
+    /**
+     * Compress image file if it's JPG/PNG and larger than 10MB.
+     * Returns the path of the stored file.
+     */
+    private function storeAndCompressFile($file, string $storagePath): string
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+        $mimeType = $file->getMimeType();
+        $fileSize = $file->getSize();
+        $maxSize = 10 * 1024 * 1024; // 10MB in bytes
+
+        // Check if file is a compressible image AND larger than 10MB
+        $compressibleTypes = ['jpg', 'jpeg', 'png'];
+        $compressibleMimes = ['image/jpeg', 'image/jpg', 'image/png'];
+
+        $isCompressibleImage = in_array($extension, $compressibleTypes) || in_array($mimeType, $compressibleMimes);
+
+        // Only compress if it's an image AND file size > 10MB
+        if ($isCompressibleImage && $fileSize > $maxSize) {
+            try {
+                // Generate unique filename
+                $filename = uniqid() . '_' . time() . '.' . $extension;
+                $fullPath = $storagePath . '/' . $filename;
+
+                // Read and compress image
+                $image = Image::read($file->getRealPath());
+
+                // Resize if too large (max 1920px width)
+                if ($image->width() > 1920) {
+                    $image->scale(width: 1920);
+                }
+
+                // Encode with compression
+                if (in_array($extension, ['jpg', 'jpeg']) || $mimeType === 'image/jpeg') {
+                    $encoded = $image->toJpeg(75); // 75% quality
+                } else {
+                    $encoded = $image->toPng(); // PNG compression
+                }
+
+                // Store compressed image
+                Storage::disk('public')->put($fullPath, (string) $encoded);
+
+                return $fullPath;
+            } catch (\Exception $e) {
+                // If compression fails, fall back to normal storage
+                return $file->store($storagePath, 'public');
+            }
+        }
+
+        // Files under 10MB or non-image files, store normally
+        return $file->store($storagePath, 'public');
+    }
+
     /**
      * Display a listing of documents for a project.
      * Includes both Documents (versioned) and Task Attachments.
@@ -19,13 +73,13 @@ class DocumentController extends Controller
     {
         // Get versioned documents (shared with all project members)
         $documents = $project->documents()->with(['latestVersion.uploader', 'project'])->latest()->get();
-        
+
         // Get ALL task attachments from ALL tasks in this project
         // All project members can see all attachments
         $taskAttachments = \App\Models\Attachment::whereHasMorph('attachable', [\App\Models\Task::class], function ($query) use ($project) {
             $query->where('project_id', $project->id);
         })
-        ->with(['uploader', 'attachable'])->latest()->get();
+            ->with(['uploader', 'attachable'])->latest()->get();
 
         // Transform attachments to match document structure for unified display
         $attachmentDocs = $taskAttachments->map(function ($att) use ($project) {
@@ -70,14 +124,27 @@ class DocumentController extends Controller
      */
     public function store(Request $request, Project $project)
     {
+        // Allowed file extensions
+        $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'gif', 'txt', 'zip', 'rar', 'sql', 'js', 'php', 'html', 'css', 'json', 'py'];
+
         $request->validate([
             'title' => 'required|string|max:255',
-            'file' => 'required|file|max:10240', // 10MB Max
+            'file' => [
+                'required',
+                'file',
+                'max:10240', // 10MB Max
+                function ($attribute, $value, $fail) use ($allowedExtensions) {
+                    $extension = strtolower($value->getClientOriginalExtension());
+                    if (!in_array($extension, $allowedExtensions)) {
+                        $fail('Format file tidak diizinkan. Format yang diizinkan: ' . implode(', ', $allowedExtensions));
+                    }
+                },
+            ],
             'changelog' => 'nullable|string',
         ]);
 
         $file = $request->file('file');
-        $path = $file->store('documents/' . $project->id, 'public');
+        $path = $this->storeAndCompressFile($file, 'documents/' . $project->id);
 
         // Check if upload is from overview
         $fromOverview = $request->input('from_overview', false);
@@ -115,9 +182,13 @@ class DocumentController extends Controller
      */
     public function show(Document $document): View
     {
-        $document->load(['project', 'versions.uploader', 'versions' => function ($query) {
-            $query->orderBy('version_number', 'desc');
-        }]);
+        $document->load([
+            'project',
+            'versions.uploader',
+            'versions' => function ($query) {
+                $query->orderBy('version_number', 'desc');
+            }
+        ]);
 
         return view('documents.show', compact('document'));
     }
@@ -127,8 +198,21 @@ class DocumentController extends Controller
      */
     public function storeVersion(Request $request, Document $document)
     {
+        // Allowed file extensions
+        $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'gif', 'txt', 'zip', 'rar', 'sql', 'js', 'php', 'html', 'css', 'json', 'py'];
+
         $request->validate([
-            'file' => 'required|file|max:10240',
+            'file' => [
+                'required',
+                'file',
+                'max:10240',
+                function ($attribute, $value, $fail) use ($allowedExtensions) {
+                    $extension = strtolower($value->getClientOriginalExtension());
+                    if (!in_array($extension, $allowedExtensions)) {
+                        $fail('Format file tidak diizinkan. Format yang diizinkan: ' . implode(', ', $allowedExtensions));
+                    }
+                },
+            ],
             'changelog' => 'required|string',
         ]);
 
@@ -136,7 +220,7 @@ class DocumentController extends Controller
         $newVersionNum = $currentVersion + 1;
 
         $file = $request->file('file');
-        $path = $file->store('documents/' . $document->project_id, 'public');
+        $path = $this->storeAndCompressFile($file, 'documents/' . $document->project_id);
 
         $version = $document->versions()->create([
             'file_path' => $path,
@@ -168,17 +252,17 @@ class DocumentController extends Controller
     public function destroy(Document $document)
     {
         $projectId = $document->project_id;
-        
+
         // Delete all version files from storage
         foreach ($document->versions as $version) {
             if ($version->file_path && Storage::disk('public')->exists($version->file_path)) {
                 Storage::disk('public')->delete($version->file_path);
             }
         }
-        
+
         // Delete the document (versions will cascade delete)
         $document->delete();
-        
+
         return redirect()->route('projects.documents.index', $projectId)
             ->with('success', 'Dokumen berhasil dihapus.');
     }
@@ -189,25 +273,25 @@ class DocumentController extends Controller
     public function destroyVersion(DocumentVersion $version)
     {
         $document = $version->document;
-        
+
         // If this is the only version, delete the entire document
         if ($document->versions()->count() <= 1) {
             return $this->destroy($document);
         }
-        
+
         // Delete the file from storage
         if ($version->file_path && Storage::disk('public')->exists($version->file_path)) {
             Storage::disk('public')->delete($version->file_path);
         }
-        
+
         // If this was the latest version, update the document's latest_version_id
         if ($document->latest_version_id === $version->id) {
             $newLatest = $document->versions()->where('id', '!=', $version->id)->orderBy('version_number', 'desc')->first();
             $document->update(['latest_version_id' => $newLatest?->id]);
         }
-        
+
         $version->delete();
-        
+
         return back()->with('success', 'Versi dokumen berhasil dihapus.');
     }
 }

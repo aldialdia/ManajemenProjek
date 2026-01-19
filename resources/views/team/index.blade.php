@@ -74,7 +74,7 @@
                                 <span>Kadaluarsa {{ $invitation->expires_at->diffForHumans() }}</span>
                             </div>
                             <form action="{{ route('projects.team.cancelInvitation', $invitation) }}" method="POST"
-                                onsubmit="return confirm('Batalkan undangan ini?')">
+                                onsubmit="return confirmSubmit(this, 'Batalkan undangan ini?')">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-sm btn-danger">
@@ -134,7 +134,7 @@
                                         </select>
                                     </form>
                                     <form action="{{ route('projects.team.remove', [$project, $member]) }}" method="POST"
-                                        onsubmit="return confirm('Hapus {{ $member->name }} dari project?')">
+                                        onsubmit="return confirmSubmit(this, 'Hapus {{ $member->name }} dari project?')">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn-icon-delete" title="Hapus dari project">
@@ -145,7 +145,7 @@
                             @elseif($userRole === 'admin' && $member->pivot->role === 'member' && $member->id !== auth()->id())
                                 <div class="member-actions">
                                     <form action="{{ route('projects.team.remove', [$project, $member]) }}" method="POST"
-                                        onsubmit="return confirm('Hapus {{ $member->name }} dari project?')">
+                                        onsubmit="return confirmSubmit(this, 'Hapus {{ $member->name }} dari project?')">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn-icon-delete" title="Hapus dari project">

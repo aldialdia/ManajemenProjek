@@ -76,7 +76,7 @@
                         <a href="{{ route('clients.show', $client ?? 1) }}" class="btn btn-secondary">Cancel</a>
                     </div>
                     <form action="{{ route('clients.destroy', $client ?? 1) }}" method="POST"
-                        onsubmit="return confirm('Are you sure you want to delete this client?');">
+                        onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus client ini?')">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-danger">

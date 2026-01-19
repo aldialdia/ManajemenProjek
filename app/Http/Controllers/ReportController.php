@@ -158,7 +158,7 @@ class ReportController extends Controller
             'todo' => round(($timeByStatus['todo'] ?? 0) / $totalTimeSeconds * 100),
         ];
 
-        // Tasks by user - filtered by period
+        // Tasks by user - filtered by period, with percentage calculation
         $tasksByUser = User::whereHas('projects', function($q) use ($userProjectIds) {
             $q->whereIn('projects.id', $userProjectIds);
         })->withCount([
@@ -167,15 +167,19 @@ class ReportController extends Controller
                   ->whereIn('project_id', $userProjectIds)
                   ->whereBetween('updated_at', [$startDate, $endDate]);
             },
-            'assignedTasks as pending_count' => function ($q) use ($userProjectIds, $startDate, $endDate) {
-                $q->where('status', '!=', 'done')
-                  ->whereIn('project_id', $userProjectIds)
+            'assignedTasks as total_tasks_count' => function ($q) use ($userProjectIds, $startDate, $endDate) {
+                $q->whereIn('project_id', $userProjectIds)
                   ->where(function($subQ) use ($startDate, $endDate) {
                       $subQ->whereBetween('created_at', [$startDate, $endDate])
                            ->orWhereBetween('updated_at', [$startDate, $endDate]);
                   });
             }
-        ])->take(10)->get();
+        ])->take(10)->get()->map(function ($user) {
+            $user->completion_percentage = $user->total_tasks_count > 0 
+                ? round(($user->completed_count / $user->total_tasks_count) * 100) 
+                : 0;
+            return $user;
+        });
 
         // Recent activities - all tasks from user's projects within period
         $recentActivities = Task::whereIn('project_id', $userProjectIds)
@@ -196,6 +200,7 @@ class ReportController extends Controller
                     'project' => $task->project?->name ?? 'No Project',
                     'activity' => $task->title,
                     'user' => $task->assignee?->name ?? 'Unassigned',
+                    'date' => $task->updated_at->format('d M Y'),
                     'time' => $task->updated_at->diffForHumans(),
                     'status' => $statusLabel,
                 ];

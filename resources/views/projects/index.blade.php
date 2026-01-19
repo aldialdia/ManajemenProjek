@@ -78,7 +78,7 @@
                                     <i class="fas fa-edit"></i> Edit
                                 </a>
                                 <form action="{{ route('projects.destroy', $project) }}" method="POST"
-                                    onsubmit="return confirm('Are you sure?')">
+                                    onsubmit="return confirmSubmit(this, 'Hapus project ini?')">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="dropdown-item text-danger">

@@ -38,8 +38,15 @@ class Attachment extends Model
     /**
      * Get human readable file size.
      */
+    /**
+     * Get human readable file size.
+     */
     public function getHumanSizeAttribute(): string
     {
+        if ($this->isLink()) {
+            return 'Link';
+        }
+
         $bytes = $this->size;
         $units = ['B', 'KB', 'MB', 'GB'];
 
@@ -56,5 +63,13 @@ class Attachment extends Model
     public function isImage(): bool
     {
         return str_starts_with($this->mime_type ?? '', 'image/');
+    }
+
+    /**
+     * Check if attachment is a link.
+     */
+    public function isLink(): bool
+    {
+        return $this->mime_type === 'external-link';
     }
 }
