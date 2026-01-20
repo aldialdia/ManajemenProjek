@@ -34,19 +34,8 @@
                     <input type="hidden" name="from_overview" value="1">
                 @endif
 
-                <!-- Title Input -->
-                <div class="form-group">
-                    <label for="title" class="form-label">
-                        <i class="fas fa-heading"></i> Judul Dokumen
-                    </label>
-                    <input type="text" name="title" id="title" required class="form-input"
-                        placeholder="Contoh: Spesifikasi Sistem v1.0" value="{{ old('title') }}">
-                    @error('title')
-                        <span class="form-error"><i class="fas fa-exclamation-circle"></i> {{ $message }}</span>
-                    @enderror
-                </div>
-
                 <!-- File Upload -->
+
                 <div class="form-group">
                     <label class="form-label">
                         <i class="fas fa-file-upload"></i> Pilih File

@@ -74,8 +74,9 @@
                 @foreach($document->versions as $version)
                     <div class="doc-history-item {{ $loop->first ? 'latest' : '' }}">
                         <div class="doc-history-left">
-                            <div class="doc-history-version">
-                                <span class="version-number">v{{ $version->version_number }}</span>
+                            <div class="doc-history-filename">
+                                <span class="doc-filename">{{ $document->title }}</span>
+                                <span class="version-number">- v{{ $version->version_number }}</span>
                                 @if($loop->first)
                                     <span class="version-latest">TERBARU</span>
                                 @endif
@@ -353,6 +354,20 @@
             flex: 1;
         }
 
+        .doc-history-filename {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.375rem;
+            flex-wrap: wrap;
+        }
+
+        .doc-filename {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 0.9rem;
+        }
+
         .doc-history-version {
             display: flex;
             align-items: center;
@@ -361,9 +376,9 @@
         }
 
         .version-number {
-            font-weight: 700;
-            color: #1e293b;
-            font-size: 0.9rem;
+            font-weight: 600;
+            color: #6366f1;
+            font-size: 0.85rem;
         }
 
         .version-latest {
