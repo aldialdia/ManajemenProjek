@@ -734,9 +734,10 @@
             newOkBtn.innerHTML = '<i class="fas fa-check"></i> Ya, Lanjutkan';
 
             newOkBtn.addEventListener('click', function () {
-                closeConfirmModal();
-                if (confirmModalCallback) {
-                    confirmModalCallback();
+                const callback = confirmModalCallback; // Simpan referensi callback
+                closeConfirmModal(); // Tutup modal (ini akan null-kan confirmModalCallback)
+                if (callback) {
+                    callback(); // Jalankan callback yang sudah disimpan
                 }
             });
 

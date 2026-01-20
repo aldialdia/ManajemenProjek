@@ -242,49 +242,57 @@
 
 
             <!-- Quick Actions -->
-            <div class="card">
-                <div class="card-header">Actions</div>
-                <div class="card-body">
-                    <div class="quick-actions">
-                        @if($task->status->value !== 'done')
-                            <form action="{{ route('tasks.update-status', $task) }}" method="POST">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="status" value="done">
-                                <button type="submit" class="btn btn-success" style="width: 100%;">
-                                    <i class="fas fa-check"></i>
-                                    Mark as Done
-                                </button>
-                            </form>
-                        @else
-                            <form action="{{ route('tasks.update-status', $task) }}" method="POST">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="status" value="todo">
-                                <button type="submit" class="btn btn-secondary" style="width: 100%;">
-                                    <i class="fas fa-undo"></i>
-                                    Reopen Task
-                                </button>
-                            </form>
-                        @endif
+            @canany(['updateStatus', 'update', 'delete'], $task)
+                <div class="card">
+                    <div class="card-header">Actions</div>
+                    <div class="card-body">
+                        <div class="quick-actions">
+                            @can('updateStatus', $task)
+                                @if($task->status->value !== 'done')
+                                    <form action="{{ route('tasks.update-status', $task) }}" method="POST">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="status" value="done">
+                                        <button type="submit" class="btn btn-success" style="width: 100%;">
+                                            <i class="fas fa-check"></i>
+                                            Mark as Done
+                                        </button>
+                                    </form>
+                                @else
+                                    <form action="{{ route('tasks.update-status', $task) }}" method="POST">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="status" value="todo">
+                                        <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                                            <i class="fas fa-undo"></i>
+                                            Reopen Task
+                                        </button>
+                                    </form>
+                                @endif
+                            @endcan
 
-                        <a href="{{ route('tasks.edit', $task) }}" class="btn btn-secondary" style="width: 100%;">
-                            <i class="fas fa-edit"></i>
-                            Edit Task
-                        </a>
+                            @can('update', $task)
+                                <a href="{{ route('tasks.edit', $task) }}" class="btn btn-secondary" style="width: 100%;">
+                                    <i class="fas fa-edit"></i>
+                                    Edit Task
+                                </a>
+                            @endcan
 
-                        <form action="{{ route('tasks.destroy', $task) }}" method="POST"
-                            onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus tugas ini?')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-danger" style="width: 100%;">
-                                <i class="fas fa-trash"></i>
-                                Delete Task
-                            </button>
-                        </form>
+                            @can('delete', $task)
+                                <form action="{{ route('tasks.destroy', $task) }}" method="POST"
+                                    onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus tugas ini?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger" style="width: 100%;">
+                                        <i class="fas fa-trash"></i>
+                                        Delete Task
+                                    </button>
+                                </form>
+                            @endcan
+                        </div>
                     </div>
                 </div>
-            </div>
+            @endcanany
         </div>
     </div>
 
