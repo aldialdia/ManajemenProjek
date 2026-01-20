@@ -162,7 +162,10 @@ class TaskController extends Controller
             ];
         });
 
-        return view('tasks.calendar', compact('calendarTasks', 'ganttTasks', 'project'));
+        // Project end date for marking on calendar/gantt
+        $projectEndDate = $project?->end_date?->format('Y-m-d');
+
+        return view('tasks.calendar', compact('calendarTasks', 'ganttTasks', 'project', 'projectEndDate'));
     }
 
     /**

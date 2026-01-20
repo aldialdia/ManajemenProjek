@@ -14,37 +14,49 @@
     <div class="card" style="margin-bottom: 1.5rem;">
         <div class="card-body">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-                <div style="position: relative;">
-                    <div id="calendar-title-btn" style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 600; color: #1e293b; cursor: pointer;">
-                        <i class="far fa-calendar-alt"></i>
-                        <span id="calendar-title">Loading...</span>
-                        <i class="fas fa-chevron-down" style="font-size: 0.75rem; color: #64748b;"></i>
-                    </div>
-                    <!-- Dropdown Menu -->
-                    <div id="month-dropdown" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 0.5rem; background: white; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 100; min-width: 200px; padding: 0.5rem 0;">
-                        <div style="padding: 0.5rem 1rem; border-bottom: 1px solid #e2e8f0;">
-                            <select id="cal-year" class="form-control" style="width: 100%;">
-                                @for($y = date('Y') - 2; $y <= date('Y') + 3; $y++)
-                                    <option value="{{ $y }}" {{ $y == date('Y') ? 'selected' : '' }}>{{ $y }}</option>
-                                @endfor
-                            </select>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <!-- Prev/Next Buttons -->
+                    <button id="cal-prev" class="btn btn-secondary" style="padding: 0.5rem 0.75rem;" title="Bulan Sebelumnya">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    
+                    <div style="position: relative;">
+                        <div id="calendar-title-btn" style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 600; color: #1e293b; cursor: pointer;">
+                            <i class="far fa-calendar-alt"></i>
+                            <span id="calendar-title">Loading...</span>
+                            <i class="fas fa-chevron-down" style="font-size: 0.75rem; color: #64748b;"></i>
                         </div>
-                        <div id="month-list" style="max-height: 250px; overflow-y: auto;">
-                            <div class="month-option" data-month="0" style="padding: 0.5rem 1rem; cursor: pointer;">Januari</div>
-                            <div class="month-option" data-month="1" style="padding: 0.5rem 1rem; cursor: pointer;">Februari</div>
-                            <div class="month-option" data-month="2" style="padding: 0.5rem 1rem; cursor: pointer;">Maret</div>
-                            <div class="month-option" data-month="3" style="padding: 0.5rem 1rem; cursor: pointer;">April</div>
-                            <div class="month-option" data-month="4" style="padding: 0.5rem 1rem; cursor: pointer;">Mei</div>
-                            <div class="month-option" data-month="5" style="padding: 0.5rem 1rem; cursor: pointer;">Juni</div>
-                            <div class="month-option" data-month="6" style="padding: 0.5rem 1rem; cursor: pointer;">Juli</div>
-                            <div class="month-option" data-month="7" style="padding: 0.5rem 1rem; cursor: pointer;">Agustus</div>
-                            <div class="month-option" data-month="8" style="padding: 0.5rem 1rem; cursor: pointer;">September</div>
-                            <div class="month-option" data-month="9" style="padding: 0.5rem 1rem; cursor: pointer;">Oktober</div>
-                            <div class="month-option" data-month="10" style="padding: 0.5rem 1rem; cursor: pointer;">November</div>
-                            <div class="month-option" data-month="11" style="padding: 0.5rem 1rem; cursor: pointer;">Desember</div>
+                        <!-- Dropdown Menu -->
+                        <div id="month-dropdown" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 0.5rem; background: white; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 100; min-width: 200px; padding: 0.5rem 0;">
+                            <div style="padding: 0.5rem 1rem; border-bottom: 1px solid #e2e8f0;">
+                                <select id="cal-year" class="form-control" style="width: 100%;">
+                                    @for($y = date('Y') - 2; $y <= date('Y') + 3; $y++)
+                                        <option value="{{ $y }}" {{ $y == date('Y') ? 'selected' : '' }}>{{ $y }}</option>
+                                    @endfor
+                                </select>
+                            </div>
+                            <div id="month-list" style="max-height: 250px; overflow-y: auto;">
+                                <div class="month-option" data-month="0" style="padding: 0.5rem 1rem; cursor: pointer;">Januari</div>
+                                <div class="month-option" data-month="1" style="padding: 0.5rem 1rem; cursor: pointer;">Februari</div>
+                                <div class="month-option" data-month="2" style="padding: 0.5rem 1rem; cursor: pointer;">Maret</div>
+                                <div class="month-option" data-month="3" style="padding: 0.5rem 1rem; cursor: pointer;">April</div>
+                                <div class="month-option" data-month="4" style="padding: 0.5rem 1rem; cursor: pointer;">Mei</div>
+                                <div class="month-option" data-month="5" style="padding: 0.5rem 1rem; cursor: pointer;">Juni</div>
+                                <div class="month-option" data-month="6" style="padding: 0.5rem 1rem; cursor: pointer;">Juli</div>
+                                <div class="month-option" data-month="7" style="padding: 0.5rem 1rem; cursor: pointer;">Agustus</div>
+                                <div class="month-option" data-month="8" style="padding: 0.5rem 1rem; cursor: pointer;">September</div>
+                                <div class="month-option" data-month="9" style="padding: 0.5rem 1rem; cursor: pointer;">Oktober</div>
+                                <div class="month-option" data-month="10" style="padding: 0.5rem 1rem; cursor: pointer;">November</div>
+                                <div class="month-option" data-month="11" style="padding: 0.5rem 1rem; cursor: pointer;">Desember</div>
+                            </div>
                         </div>
                     </div>
+                    
+                    <button id="cal-next" class="btn btn-secondary" style="padding: 0.5rem 0.75rem;" title="Bulan Berikutnya">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
                 </div>
+                
                 <button id="cal-today" class="btn btn-secondary">
                     Hari Ini
                 </button>
@@ -99,6 +111,23 @@
                 <span style="font-size: 0.875rem;">Silakan pilih tanggal hari ini atau setelahnya.</span>
             </p>
             <button onclick="closeDeadlinePopup()" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                <i class="fas fa-check" style="margin-right: 0.5rem;"></i>Mengerti
+            </button>
+        </div>
+    </div>
+
+    <!-- Project Deadline Popup Modal -->
+    <div id="project-deadline-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: popIn 0.3s ease-out;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-radius: 50%; margin: 0 auto 1.5rem; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-project-diagram" style="font-size: 2rem; color: #dc2626;"></i>
+            </div>
+            <h3 style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 0.75rem;">Melebihi Deadline Project</h3>
+            <p style="color: #64748b; margin-bottom: 1.5rem; line-height: 1.6;">
+                <strong style="color: #dc2626;">Deadline tugas tidak boleh melebihi deadline project.</strong><br>
+                <span style="font-size: 0.875rem;">Deadline project: {{ $projectEndDate ?? '-' }}</span>
+            </p>
+            <button onclick="closeProjectDeadlinePopup()" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
                 <i class="fas fa-check" style="margin-right: 0.5rem;"></i>Mengerti
             </button>
         </div>
@@ -203,7 +232,21 @@
                     contentHeight: 'auto',
                     aspectRatio: 1.6,
                     headerToolbar: false, // We use custom toolbar
-                    events: @json($calendarTasks),
+                    events: [
+                        ...@json($calendarTasks),
+                        @if($projectEndDate)
+                        {
+                            title: '📌 Deadline Project',
+                            start: '{{ $projectEndDate }}',
+                            backgroundColor: '#dc2626',
+                            borderColor: '#dc2626',
+                            textColor: '#ffffff',
+                            allDay: true,
+                            editable: false,
+                            classNames: ['project-deadline-event']
+                        }
+                        @endif
+                    ],
                     editable: true,
                     droppable: true,
                     dayMaxEvents: 3,
@@ -275,6 +318,16 @@
                     calendar.today();
                     yearSelect.value = new Date().getFullYear();
                 });
+                
+                // Prev button
+                document.getElementById('cal-prev').addEventListener('click', function() {
+                    calendar.prev();
+                });
+                
+                // Next button
+                document.getElementById('cal-next').addEventListener('click', function() {
+                    calendar.next();
+                });
 
                 // Gantt Initialization
                 const ganttTasks = @json($ganttTasks);
@@ -325,8 +378,8 @@
                                     line.setAttribute('y1', headerHeight);
                                     line.setAttribute('x2', x);
                                     line.setAttribute('y2', gridHeight + headerHeight);
-                                    line.setAttribute('stroke', '#ef4444');
-                                    line.setAttribute('stroke-width', '2');
+                                    line.setAttribute('stroke', '#d1d5db');
+                                    line.setAttribute('stroke-width', '1');
                                     line.setAttribute('stroke-dasharray', '4,4');
                                     line.classList.add('month-start-line');
                                     svg.appendChild(line);
@@ -334,6 +387,58 @@
                             });
                         }
                     }, 500);
+                    
+                    // Add project deadline marker on Gantt
+                    @if($projectEndDate)
+                    setTimeout(function() {
+                        const svg = document.querySelector('#gantt');
+                        if (svg && ganttTasks.length > 0) {
+                            const projectEndDate = moment('{{ $projectEndDate }}');
+                            const today = moment().startOf('day');
+                            
+                            // Find today-highlight element to get reference position
+                            const todayHighlight = svg.querySelector('.today-highlight');
+                            if (!todayHighlight) {
+                                console.log('Today highlight not found');
+                                return;
+                            }
+                            
+                            const todayX = parseFloat(todayHighlight.getAttribute('x'));
+                            const columnWidth = parseFloat(todayHighlight.getAttribute('width')) || 30;
+                            
+                            // Calculate days from today to project end date
+                            const daysDiff = projectEndDate.diff(today, 'days');
+                            const x = todayX + (daysDiff * columnWidth) + (columnWidth / 2); // center of the day
+                            
+                            const gridBg = svg.querySelector('.grid-background');
+                            if (gridBg) {
+                                const gridHeight = gridBg.getBBox().height;
+                                const headerHeight = 50;
+                                
+                                // Create vertical line for project deadline
+                                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                                line.setAttribute('x1', x);
+                                line.setAttribute('y1', 0);
+                                line.setAttribute('x2', x);
+                                line.setAttribute('y2', gridHeight + headerHeight);
+                                line.setAttribute('stroke', '#dc2626');
+                                line.setAttribute('stroke-width', '3');
+                                line.classList.add('project-deadline-line');
+                                svg.appendChild(line);
+                                
+                                // Add label at top
+                                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                                label.setAttribute('x', x + 5);
+                                label.setAttribute('y', 35);
+                                label.setAttribute('fill', '#dc2626');
+                                label.setAttribute('font-size', '11');
+                                label.setAttribute('font-weight', 'bold');
+                                label.textContent = '📌 Deadline Project ({{ $projectEndDate }})';
+                                svg.appendChild(label);
+                            }
+                        }
+                    }, 800);
+                    @endif
                     
                     // Add custom hover tooltip functionality
                     setTimeout(function() {
@@ -385,6 +490,15 @@
                         return;
                     }
                     
+                    // Validate: due date cannot exceed project end date
+                    @if($projectEndDate)
+                    var projectEnd = moment('{{ $projectEndDate }}');
+                    if (moment(newDueDate).isAfter(projectEnd)) {
+                        info.revert();
+                        showProjectDeadlinePopup();
+                        return;
+                    }
+                    @endif
                     fetch(`/tasks/${info.event.id}/dates`, {
                         method: 'PATCH',
                         headers: {
@@ -393,19 +507,35 @@
                         },
                         body: JSON.stringify({ due_date: newDueDate })
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.success) {
-                            // Reload to sync both Calendar and Gantt
-                            window.location.reload();
+                            // Navigate calendar to the month where task was dropped first
+                            calendar.gotoDate(newDueDate);
+                            // Update year dropdown
+                            const newDate = new Date(newDueDate);
+                            const yearSelect = document.getElementById('cal-year');
+                            if (yearSelect) {
+                                yearSelect.value = newDate.getFullYear();
+                            }
+                            // Reload page to sync Gantt chart
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 300);
                         } else {
                             info.revert();
-                            alert('Gagal memperbarui tanggal.');
+                            alert('Gagal memperbarui tanggal: ' + (data.message || 'Unknown error'));
                         }
                     })
                     .catch(error => {
+                        console.error('Error:', error);
                         info.revert();
-                        alert('Terjadi kesalahan.');
+                        alert('Terjadi kesalahan: ' + error.message);
                     });
                 }
 
@@ -420,6 +550,17 @@
                         return;
                     }
                     
+                    // Validate: due date cannot exceed project end date
+                    @if($projectEndDate)
+                    var projectEnd = moment('{{ $projectEndDate }}');
+                    if (moment(end).isAfter(projectEnd)) {
+                        showProjectDeadlinePopup();
+                        if (reloadAfter) {
+                            setTimeout(() => window.location.reload(), 2000);
+                        }
+                        return;
+                    }
+                    @endif
                     fetch(`/tasks/${taskId}/dates`, {
                         method: 'PATCH',
                         headers: {
@@ -454,10 +595,24 @@
                 document.getElementById('deadline-popup').style.display = 'none';
             }
             
+            function showProjectDeadlinePopup() {
+                document.getElementById('project-deadline-popup').style.display = 'flex';
+            }
+            
+            function closeProjectDeadlinePopup() {
+                document.getElementById('project-deadline-popup').style.display = 'none';
+            }
+            
             // Close popup on background click
             document.getElementById('deadline-popup').addEventListener('click', function(e) {
                 if (e.target === this) {
                     closeDeadlinePopup();
+                }
+            });
+            
+            document.getElementById('project-deadline-popup').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeProjectDeadlinePopup();
                 }
             });
             
