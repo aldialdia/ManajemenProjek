@@ -295,9 +295,16 @@
                             updateTaskDates(task.id, moment(start).format('YYYY-MM-DD'), moment(end).format('YYYY-MM-DD'), null, true);
                         },
                         on_click: function (task) {
+                            // Navigate to task detail (popup disabled)
                             window.location.href = `/tasks/${task.id}`;
                         },
+                        popup_trigger: 'manual', // Disable auto popup
                     });
+                    
+                    // Remove default popup completely
+                    setInterval(function() {
+                        document.querySelectorAll('.popup-wrapper').forEach(p => p.remove());
+                    }, 100);
                     
                     // Add month start markers
                     setTimeout(function() {
