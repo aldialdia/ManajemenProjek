@@ -104,9 +104,13 @@
                     @endforelse
                 </div>
 
-                <!-- Upload Form - Hanya File -->
+                <!-- Upload Form - Hanya Manager, Admin, atau Assignee -->
                 @auth
-                    @if($task->status->value !== 'done')
+                    @php
+                        $canUploadAttachment = auth()->user()->isManagerInProject($task->project) 
+                            || $task->assigned_to === auth()->id();
+                    @endphp
+                    @if($canUploadAttachment && $task->status->value !== 'done')
                         <div class="attachment-form-wrapper">
                             <form action="{{ route('tasks.attachments.store', $task) }}" method="POST" enctype="multipart/form-data" class="attachment-form">
                                 @csrf
@@ -129,7 +133,7 @@
                                 <span><strong>Format:</strong> PDF, DOC, XLS, PPT, PNG, JPG, GIF, TXT, ZIP, RAR, SQL, JS, PHP, HTML, CSS, JSON, PY — Max 10MB</span>
                             </div>
                         </div>
-                    @else
+                    @elseif($canUploadAttachment && $task->status->value === 'done')
                         <div class="attachment-form-wrapper">
                             <div class="task-completed-notice">
                                 <i class="fas fa-check-circle"></i>
@@ -251,13 +255,20 @@
 
 
             <!-- Quick Actions -->
-            @canany(['updateStatus', 'update', 'delete'], $task)
+            @canany(['updateStatus', 'update', 'delete', 'approve'], $task)
                 <div class="card">
                     <div class="card-header">Actions</div>
                     <div class="card-body">
                         <div class="quick-actions">
-                            @can('updateStatus', $task)
-                                @if($task->status->value !== 'done')
+                            @php
+                                $isManager = auth()->user()->isManagerInProject($task->project);
+                                $isAssignee = $task->assigned_to === auth()->id();
+                                $statusValue = $task->status->value;
+                            @endphp
+
+                            {{-- Status: Not done/approved - Show "Mark as Done" for assignee/manager --}}
+                            @if(!in_array($statusValue, ['done', 'done_approved']))
+                                @can('updateStatus', $task)
                                     <form action="{{ route('tasks.update-status', $task) }}" method="POST">
                                         @csrf
                                         @method('PATCH')
@@ -267,18 +278,51 @@
                                             Mark as Done
                                         </button>
                                     </form>
-                                @else
+                                @endcan
+                            @endif
+
+                            {{-- Status: done (pending approval) --}}
+                            @if($statusValue === 'done')
+                                {{-- Manager/Admin sees Approve button --}}
+                                @can('approve', $task)
+                                    <form action="{{ route('tasks.approve', $task) }}" method="POST">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="btn btn-warning" style="width: 100%;">
+                                            <i class="fas fa-check-double"></i>
+                                            Approve Task
+                                        </button>
+                                    </form>
+                                @endcan
+
+                                {{-- Assignee/Manager can still Reopen --}}
+                                @can('updateStatus', $task)
                                     <form action="{{ route('tasks.update-status', $task) }}" method="POST">
                                         @csrf
                                         @method('PATCH')
-                                        <input type="hidden" name="status" value="todo">
+                                        <input type="hidden" name="status" value="in_progress">
+                                        <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                                            <i class="fas fa-undo"></i>
+                                            Reopen Task
+                                        </button>
+                                    </form>
+                                @endcan
+                            @endif
+
+                            {{-- Status: done_approved - Only Manager/Admin can Reopen --}}
+                            @if($statusValue === 'done_approved')
+                                @if($isManager)
+                                    <form action="{{ route('tasks.update-status', $task) }}" method="POST">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="status" value="in_progress">
                                         <button type="submit" class="btn btn-secondary" style="width: 100%;">
                                             <i class="fas fa-undo"></i>
                                             Reopen Task
                                         </button>
                                     </form>
                                 @endif
-                            @endcan
+                            @endif
 
                             @can('update', $task)
                                 <a href="{{ route('tasks.edit', $task) }}" class="btn btn-secondary" style="width: 100%;">
@@ -626,6 +670,7 @@
         .attachment-empty {
             text-align: center;
             color: #94a3b8;
+            padding: 2rem 1rem;
         }
 
         .attachment-empty i {

@@ -95,4 +95,17 @@ class TaskPolicy
 
         return $user->isManagerInProject($task->project);
     }
+
+    /**
+     * Determine whether the user can approve the task.
+     * Only Manager or Admin can approve.
+     */
+    public function approve(User $user, Task $task): bool
+    {
+        if (!$user->isMemberOfProject($task->project)) {
+            return false;
+        }
+
+        return $user->isManagerInProject($task->project);
+    }
 }

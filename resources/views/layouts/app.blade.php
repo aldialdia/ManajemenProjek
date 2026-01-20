@@ -140,7 +140,16 @@
             color: white;
         }
 
-        /* Forms */
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        }
+
         .form-group {
             margin-bottom: 1.25rem;
         }
@@ -773,7 +782,7 @@
             if (form.dataset.confirmed === 'true') {
                 return true; // Allow form submission
             }
-            
+
             showConfirmModal(message, function () {
                 form.dataset.confirmed = 'true';
                 // Use requestSubmit if available (works with submit event handlers)

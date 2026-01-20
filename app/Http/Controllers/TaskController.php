@@ -104,6 +104,13 @@ class TaskController extends Controller
 
         $tasks = $query->get();
 
+        // Add permission info for each task (for frontend validation)
+        $tasks->each(function ($task) use ($user) {
+            $isManager = $user->isManagerInProject($task->project);
+            $isAssignee = $task->assigned_to === $user->id;
+            $task->can_update_status = $isManager || $isAssignee;
+        });
+
         return view('tasks.kanban', compact('tasks', 'project', 'showSubtasks'));
     }
 
@@ -130,7 +137,7 @@ class TaskController extends Controller
 
         $calendarTasks = $query->get()->map(function ($task) {
             $hexColor = $task->status->hexColor();
-            
+
             return [
                 'id' => $task->id,
                 'title' => $task->title,
@@ -150,7 +157,7 @@ class TaskController extends Controller
         });
 
         // Gantt Data - All tasks with actual dates
-        $ganttTasks = $query->get()->map(function($task) {
+        $ganttTasks = $query->get()->map(function ($task) {
             return [
                 'id' => (string) $task->id,
                 'name' => $task->title,
@@ -322,5 +329,27 @@ class TaskController extends Controller
         return redirect()
             ->route('tasks.index', ['project_id' => $projectId])
             ->with('success', 'Task berhasil dihapus.');
+    }
+
+    /**
+     * Approve a completed task (change from done to done_approved).
+     * Only Manager or Admin can approve.
+     */
+    public function approve(Task $task): RedirectResponse
+    {
+        $this->authorize('approve', $task);
+
+        // Only approve if task is in 'done' status
+        if ($task->status !== \App\Enums\TaskStatus::DONE) {
+            return redirect()
+                ->route('tasks.show', $task)
+                ->with('error', 'Task hanya bisa di-approve jika statusnya Done.');
+        }
+
+        $task->update(['status' => 'done_approved']);
+
+        return redirect()
+            ->route('tasks.show', $task)
+            ->with('success', 'Task berhasil di-approve.');
     }
 }

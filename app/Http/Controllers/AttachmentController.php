@@ -93,12 +93,15 @@ class AttachmentController extends Controller
      */
     public function storeForTask(Request $request, Task $task): RedirectResponse
     {
-        // Authorization: User harus member dari project task ini
+        // Authorization: Hanya Manager, Admin, atau Assignee yang bisa upload
         $project = $task->project;
         /** @var User $user */
         $user = Auth::user();
-        if (!$user->isMemberOfProject($project)) {
-            abort(403, 'Anda tidak memiliki akses ke task ini.');
+
+        $canUpload = $user->isManagerInProject($project) || $task->assigned_to === $user->id;
+
+        if (!$canUpload) {
+            abort(403, 'Hanya Manager, Admin, atau yang ditugaskan yang dapat mengupload file.');
         }
 
         // Allowed file extensions

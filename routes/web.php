@@ -72,6 +72,7 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::patch('/tasks/{task}/dates', [TaskController::class, 'updateDates'])->name('tasks.update-dates');
     Route::get('/tasks/kanban', [TaskController::class, 'kanban'])->name('tasks.kanban');
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
+    Route::patch('/tasks/{task}/approve', [TaskController::class, 'approve'])->name('tasks.approve');
     Route::resource('tasks', TaskController::class);
 
     // Clients

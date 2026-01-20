@@ -79,7 +79,7 @@
             <div class="stat-info">
                 <span class="stat-label">Total Minggu Ini</span>
                 <span class="stat-value">{{ round($weekSeconds / 3600, 1) }}j</span>
-                <span class="stat-meta">Target: 40 jam</span>
+                
             </div>
             <div class="stat-icon green">
                 <i class="fas fa-calendar-week"></i>
