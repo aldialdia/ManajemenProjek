@@ -6,21 +6,21 @@
     @php
         $user = auth()->user();
         $userProjectIds = $user->projects()->pluck('projects.id')->toArray();
-        
+
         // Check if user can create projects (is admin or manager in any project)
         $canCreateProject = $user->projects()
             ->wherePivotIn('role', ['admin', 'manager'])
             ->exists();
-        
+
         // User-specific stats
         $totalProjects = count($userProjectIds);
         $activeProjects = \App\Models\Project::whereIn('id', $userProjectIds)->where('status', 'active')->count();
         $totalTasks = \App\Models\Task::where('assigned_to', $user->id)->count();
         $completedTasks = \App\Models\Task::where('assigned_to', $user->id)->where('status', 'done')->count();
         $pendingTasks = \App\Models\Task::where('assigned_to', $user->id)->whereIn('status', ['todo', 'in_progress'])->count();
-        
+
         // Team members in user's projects
-        $totalTeamMembers = \App\Models\User::whereHas('projects', function($q) use ($userProjectIds) {
+        $totalTeamMembers = \App\Models\User::whereHas('projects', function ($q) use ($userProjectIds) {
             $q->whereIn('projects.id', $userProjectIds);
         })->count();
 
@@ -33,14 +33,14 @@
             ->whereMonth('started_at', now()->subMonth()->month)
             ->whereYear('started_at', now()->subMonth()->year)
             ->sum('duration_seconds') / 3600;
-        
+
         // Calculate percentage changes (user-specific)
         $projectsLastMonth = \App\Models\Project::whereIn('id', $userProjectIds)
             ->whereMonth('created_at', now()->subMonth()->month)->count();
         $projectsThisMonth = \App\Models\Project::whereIn('id', $userProjectIds)
             ->whereMonth('created_at', now()->month)->count();
         $projectChange = $projectsLastMonth > 0 ? round((($projectsThisMonth - $projectsLastMonth) / $projectsLastMonth) * 100) : ($projectsThisMonth > 0 ? 100 : 0);
-        
+
         $tasksCompletedLastMonth = \App\Models\Task::where('assigned_to', $user->id)
             ->where('status', 'done')
             ->whereMonth('updated_at', now()->subMonth()->month)->count();
@@ -48,7 +48,7 @@
             ->where('status', 'done')
             ->whereMonth('updated_at', now()->month)->count();
         $taskChange = $tasksCompletedLastMonth > 0 ? round((($tasksCompletedThisMonth - $tasksCompletedLastMonth) / $tasksCompletedLastMonth) * 100) : ($tasksCompletedThisMonth > 0 ? 100 : 0);
-        
+
         $hoursChange = $totalHoursLastMonth > 0 ? round((($totalHoursThisMonth - $totalHoursLastMonth) / $totalHoursLastMonth) * 100) : ($totalHoursThisMonth > 0 ? 100 : 0);
 
         // Tasks by status for pie chart (user's tasks only)
@@ -105,10 +105,10 @@
             <p class="welcome-subtitle">Berikut adalah ringkasan aktivitas proyek Anda hari ini.</p>
         </div>
         @if($canCreateProject)
-        <a href="{{ route('projects.create') }}" class="btn btn-welcome">
-            <i class="fas fa-plus"></i>
-            Tambah Proyek Baru
-        </a>
+            <a href="{{ route('projects.create') }}" class="btn btn-welcome">
+                <i class="fas fa-plus"></i>
+                Tambah Proyek Baru
+            </a>
         @endif
     </div>
 
@@ -122,9 +122,10 @@
                 <span class="stat-label">Total Proyek</span>
                 <span class="stat-value">{{ $totalProjects }}</span>
                 @if($projectChange != 0)
-                <span class="stat-change {{ $projectChange >= 0 ? 'positive' : 'negative' }}">
-                    <i class="fas fa-arrow-{{ $projectChange >= 0 ? 'up' : 'down' }}"></i> {{ $projectChange >= 0 ? '+' : '' }}{{ $projectChange }}%
-                </span>
+                    <span class="stat-change {{ $projectChange >= 0 ? 'positive' : 'negative' }}">
+                        <i class="fas fa-arrow-{{ $projectChange >= 0 ? 'up' : 'down' }}"></i>
+                        {{ $projectChange >= 0 ? '+' : '' }}{{ $projectChange }}%
+                    </span>
                 @endif
             </div>
             <span class="stat-note">{{ $activeProjects }} proyek aktif</span>
@@ -138,9 +139,10 @@
                 <span class="stat-label">Tugas Selesai</span>
                 <span class="stat-value">{{ $completedTasks }}</span>
                 @if($taskChange != 0)
-                <span class="stat-change {{ $taskChange >= 0 ? 'positive' : 'negative' }}">
-                    <i class="fas fa-arrow-{{ $taskChange >= 0 ? 'up' : 'down' }}"></i> {{ $taskChange >= 0 ? '+' : '' }}{{ $taskChange }}%
-                </span>
+                    <span class="stat-change {{ $taskChange >= 0 ? 'positive' : 'negative' }}">
+                        <i class="fas fa-arrow-{{ $taskChange >= 0 ? 'up' : 'down' }}"></i>
+                        {{ $taskChange >= 0 ? '+' : '' }}{{ $taskChange }}%
+                    </span>
                 @endif
             </div>
             <span class="stat-note">{{ $pendingTasks }} tugas tertunda</span>
@@ -154,9 +156,10 @@
                 <span class="stat-label">Jam Kerja</span>
                 <span class="stat-value">{{ number_format($totalHoursThisMonth, 0) }}h</span>
                 @if($hoursChange != 0)
-                <span class="stat-change {{ $hoursChange >= 0 ? 'positive' : 'negative' }}">
-                    <i class="fas fa-arrow-{{ $hoursChange >= 0 ? 'up' : 'down' }}"></i> {{ $hoursChange >= 0 ? '+' : '' }}{{ $hoursChange }}%
-                </span>
+                    <span class="stat-change {{ $hoursChange >= 0 ? 'positive' : 'negative' }}">
+                        <i class="fas fa-arrow-{{ $hoursChange >= 0 ? 'up' : 'down' }}"></i>
+                        {{ $hoursChange >= 0 ? '+' : '' }}{{ $hoursChange }}%
+                    </span>
                 @endif
             </div>
             <span class="stat-note">Bulan ini</span>
@@ -206,9 +209,6 @@
                     <span>Proyek Aktif</span>
                     <p class="text-muted text-sm" style="margin: 0;">Progress terkini</p>
                 </div>
-                <a href="{{ route('projects.index') }}" class="btn btn-sm btn-outline">
-                    <i class="fas fa-external-link-alt"></i>
-                </a>
             </div>
             <div class="card-body" style="padding: 0;">
                 @forelse($activeProjectsList as $project)
@@ -344,9 +344,9 @@
                 labels: ['Selesai', 'Dikerjakan', 'Review', 'Pending'],
                 datasets: [{
                     data: [
-                        {{ $tasksByStatus['done'] }},
-                        {{ $tasksByStatus['in_progress'] }},
-                        {{ $tasksByStatus['review'] }},
+                            {{ $tasksByStatus['done'] }},
+                            {{ $tasksByStatus['in_progress'] }},
+                            {{ $tasksByStatus['review'] }},
                         {{ $tasksByStatus['todo'] }}
                     ],
                     backgroundColor: ['#22c55e', '#f59e0b', '#8b5cf6', '#3b82f6'],
@@ -373,310 +373,310 @@
         });
     </script>
 
-        <style>
-            .welcome-banner {
-                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #7c3aed 100%);
-                border-radius: 16px;
-                padding: 2rem 2.5rem;
-                margin-bottom: 1.5rem;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                color: white;
-            }
+    <style>
+        .welcome-banner {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #7c3aed 100%);
+            border-radius: 16px;
+            padding: 2rem 2.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
 
-            .welcome-badge {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
-                background: rgba(255, 255, 255, 0.2);
-                padding: 0.375rem 0.75rem;
-                border-radius: 20px;
-                font-size: 0.75rem;
-                font-weight: 500;
-                margin-bottom: 0.75rem;
-            }
+        .welcome-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.375rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-bottom: 0.75rem;
+        }
 
-            .welcome-title {
-                font-size: 1.75rem;
-                font-weight: 700;
-                margin-bottom: 0.25rem;
-            }
+        .welcome-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
 
-            .welcome-subtitle {
-                opacity: 0.9;
-                font-size: 0.95rem;
-            }
+        .welcome-subtitle {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
 
-            .btn-welcome {
-                background: white;
-                color: #6366f1;
-                padding: 0.75rem 1.5rem;
-                border-radius: 10px;
-                font-weight: 600;
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
-                text-decoration: none;
-                transition: all 0.2s;
-            }
+        .btn-welcome {
+            background: white;
+            color: #6366f1;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
 
-            .btn-welcome:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-            }
+        .btn-welcome:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
 
-            .stats-row {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 1rem;
-                margin-bottom: 1.5rem;
-            }
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
 
-            .stat-card-dashboard {
-                background: white;
-                border-radius: 16px;
-                padding: 1.25rem;
-                display: flex;
-                flex-direction: column;
-                gap: 0.75rem;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            }
+        .stat-card-dashboard {
+            background: white;
+            border-radius: 16px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
 
-            .stat-icon-circle {
-                width: 44px;
-                height: 44px;
-                border-radius: 12px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 1.1rem;
-                color: white;
-            }
+        .stat-icon-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: white;
+        }
 
-            .stat-blue .stat-icon-circle {
-                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            }
+        .stat-blue .stat-icon-circle {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        }
 
-            .stat-green .stat-icon-circle {
-                background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-            }
+        .stat-green .stat-icon-circle {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        }
 
-            .stat-purple .stat-icon-circle {
-                background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-            }
+        .stat-purple .stat-icon-circle {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        }
 
-            .stat-orange .stat-icon-circle {
-                background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-            }
+        .stat-orange .stat-icon-circle {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+        }
 
-            .stat-info {
-                display: flex;
-                align-items: baseline;
-                gap: 0.5rem;
-                flex-wrap: wrap;
-            }
+        .stat-info {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
 
-            .stat-label {
-                font-size: 0.875rem;
-                color: #64748b;
-                width: 100%;
-            }
+        .stat-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            width: 100%;
+        }
 
-            .stat-value {
-                font-size: 1.75rem;
-                font-weight: 700;
-                color: var(--dark);
-            }
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
 
-            .stat-change {
-                font-size: 0.75rem;
-                font-weight: 600;
-                display: inline-flex;
-                align-items: center;
-                gap: 0.25rem;
-            }
+        .stat-change {
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
 
-            .stat-change.positive {
-                color: #22c55e;
-            }
+        .stat-change.positive {
+            color: #22c55e;
+        }
 
-            .stat-note {
-                font-size: 0.75rem;
-                color: #94a3b8;
-            }
+        .stat-note {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
 
-            .chart-legend {
-                display: flex;
-                justify-content: center;
-                gap: 2rem;
-                margin-top: 1rem;
-            }
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
 
-            .legend-item {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                font-size: 0.875rem;
-                color: #64748b;
-            }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
 
-            .legend-dot {
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-            }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
 
-            .project-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 1rem 1.5rem;
-                border-bottom: 1px solid #e2e8f0;
-            }
+        .project-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
 
-            .project-row:last-child {
-                border-bottom: none;
-            }
+        .project-row:last-child {
+            border-bottom: none;
+        }
 
-            .project-row-title {
-                font-weight: 500;
-                color: var(--dark);
-                text-decoration: none;
-            }
+        .project-row-title {
+            font-weight: 500;
+            color: var(--dark);
+            text-decoration: none;
+        }
 
-            .project-row-title:hover {
-                color: var(--primary);
-            }
+        .project-row-title:hover {
+            color: var(--primary);
+        }
 
-            .project-row-date {
-                font-size: 0.75rem;
-                color: #94a3b8;
-                display: block;
-                margin-top: 0.25rem;
-            }
+        .project-row-date {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            display: block;
+            margin-top: 0.25rem;
+        }
 
-            .project-row-progress {
-                display: flex;
-                align-items: center;
-                gap: 0.75rem;
-            }
+        .project-row-progress {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
 
-            .mini-progress {
-                width: 80px;
-                height: 6px;
-                background: #e2e8f0;
-                border-radius: 999px;
-                overflow: hidden;
-            }
+        .mini-progress {
+            width: 80px;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 999px;
+            overflow: hidden;
+        }
 
-            .mini-progress-fill {
-                height: 100%;
-                background: linear-gradient(90deg, #3b82f6, #1d4ed8);
-                border-radius: 999px;
-            }
+        .mini-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+            border-radius: 999px;
+        }
 
-            .progress-text {
-                font-size: 0.875rem;
-                font-weight: 600;
-                color: var(--dark);
-                min-width: 40px;
-            }
+        .progress-text {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--dark);
+            min-width: 40px;
+        }
 
-            .deadline-row {
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-                padding: 1rem 1.5rem;
-                border-bottom: 1px solid #e2e8f0;
-            }
+        .deadline-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
 
-            .deadline-row:last-child {
-                border-bottom: none;
-            }
+        .deadline-row:last-child {
+            border-bottom: none;
+        }
 
-            .deadline-priority {
-                width: 36px;
-                height: 36px;
-                border-radius: 8px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 0.875rem;
-            }
+        .deadline-priority {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+        }
 
-            .priority-high {
-                background: #fef2f2;
-                color: #ef4444;
-            }
+        .priority-high {
+            background: #fef2f2;
+            color: #ef4444;
+        }
 
-            .priority-medium {
-                background: #fff7ed;
-                color: #f97316;
-            }
+        .priority-medium {
+            background: #fff7ed;
+            color: #f97316;
+        }
 
-            .priority-low {
-                background: #f0fdf4;
-                color: #22c55e;
-            }
+        .priority-low {
+            background: #f0fdf4;
+            color: #22c55e;
+        }
 
-            .deadline-info {
-                flex: 1;
-            }
+        .deadline-info {
+            flex: 1;
+        }
 
-            .deadline-title {
-                font-weight: 500;
-                color: var(--dark);
-                text-decoration: none;
-                display: block;
-            }
+        .deadline-title {
+            font-weight: 500;
+            color: var(--dark);
+            text-decoration: none;
+            display: block;
+        }
 
-            .deadline-title:hover {
-                color: var(--primary);
-            }
+        .deadline-title:hover {
+            color: var(--primary);
+        }
 
-            .deadline-project {
-                font-size: 0.75rem;
-                color: #94a3b8;
-            }
+        .deadline-project {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
 
-            .deadline-meta {
-                text-align: right;
-            }
+        .deadline-meta {
+            text-align: right;
+        }
 
-            .deadline-date,
-            .deadline-remaining {
-                display: block;
-                font-size: 0.75rem;
-                color: #64748b;
-            }
+        .deadline-date,
+        .deadline-remaining {
+            display: block;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
 
-            .deadline-remaining {
-                color: #f97316;
-            }
+        .deadline-remaining {
+            color: #f97316;
+        }
 
-            .badge-primary {
-                background: #fef2f2;
-                color: #ef4444;
-                padding: 0.25rem 0.5rem;
-                border-radius: 4px;
-                font-size: 0.7rem;
-                font-weight: 600;
-            }
+        .badge-primary {
+            background: #fef2f2;
+            color: #ef4444;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
 
-            .btn-sm {
-                padding: 0.375rem 0.75rem;
-                font-size: 0.75rem;
-            }
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+        }
 
-            .btn-outline {
-                background: transparent;
-                border: 1px solid #e2e8f0;
-                color: #64748b;
-            }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+        }
 
-            .btn-outline:hover {
-                background: #f1f5f9;
-            }
-        </style>
+        .btn-outline:hover {
+            background: #f1f5f9;
+        }
+    </style>
 @endsection

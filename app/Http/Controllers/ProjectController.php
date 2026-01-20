@@ -4,13 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Project\StoreProjectRequest;
 use App\Http\Requests\Project\UpdateProjectRequest;
-use App\Models\Client;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\ProjectService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ProjectController extends Controller
@@ -22,36 +20,6 @@ class ProjectController extends Controller
     ) {
     }
 
-
-    public function index(Request $request): View
-    {
-        $user = auth()->user();
-        $query = Project::with(['client', 'users', 'tasks']);
-
-        // Jika bukan admin, hanya tampilkan project dimana user terdaftar (sebagai manager atau member)
-        if (!$user->isAdmin()) {
-            $query->whereHas('users', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            });
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->filled('client_id')) {
-            $query->where('client_id', $request->client_id);
-        }
-
-        if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-
-        $projects = $query->latest()->paginate(10);
-        $clients = Client::orderBy('name')->get();
-
-        return view('projects.index', compact('projects', 'clients'));
-    }
 
     public function create(): View
     {
@@ -122,7 +90,7 @@ class ProjectController extends Controller
         $project->delete();
 
         return redirect()
-            ->route('projects.index')
+            ->route('dashboard')
             ->with('success', 'Project deleted successfully.');
     }
 }

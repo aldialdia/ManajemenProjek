@@ -54,8 +54,8 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Projects
-    Route::resource('projects', ProjectController::class);
+    // Projects (index excluded - projects shown in dashboard)
+    Route::resource('projects', ProjectController::class)->except(['index']);
 
     // Documents (Module 8)
     Route::get('/projects/{project}/documents', [DocumentController::class, 'index'])->name('projects.documents.index');
