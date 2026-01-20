@@ -734,9 +734,11 @@
             newOkBtn.innerHTML = '<i class="fas fa-check"></i> Ya, Lanjutkan';
 
             newOkBtn.addEventListener('click', function () {
+                // Store callback before closing (which nullifies it)
+                const callback = confirmModalCallback;
                 closeConfirmModal();
-                if (confirmModalCallback) {
-                    confirmModalCallback();
+                if (callback) {
+                    callback();
                 }
             });
 
@@ -767,8 +769,21 @@
 
         // Helper function for form submission with confirmation
         function confirmSubmit(form, message) {
+            // Check if already confirmed (bypass second call)
+            if (form.dataset.confirmed === 'true') {
+                return true; // Allow form submission
+            }
+            
             showConfirmModal(message, function () {
-                form.submit();
+                form.dataset.confirmed = 'true';
+                // Use requestSubmit if available (works with submit event handlers)
+                // Otherwise use the native submit which bypasses handlers
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    // Fallback: directly call native submit
+                    HTMLFormElement.prototype.submit.call(form);
+                }
             });
             return false;
         }

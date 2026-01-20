@@ -106,28 +106,37 @@
 
                 <!-- Upload Form - Hanya File -->
                 @auth
-                    <div class="attachment-form-wrapper">
-                        <form action="{{ route('tasks.attachments.store', $task) }}" method="POST" enctype="multipart/form-data" class="attachment-form">
-                            @csrf
-                            <div class="file-input-wrapper">
-                                <input type="file" name="file" id="task-file" class="file-input" required 
-                                    onchange="handleTaskFileChange(this)" 
-                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt,.zip,.rar,.sql,.js,.php,.html,.css,.json,.py">
-                                <label for="task-file" class="file-label">
-                                    <i class="fas fa-folder-open"></i> Pilih file
-                                </label>
-                                <span class="file-name-display" id="task-file-name">Tidak ada file dipilih</span>
-                                <button type="button" id="task-file-clear" class="btn-clear-file" onclick="clearTaskFile()" style="display: none;">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                    @if($task->status->value !== 'done')
+                        <div class="attachment-form-wrapper">
+                            <form action="{{ route('tasks.attachments.store', $task) }}" method="POST" enctype="multipart/form-data" class="attachment-form">
+                                @csrf
+                                <div class="file-input-wrapper">
+                                    <input type="file" name="file" id="task-file" class="file-input" required 
+                                        onchange="handleTaskFileChange(this)" 
+                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.txt,.zip,.rar,.sql,.js,.php,.html,.css,.json,.py">
+                                    <label for="task-file" class="file-label">
+                                        <i class="fas fa-folder-open"></i> Pilih file
+                                    </label>
+                                    <span class="file-name-display" id="task-file-name">Tidak ada file dipilih</span>
+                                    <button type="button" id="task-file-clear" class="btn-clear-file" onclick="clearTaskFile()" style="display: none;">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <button type="submit" id="task-upload-btn" class="btn-upload" disabled>Upload</button>
+                            </form>
+                            <div class="allowed-formats-hint">
+                                <i class="fas fa-info-circle"></i>
+                                <span><strong>Format:</strong> PDF, DOC, XLS, PPT, PNG, JPG, GIF, TXT, ZIP, RAR, SQL, JS, PHP, HTML, CSS, JSON, PY — Max 10MB</span>
                             </div>
-                            <button type="submit" id="task-upload-btn" class="btn-upload" disabled>Upload</button>
-                        </form>
-                        <div class="allowed-formats-hint">
-                            <i class="fas fa-info-circle"></i>
-                            <span><strong>Format:</strong> PDF, DOC, XLS, PPT, PNG, JPG, GIF, TXT, ZIP, RAR, SQL, JS, PHP, HTML, CSS, JSON, PY — Max 10MB</span>
                         </div>
-                    </div>
+                    @else
+                        <div class="attachment-form-wrapper">
+                            <div class="task-completed-notice">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Tugas sudah selesai. Upload file tidak tersedia.</span>
+                            </div>
+                        </div>
+                    @endif
                 @endauth
             </div>
             <!-- Comments -->
@@ -717,6 +726,24 @@
 
         .btn-upload:disabled:hover {
             background: #cbd5e1;
+        }
+
+        .task-completed-notice {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border: 1px solid #86efac;
+            border-radius: 10px;
+            color: #166534;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .task-completed-notice i {
+            font-size: 1.25rem;
+            color: #22c55e;
         }
 
         .btn-clear-file {

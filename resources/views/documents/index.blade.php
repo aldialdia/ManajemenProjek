@@ -141,7 +141,7 @@
                         <div class="doc-user-info">
                             <span class="doc-user-name">{{ $doc->latestVersion->uploader->name ?? 'Unknown' }}</span>
                             <span class="doc-user-date"><i class="far fa-clock"></i>
-                                {{ $doc->updated_at->format('Y-m-d H:i') }}</span>
+                                {{ ($doc->latestVersion->created_at ?? $doc->updated_at)->format('Y-m-d H:i') }}</span>
                         </div>
                         <div class="doc-actions-dropdown">
                             <button class="doc-action-btn" onclick="toggleDocMenu(this)">
@@ -171,14 +171,11 @@
                                     <a href="{{ route('documents.show', ['document' => $doc->id]) }}" class="doc-dropdown-item">
                                         <i class="fas fa-history"></i> Lihat Versi
                                     </a>
-                                    <form action="{{ route('documents.destroy', ['document' => $doc->id]) }}" method="POST"
-                                        onsubmit="return confirmSubmit(this, 'Yakin ingin menghapus dokumen ini beserta semua versinya?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="doc-dropdown-item doc-dropdown-danger">
-                                            <i class="fas fa-trash"></i> Hapus
-                                        </button>
-                                    </form>
+                                    <button type="button" class="doc-dropdown-item doc-dropdown-danger btn-delete-doc"
+                                        data-action="{{ route('documents.destroy', ['document' => $doc->id]) }}"
+                                        data-message="Yakin ingin menghapus dokumen ini beserta semua versinya?">
+                                        <i class="fas fa-trash"></i> Hapus
+                                    </button>
                                 @endif
                             </div>
                         </div>
@@ -198,6 +195,12 @@
             @endforelse
         </div>
     </div>
+
+    <!-- Hidden Delete Form -->
+    <form id="deleteDocumentForm" method="POST" style="display: none;">
+        @csrf
+        @method('DELETE')
+    </form>
 
     <style>
         .doc-page-container {
@@ -621,6 +624,24 @@
                     } else {
                         item.style.display = 'none';
                     }
+                });
+            });
+        });
+
+        // Delete document handler - uses hidden form and custom modal
+        document.querySelectorAll('.btn-delete-doc').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const actionUrl = this.dataset.action;
+                const message = this.dataset.message || 'Yakin ingin menghapus?';
+                const deleteForm = document.getElementById('deleteDocumentForm');
+                
+                showConfirmModal(message, function() {
+                    // Set form action and submit
+                    deleteForm.action = actionUrl;
+                    deleteForm.submit();
                 });
             });
         });

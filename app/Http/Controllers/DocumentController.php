@@ -127,16 +127,37 @@ class DocumentController extends Controller
         // Allowed file extensions
         $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'gif', 'txt', 'zip', 'rar', 'sql', 'js', 'php', 'html', 'css', 'json', 'py'];
 
+        // Compressible image types can be larger (will be auto-compressed)
+        $compressibleTypes = ['jpg', 'jpeg', 'png'];
+        
         $request->validate([
-            'title' => 'required|string|max:255',
+            'title' => 'nullable|string|max:255',
             'file' => [
                 'required',
                 'file',
-                'max:10240', // 10MB Max
-                function ($attribute, $value, $fail) use ($allowedExtensions) {
+                function ($attribute, $value, $fail) use ($allowedExtensions, $compressibleTypes) {
                     $extension = strtolower($value->getClientOriginalExtension());
+                    $fileSize = $value->getSize();
+                    $maxImageSize = 50 * 1024 * 1024; // 50MB for compressible images
+                    $maxOtherSize = 10 * 1024 * 1024; // 10MB for other files
+                    
+                    // Check extension first
                     if (!in_array($extension, $allowedExtensions)) {
                         $fail('Format file tidak diizinkan. Format yang diizinkan: ' . implode(', ', $allowedExtensions));
+                        return;
+                    }
+                    
+                    // Check size based on file type
+                    if (in_array($extension, $compressibleTypes)) {
+                        // Images up to 50MB allowed (will be compressed)
+                        if ($fileSize > $maxImageSize) {
+                            $fail('File gambar maksimal 50MB (akan dikompres otomatis jika > 10MB).');
+                        }
+                    } else {
+                        // Other files max 10MB
+                        if ($fileSize > $maxOtherSize) {
+                            $fail('File maksimal 10MB untuk format ini.');
+                        }
                     }
                 },
             ],
@@ -144,6 +165,10 @@ class DocumentController extends Controller
         ]);
 
         $file = $request->file('file');
+        
+        // Use original filename as title if not provided
+        $title = $request->title ?? pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        
         $path = $this->storeAndCompressFile($file, 'documents/' . $project->id);
 
         // Check if upload is from overview
@@ -151,7 +176,7 @@ class DocumentController extends Controller
 
         // 1. Create Document
         $document = $project->documents()->create([
-            'title' => $request->title,
+            'title' => $title,
             'type' => 'file',
             'show_in_overview' => $fromOverview ? true : false,
         ]);
@@ -201,15 +226,36 @@ class DocumentController extends Controller
         // Allowed file extensions
         $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'gif', 'txt', 'zip', 'rar', 'sql', 'js', 'php', 'html', 'css', 'json', 'py'];
 
+        // Compressible image types can be larger (will be auto-compressed)
+        $compressibleTypes = ['jpg', 'jpeg', 'png'];
+
         $request->validate([
             'file' => [
                 'required',
                 'file',
-                'max:10240',
-                function ($attribute, $value, $fail) use ($allowedExtensions) {
+                function ($attribute, $value, $fail) use ($allowedExtensions, $compressibleTypes) {
                     $extension = strtolower($value->getClientOriginalExtension());
+                    $fileSize = $value->getSize();
+                    $maxImageSize = 50 * 1024 * 1024; // 50MB for compressible images
+                    $maxOtherSize = 10 * 1024 * 1024; // 10MB for other files
+                    
+                    // Check extension first
                     if (!in_array($extension, $allowedExtensions)) {
                         $fail('Format file tidak diizinkan. Format yang diizinkan: ' . implode(', ', $allowedExtensions));
+                        return;
+                    }
+                    
+                    // Check size based on file type
+                    if (in_array($extension, $compressibleTypes)) {
+                        // Images up to 50MB allowed (will be compressed)
+                        if ($fileSize > $maxImageSize) {
+                            $fail('File gambar maksimal 50MB (akan dikompres otomatis jika > 10MB).');
+                        }
+                    } else {
+                        // Other files max 10MB
+                        if ($fileSize > $maxOtherSize) {
+                            $fail('File maksimal 10MB untuk format ini.');
+                        }
                     }
                 },
             ],
