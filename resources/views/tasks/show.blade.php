@@ -275,13 +275,13 @@
                                 $statusValue = $task->status->value;
                             @endphp
 
-                            {{-- Status: Not done/approved - Show "Mark as Done" for assignee/manager --}}
-                            @if(!in_array($statusValue, ['done', 'done_approved']))
+                            {{-- Status: Not review/done - Show "Mark as Done" for assignee/manager --}}
+                            @if(!in_array($statusValue, ['review', 'done']))
                                 @can('updateStatus', $task)
                                     <form action="{{ route('tasks.update-status', $task) }}" method="POST">
                                         @csrf
                                         @method('PATCH')
-                                        <input type="hidden" name="status" value="done">
+                                        <input type="hidden" name="status" value="review">
                                         <button type="submit" class="btn btn-success" style="width: 100%;">
                                             <i class="fas fa-check"></i>
                                             Mark as Done
@@ -290,8 +290,8 @@
                                 @endcan
                             @endif
 
-                            {{-- Status: done (pending approval) --}}
-                            @if($statusValue === 'done')
+                            {{-- Status: review (pending approval) --}}
+                            @if($statusValue === 'review')
                                 {{-- Manager/Admin sees Approve button --}}
                                 @can('approve', $task)
                                     <form action="{{ route('tasks.approve', $task) }}" method="POST">
@@ -304,7 +304,7 @@
                                     </form>
                                 @endcan
 
-                                {{-- Assignee/Manager can still Reopen --}}
+                                {{-- Assignee/Manager can Reopen --}}
                                 @can('updateStatus', $task)
                                     <form action="{{ route('tasks.update-status', $task) }}" method="POST">
                                         @csrf
@@ -318,8 +318,8 @@
                                 @endcan
                             @endif
 
-                            {{-- Status: done_approved - Only Manager/Admin can Reopen --}}
-                            @if($statusValue === 'done_approved')
+                            {{-- Status: done - Only Manager/Admin can Reopen --}}
+                            @if($statusValue === 'done')
                                 @if($isManager)
                                     <form action="{{ route('tasks.update-status', $task) }}" method="POST">
                                         @csrf
