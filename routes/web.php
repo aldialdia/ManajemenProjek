@@ -14,6 +14,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TimeTrackingController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\VerificationController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,7 +26,7 @@ use Illuminate\Support\Facades\Route;
 
 // Public routes
 Route::get('/', function () {
-    return view('welcome');
+    return redirect('/login');
 });
 
 // Auth routes (Guest only)
@@ -53,12 +54,25 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Projects
-    Route::resource('projects', ProjectController::class);
+    // Projects (index excluded - projects shown in dashboard)
+    Route::resource('projects', ProjectController::class)->except(['index']);
+
+    // Documents (Module 8)
+    Route::get('/projects/{project}/documents', [DocumentController::class, 'index'])->name('projects.documents.index');
+    Route::get('/projects/{project}/documents/create', [DocumentController::class, 'create'])->name('projects.documents.create');
+    Route::post('/projects/{project}/documents', [DocumentController::class, 'store'])->name('projects.documents.store');
+    Route::get('/documents/{document}', [DocumentController::class, 'show'])->name('documents.show');
+    Route::post('/documents/{document}/versions', [DocumentController::class, 'storeVersion'])->name('documents.add-version');
+    Route::get('/document-versions/{version}/download', [DocumentController::class, 'download'])->name('documents.download');
+    Route::delete('/document-versions/{version}', [DocumentController::class, 'destroyVersion'])->name('document-versions.destroy');
+    Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy');
 
     // Tasks
+    Route::get('/tasks/calendar', [TaskController::class, 'calendar'])->name('tasks.calendar');
+    Route::patch('/tasks/{task}/dates', [TaskController::class, 'updateDates'])->name('tasks.update-dates');
     Route::get('/tasks/kanban', [TaskController::class, 'kanban'])->name('tasks.kanban');
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
+    Route::patch('/tasks/{task}/approve', [TaskController::class, 'approve'])->name('tasks.approve');
     Route::resource('tasks', TaskController::class);
 
     // Clients
@@ -73,14 +87,14 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
-    // Comments
-    Route::post('/tasks/{task}/comments', [CommentController::class, 'storeForTask'])->name('tasks.comments.store');
-    Route::post('/projects/{project}/comments', [CommentController::class, 'storeForProject'])->name('projects.comments.store');
+    // Comments (dengan rate limiting untuk mencegah spam)
+    Route::post('/tasks/{task}/comments', [CommentController::class, 'storeForTask'])->name('tasks.comments.store')->middleware('throttle:30,1');
+    Route::post('/projects/{project}/comments', [CommentController::class, 'storeForProject'])->name('projects.comments.store')->middleware('throttle:30,1');
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 
-    // Attachments
-    Route::post('/tasks/{task}/attachments', [AttachmentController::class, 'storeForTask'])->name('tasks.attachments.store');
-    Route::post('/projects/{project}/attachments', [AttachmentController::class, 'storeForProject'])->name('projects.attachments.store');
+    // Attachments (dengan rate limiting)
+    Route::post('/tasks/{task}/attachments', [AttachmentController::class, 'storeForTask'])->name('tasks.attachments.store')->middleware('throttle:20,1');
+    Route::post('/projects/{project}/attachments', [AttachmentController::class, 'storeForProject'])->name('projects.attachments.store')->middleware('throttle:20,1');
     Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download'])->name('attachments.download');
     Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('attachments.destroy');
 

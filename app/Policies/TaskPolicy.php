@@ -35,7 +35,7 @@ class TaskPolicy
 
     /**
      * Determine whether the user can update the task.
-     * Manager, Admin, or Creator can update.
+     * Only Manager or Admin can update.
      */
     public function update(User $user, Task $task): bool
     {
@@ -44,31 +44,33 @@ class TaskPolicy
             return false;
         }
 
-        // Manager or Admin can update any task
-        if ($user->isManagerInProject($task->project)) {
-            return true;
-        }
-
-        // Creator can update their own task
-        if ($task->created_by === $user->id) {
-            return true;
-        }
-
-        return false;
+        // Only Manager or Admin can update tasks
+        return $user->isManagerInProject($task->project);
     }
 
     /**
      * Determine whether the user can update task status.
-     * All project members can update status (for Kanban).
+     * Only Manager, Admin, or Assignee can update status.
      */
     public function updateStatus(User $user, Task $task): bool
     {
-        return $user->isMemberOfProject($task->project);
+        // Must be project member first
+        if (!$user->isMemberOfProject($task->project)) {
+            return false;
+        }
+
+        // Manager or Admin can update status
+        if ($user->isManagerInProject($task->project)) {
+            return true;
+        }
+
+        // Assignee can update their assigned task status
+        return $task->assigned_to === $user->id;
     }
 
     /**
      * Determine whether the user can delete the task.
-     * Only Manager, Admin, or Creator can delete.
+     * Only Manager or Admin can delete.
      */
     public function delete(User $user, Task $task): bool
     {
@@ -77,17 +79,8 @@ class TaskPolicy
             return false;
         }
 
-        // Manager or Admin can delete any task
-        if ($user->isManagerInProject($task->project)) {
-            return true;
-        }
-
-        // Creator can delete their own task
-        if ($task->created_by === $user->id) {
-            return true;
-        }
-
-        return false;
+        // Only Manager or Admin can delete tasks
+        return $user->isManagerInProject($task->project);
     }
 
     /**
@@ -95,6 +88,19 @@ class TaskPolicy
      * Only Manager or Admin can assign.
      */
     public function assign(User $user, Task $task): bool
+    {
+        if (!$user->isMemberOfProject($task->project)) {
+            return false;
+        }
+
+        return $user->isManagerInProject($task->project);
+    }
+
+    /**
+     * Determine whether the user can approve the task.
+     * Only Manager or Admin can approve.
+     */
+    public function approve(User $user, Task $task): bool
     {
         if (!$user->isMemberOfProject($task->project)) {
             return false;

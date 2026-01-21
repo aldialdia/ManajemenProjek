@@ -62,6 +62,14 @@ class Project extends Model
     }
 
     /**
+     * Get all documents for this project (Module 8).
+     */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Document::class);
+    }
+
+    /**
      * Get all attachments for this project.
      */
     public function attachments(): MorphMany

@@ -8,9 +8,9 @@
         <h1 class="page-title">Create New Project</h1>
         <p class="page-subtitle">Fill in the details to create a new project</p>
     </div>
-    <a href="{{ route('projects.index') }}" class="btn btn-secondary">
+    <a href="{{ route('dashboard') }}" class="btn btn-secondary">
         <i class="fas fa-arrow-left"></i>
-        Back to Projects
+        Back to Dashboard
     </a>
 </div>
 
@@ -63,7 +63,7 @@
                     <i class="fas fa-save"></i>
                     Create Project
                 </button>
-                <a href="{{ route('projects.index') }}" class="btn btn-secondary">Cancel</a>
+                <a href="{{ route('dashboard') }}" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </div>

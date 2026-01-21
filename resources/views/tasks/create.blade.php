@@ -94,7 +94,15 @@
                         <div class="form-group">
                             <label for="due_date" class="form-label">Due Date <span class="text-danger">*</span></label>
                             <input type="date" id="due_date" name="due_date" class="form-control"
-                                value="{{ old('due_date') }}" min="{{ date('Y-m-d') }}" required>
+                                value="{{ old('due_date') }}" 
+                                min="{{ date('Y-m-d') }}" 
+                                @if($project->end_date) max="{{ $project->end_date->format('Y-m-d') }}" @endif
+                                required>
+                            @if($project->end_date)
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i> Deadline project: {{ $project->end_date->format('d M Y') }}
+                                </small>
+                            @endif
                             @error('due_date')
                                 <span class="error-message">{{ $message }}</span>
                             @enderror

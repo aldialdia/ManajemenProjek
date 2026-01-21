@@ -10,6 +10,7 @@ use App\Services\TaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class TaskController extends Controller
@@ -103,7 +104,95 @@ class TaskController extends Controller
 
         $tasks = $query->get();
 
+        // Add permission info for each task (for frontend validation)
+        $tasks->each(function ($task) use ($user) {
+            $isManager = $user->isManagerInProject($task->project);
+            $isAssignee = $task->assigned_to === $user->id;
+            $task->can_update_status = $isManager || $isAssignee;
+        });
+
         return view('tasks.kanban', compact('tasks', 'project', 'showSubtasks'));
+    }
+
+    /**
+     * Display Calendar view.
+     */
+    public function calendar(Request $request): View
+    {
+        $user = auth()->user();
+        $project = null;
+
+        $query = Task::with(['project', 'assignee'])
+            ->whereNotNull('due_date');
+
+        if ($request->filled('project_id')) {
+            $project = Project::findOrFail($request->project_id);
+            if (!$user->isMemberOfProject($project)) {
+                abort(403);
+            }
+            $query->where('project_id', $project->id);
+        } else {
+            $query->whereIn('project_id', $user->projects()->pluck('projects.id'));
+        }
+
+        $calendarTasks = $query->get()->map(function ($task) {
+            $hexColor = $task->status->hexColor();
+
+            return [
+                'id' => $task->id,
+                'title' => $task->title,
+                'start' => $task->due_date->format('Y-m-d'),
+                'end' => $task->due_date->addDay()->format('Y-m-d'), // Single day event on due date
+                'url' => route('tasks.show', $task),
+                'backgroundColor' => $hexColor,
+                'borderColor' => $hexColor,
+                'textColor' => '#ffffff',
+                'extendedProps' => [
+                    'priority' => $task->priority->label(),
+                    'status' => $task->status->label(),
+                    'assignee' => $task->assignee?->name ?? 'Unassigned',
+                    'description' => Str::limit($task->description, 50),
+                ]
+            ];
+        });
+
+        // Gantt Data - All tasks with actual dates
+        $ganttTasks = $query->get()->map(function ($task) {
+            return [
+                'id' => (string) $task->id,
+                'name' => $task->title,
+                'start' => $task->start_date ? $task->start_date->format('Y-m-d') : now()->format('Y-m-d'),
+                'end' => $task->due_date ? $task->due_date->format('Y-m-d') : now()->addDay()->format('Y-m-d'),
+                'progress' => $task->status === \App\Enums\TaskStatus::DONE ? 100 : ($task->status === \App\Enums\TaskStatus::IN_PROGRESS ? 50 : 0),
+                'dependencies' => $task->parent_task_id ? (string) $task->parent_task_id : null,
+                'custom_class' => 'bar-' . $task->status->value,
+            ];
+        });
+
+        // Project end date for marking on calendar/gantt
+        $projectEndDate = $project?->end_date?->format('Y-m-d');
+
+        return view('tasks.calendar', compact('calendarTasks', 'ganttTasks', 'project', 'projectEndDate'));
+    }
+
+    /**
+     * Update task dates via AJAX (Drag & Drop).
+     */
+    public function updateDates(Request $request, Task $task): JsonResponse
+    {
+        $this->authorize('update', $task);
+
+        $validated = $request->validate([
+            'start_date' => 'nullable|date',
+            'due_date' => 'required|date|after_or_equal:start_date',
+        ]);
+
+        $task->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tanggal task berhasil diperbarui.',
+        ]);
     }
 
     /**
@@ -243,5 +332,27 @@ class TaskController extends Controller
         return redirect()
             ->route('tasks.index', ['project_id' => $projectId])
             ->with('success', 'Task berhasil dihapus.');
+    }
+
+    /**
+     * Approve a completed task (change from done to done_approved).
+     * Only Manager or Admin can approve.
+     */
+    public function approve(Task $task): RedirectResponse
+    {
+        $this->authorize('approve', $task);
+
+        // Only approve if task is in 'done' status
+        if ($task->status !== \App\Enums\TaskStatus::DONE) {
+            return redirect()
+                ->route('tasks.show', $task)
+                ->with('error', 'Task hanya bisa di-approve jika statusnya Done.');
+        }
+
+        $task->update(['status' => 'done_approved']);
+
+        return redirect()
+            ->route('tasks.show', $task)
+            ->with('success', 'Task berhasil di-approve.');
     }
 }

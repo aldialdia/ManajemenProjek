@@ -49,14 +49,15 @@
                             <span>Overview Proyek</span>
                         </a>
                         <a href="{{ route('tasks.index', ['project_id' => $project->id]) }}"
-                            class="submenu-item {{ request()->is('tasks*') && request('project_id') == $project->id ? 'active' : '' }}">
+                            class="submenu-item {{ request()->is('tasks*') && !request()->routeIs('tasks.calendar') && request('project_id') == $project->id ? 'active' : '' }}">
                             <i class="fas fa-check-square icon-tugas"></i>
                             <span>Tugas</span>
                         </a>
-                        <a href="#" class="submenu-item">
+                        <a href="{{ route('tasks.calendar', ['project_id' => $project->id]) }}" class="submenu-item {{ request()->routeIs('tasks.calendar') && request('project_id') == $project->id ? 'active' : '' }}">
                             <i class="fas fa-calendar icon-kalender"></i>
                             <span>Kalender</span>
                         </a>
+
                         <a href="{{ route('projects.team.index', $project) }}" class="submenu-item">
                             <i class="fas fa-users icon-tim"></i>
                             <span>Tim</span>
@@ -71,7 +72,7 @@
                             <i class="fas fa-clock icon-time"></i>
                             <span>Time Tracking</span>
                         </a>
-                        <a href="#" class="submenu-item">
+                        <a href="{{ route('projects.documents.index', $project) }}" class="submenu-item {{ request()->routeIs('projects.documents.*') && request()->segment(2) == $project->id ? 'active' : '' }}">
                             <i class="fas fa-file-alt icon-dokumen"></i>
                             <span>Dokumen</span>
                         </a>

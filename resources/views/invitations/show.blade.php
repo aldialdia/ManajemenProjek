@@ -42,7 +42,7 @@
                     @csrf
                     <button type="submit" class="btn btn-success btn-lg" style="width: 100%;">
                         <i class="fas fa-check"></i>
-                        Terima Undangan
+                        Terima
                     </button>
                 </form>
                 <form action="{{ route('invitations.decline', $invitation->token) }}" method="POST" style="flex: 1;">

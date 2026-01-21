@@ -14,7 +14,8 @@
             'todo' => ['class' => 'badge-secondary', 'label' => 'To Do'],
             'in_progress' => ['class' => 'badge-primary', 'label' => 'In Progress'],
             'review' => ['class' => 'badge-warning', 'label' => 'Review'],
-            'done' => ['class' => 'badge-success', 'label' => 'Done'],
+            'done' => ['class' => 'badge-info', 'label' => 'Done (Pending)'],
+            'done_approved' => ['class' => 'badge-success', 'label' => 'Done (Approved)'],
         ],
         'priority' => [
             'low' => ['class' => 'badge-secondary', 'label' => 'Low'],

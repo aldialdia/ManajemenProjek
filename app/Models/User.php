@@ -22,10 +22,15 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'status',
         'password',
         'avatar',
     ];
+
+    /**
+     * The attributes that are guarded from mass assignment.
+     * Status hanya bisa diubah secara eksplisit oleh admin.
+     */
+    protected $guarded = ['status'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -145,5 +150,14 @@ class User extends Authenticatable
             $initials .= strtoupper(substr($word, 0, 1));
         }
         return $initials;
+    }
+
+    /**
+     * Check if user is a system admin.
+     * Admin bisa melihat semua project.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->status === 'admin';
     }
 }

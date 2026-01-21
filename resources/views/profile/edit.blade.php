@@ -131,7 +131,7 @@
                     </p>
                 </div>
                 <button type="button" class="btn btn-danger"
-                    onclick="if(confirm('Are you sure you want to delete your account? This action cannot be undone.')) { document.getElementById('delete-form').submit(); }">
+                    onclick="showConfirmModal('Apakah Anda yakin ingin menghapus akun? Tindakan ini tidak dapat dibatalkan.', function() { document.getElementById('delete-form').submit(); })">
                     <i class="fas fa-trash"></i> Delete Account
                 </button>
                 <form id="delete-form" action="#" method="POST" style="display: none;">
