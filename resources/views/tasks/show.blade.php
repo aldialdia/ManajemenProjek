@@ -53,17 +53,26 @@
                     @forelse($task->attachments as $attachment)
                         <div class="attachment-item">
                             <div class="attachment-icon">
-                                @if($attachment->isImage())
-                                    <i class="fas fa-image" style="color: #6366f1;"></i>
-                                @elseif($attachment->mime_type === 'application/pdf')
-                                    <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
-                                @elseif(str_contains($attachment->mime_type ?? '', 'word'))
-                                    <i class="fas fa-file-word" style="color: #2563eb;"></i>
-                                @elseif(str_contains($attachment->mime_type ?? '', 'excel') || str_contains($attachment->mime_type ?? '', 'spreadsheet'))
-                                    <i class="fas fa-file-excel" style="color: #16a34a;"></i>
-                                @else
-                                    <i class="fas fa-file-alt" style="color: #64748b;"></i>
-                                @endif
+                                @php
+                                    $ext = strtolower(pathinfo($attachment->filename ?? '', PATHINFO_EXTENSION));
+                                    $iconClass = 'fa-file';
+                                    $iconColor = '#64748b';
+
+                                    if (in_array($ext, ['pdf', 'doc', 'docx', 'txt'])) {
+                                        $iconClass = 'fa-file-alt';
+                                        $iconColor = '#ef4444';
+                                    } elseif (in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'])) {
+                                        $iconClass = 'fa-image';
+                                        $iconColor = '#ec4899';
+                                    } elseif (in_array($ext, ['xls', 'xlsx', 'csv'])) {
+                                        $iconClass = 'fa-file-excel';
+                                        $iconColor = '#22c55e';
+                                    } elseif (in_array($ext, ['zip', 'rar', 'sql', 'js', 'php', 'html', 'css', 'json', 'py'])) {
+                                        $iconClass = 'fa-file-code';
+                                        $iconColor = '#3b82f6';
+                                    }
+                                @endphp
+                                <i class="fas {{ $iconClass }}" style="color: {{ $iconColor }};"></i>
                             </div>
                             <div class="attachment-info">
                                 <a href="{{ route('attachments.download', $attachment) }}" class="attachment-name" target="_blank">{{ $attachment->filename }}</a>

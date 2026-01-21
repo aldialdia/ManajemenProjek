@@ -30,7 +30,29 @@
                 // Ini berarti logic strict: hanya yang direlasikan.
 
                 $allProjects = $user->projects()->latest()->get();
-                $currentProjectId = request()->route('project')?->id ?? request('project_id') ?? (request()->is('projects/*') ? request()->segment(2) : null);
+
+                // Detect current project ID from various sources
+                $currentProjectId = null;
+
+                // 1. From route parameter 'project'
+                if (request()->route('project')) {
+                    $currentProjectId = request()->route('project')->id ?? request()->route('project');
+                }
+                // 2. From query parameter 'project_id'
+                elseif (request('project_id')) {
+                    $currentProjectId = request('project_id');
+                }
+                // 3. From task route - detect project from task model
+                elseif (request()->route('task')) {
+                    $task = request()->route('task');
+                    if ($task && $task->project_id) {
+                        $currentProjectId = $task->project_id;
+                    }
+                }
+                // 4. From projects/* URL segment
+                elseif (request()->is('projects/*')) {
+                    $currentProjectId = request()->segment(2);
+                }
             @endphp
 
             @foreach($allProjects as $project)
@@ -48,17 +70,30 @@
                             <i class="fas fa-eye icon-overview"></i>
                             <span>Overview Proyek</span>
                         </a>
+                        @php
+                            // Detect if current page is task-related for this project
+                            $isTaskActive = false;
+                            if (request()->is('tasks*') && !request()->routeIs('tasks.calendar')) {
+                                if (request('project_id') == $project->id) {
+                                    $isTaskActive = true;
+                                } elseif (request()->route('task') && request()->route('task')->project_id == $project->id) {
+                                    $isTaskActive = true;
+                                }
+                            }
+                        @endphp
                         <a href="{{ route('tasks.index', ['project_id' => $project->id]) }}"
-                            class="submenu-item {{ request()->is('tasks*') && !request()->routeIs('tasks.calendar') && request('project_id') == $project->id ? 'active' : '' }}">
+                            class="submenu-item {{ $isTaskActive ? 'active' : '' }}">
                             <i class="fas fa-check-square icon-tugas"></i>
                             <span>Tugas</span>
                         </a>
-                        <a href="{{ route('tasks.calendar', ['project_id' => $project->id]) }}" class="submenu-item {{ request()->routeIs('tasks.calendar') && request('project_id') == $project->id ? 'active' : '' }}">
+                        <a href="{{ route('tasks.calendar', ['project_id' => $project->id]) }}"
+                            class="submenu-item {{ request()->routeIs('tasks.calendar') && request('project_id') == $project->id ? 'active' : '' }}">
                             <i class="fas fa-calendar icon-kalender"></i>
                             <span>Kalender</span>
                         </a>
 
-                        <a href="{{ route('projects.team.index', $project) }}" class="submenu-item {{ request()->routeIs('projects.team.*') && request()->segment(2) == $project->id ? 'active' : '' }}">
+                        <a href="{{ route('projects.team.index', $project) }}"
+                            class="submenu-item {{ request()->routeIs('projects.team.*') && request()->segment(2) == $project->id ? 'active' : '' }}">
                             <i class="fas fa-users icon-tim"></i>
                             <span>Tim</span>
                         </a>
@@ -72,7 +107,8 @@
                             <i class="fas fa-clock icon-time"></i>
                             <span>Time Tracking</span>
                         </a>
-                        <a href="{{ route('projects.documents.index', $project) }}" class="submenu-item {{ request()->routeIs('projects.documents.*') && request()->segment(2) == $project->id ? 'active' : '' }}">
+                        <a href="{{ route('projects.documents.index', $project) }}"
+                            class="submenu-item {{ request()->routeIs('projects.documents.*') && request()->segment(2) == $project->id ? 'active' : '' }}">
                             <i class="fas fa-file-alt icon-dokumen"></i>
                             <span>Dokumen</span>
                         </a>
