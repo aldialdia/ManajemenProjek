@@ -58,11 +58,10 @@
 
                     <div class="form-group">
                         <label for="email" class="form-label">Email Address</label>
-                        <input type="email" id="email" name="email" class="form-control"
-                            value="{{ old('email', auth()->user()->email ?? '') }}" required>
-                        @error('email')
-                            <span class="error-message">{{ $message }}</span>
-                        @enderror
+                        <input type="email" id="email" class="form-control"
+                            value="{{ auth()->user()->email ?? '' }}" disabled readonly
+                            style="background-color: #f1f5f9; cursor: not-allowed;">
+                        <small class="text-muted">Email tidak dapat diubah</small>
                     </div>
 
                     <button type="submit" class="btn btn-primary">
@@ -117,28 +116,5 @@
         </div>
     </div>
 
-    <!-- Danger Zone -->
-    <div class="card" style="margin-top: 1.5rem; border-color: #fecaca;">
-        <div class="card-header" style="color: var(--danger);">
-            <i class="fas fa-exclamation-triangle" style="margin-right: 0.5rem;"></i>
-            Danger Zone
-        </div>
-        <div class="card-body">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h4 style="font-weight: 600; margin-bottom: 0.25rem;">Delete Account</h4>
-                    <p class="text-muted text-sm">Once you delete your account, there is no going back. Please be certain.
-                    </p>
-                </div>
-                <button type="button" class="btn btn-danger"
-                    onclick="showConfirmModal('Apakah Anda yakin ingin menghapus akun? Tindakan ini tidak dapat dibatalkan.', function() { document.getElementById('delete-form').submit(); })">
-                    <i class="fas fa-trash"></i> Delete Account
-                </button>
-                <form id="delete-form" action="#" method="POST" style="display: none;">
-                    @csrf
-                    @method('DELETE')
-                </form>
-            </div>
-        </div>
-    </div>
+
 @endsection
