@@ -144,8 +144,9 @@
             .fc-daygrid-day-frame { padding: 8px; }
             .fc-event { border-radius: 4px; border: none; font-size: 11px; padding: 2px 4px; margin-bottom: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
             
-            /* Make dragged event follow cursor - hide default mirror */
-            .fc-event-mirror {
+            /* Make dragged event follow cursor - hide default mirror and ghost */
+            .fc-event-mirror,
+            .fc-event-dragging {
                 display: none !important;
             }
             
