@@ -38,7 +38,7 @@ class VerificationController extends Controller
             return redirect('/verify')->with('Failed', 'Kode OTP salah!');
         }
         $verify->update(['status' => 'valid']);
-        User::find($verify->user_id)->update(['status' => 'active']);
+        User::find($verify->user_id)->forceFill(['status' => 'active'])->save();
         Auth::logout();
         return redirect('/login')->with('Success', 'Email berhasil diverifikasi! Silakan login.');
     }
