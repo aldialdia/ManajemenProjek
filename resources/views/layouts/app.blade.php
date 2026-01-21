@@ -55,7 +55,8 @@
             margin-left: var(--sidebar-width);
             display: flex;
             flex-direction: column;
-            overflow-x: hidden;
+            height: 100vh;
+            overflow: hidden;
         }
 
         .content-wrapper {

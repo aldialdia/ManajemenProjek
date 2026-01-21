@@ -4,9 +4,19 @@
             <i class="fas fa-bars"></i>
         </button>
 
-        <div class="search-box">
+        <div class="search-box" id="globalSearchBox">
             <i class="fas fa-search"></i>
-            <input type="text" placeholder="Search projects, tasks..." class="search-input">
+            <input type="text" placeholder="Search projects, tasks..." class="search-input" id="globalSearchInput" autocomplete="off">
+            <div class="search-results" id="searchResults" style="display: none;">
+                <div class="search-loading" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i> Mencari...
+                </div>
+                <div class="search-content"></div>
+                <div class="search-empty" style="display: none;">
+                    <i class="fas fa-search"></i>
+                    <p>Tidak ada hasil ditemukan</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -140,10 +150,11 @@
         justify-content: space-between;
         align-items: center;
         padding: 1rem 2rem;
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-        position: relative;
+        position: sticky;
+        top: 0;
         z-index: 100;
     }
 
@@ -190,6 +201,104 @@
         outline: none;
         border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 0.5rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        z-index: 1000;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .search-loading, .search-empty {
+        padding: 1.5rem;
+        text-align: center;
+        color: #64748b;
+    }
+
+    .search-empty i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.5;
+    }
+
+    .search-empty p {
+        margin: 0;
+    }
+
+    .search-section {
+        padding: 0.5rem 0;
+    }
+
+    .search-section-title {
+        padding: 0.5rem 1rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .search-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        text-decoration: none;
+        transition: background 0.15s;
+    }
+
+    .search-item:hover {
+        background: #f1f5f9;
+    }
+
+    .search-item-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.875rem;
+        color: white;
+    }
+
+    .search-item-icon.project {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+    }
+
+    .search-item-icon.task {
+        background: linear-gradient(135deg, #f97316, #ea580c);
+    }
+
+    .search-item-icon.document {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+    }
+
+    .search-item-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .search-item-title {
+        font-weight: 500;
+        color: #1e293b;
+        margin-bottom: 0.125rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .search-item-meta {
+        font-size: 0.75rem;
+        color: #94a3b8;
     }
 
     .navbar-right {
@@ -471,5 +580,126 @@
                 dropdown.classList.remove('active');
             }
         });
+        
+        // Close search results when clicking outside
+        const searchBox = document.getElementById('globalSearchBox');
+        if (searchBox && !searchBox.contains(e.target)) {
+            document.getElementById('searchResults').style.display = 'none';
+        }
     });
+
+    // Global Search Functionality
+    (function() {
+        const searchInput = document.getElementById('globalSearchInput');
+        const searchResults = document.getElementById('searchResults');
+        if (!searchInput || !searchResults) return;
+
+        const searchLoading = searchResults.querySelector('.search-loading');
+        const searchContent = searchResults.querySelector('.search-content');
+        const searchEmpty = searchResults.querySelector('.search-empty');
+        
+        let searchTimeout;
+
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                searchResults.style.display = 'none';
+                return;
+            }
+            
+            searchResults.style.display = 'block';
+            searchLoading.style.display = 'block';
+            searchContent.innerHTML = '';
+            searchEmpty.style.display = 'none';
+            
+            searchTimeout = setTimeout(() => {
+                fetch(`/search?q=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    searchLoading.style.display = 'none';
+                    
+                    if (data.projects.length === 0 && data.tasks.length === 0 && data.documents.length === 0) {
+                        searchEmpty.style.display = 'block';
+                        return;
+                    }
+                    
+                    let html = '';
+                    
+                    if (data.projects.length > 0) {
+                        html += '<div class="search-section"><div class="search-section-title">📁 Proyek</div>';
+                        data.projects.forEach(project => {
+                            html += `
+                                <a href="/projects/${project.id}" class="search-item">
+                                    <div class="search-item-icon project"><i class="fas fa-folder"></i></div>
+                                    <div class="search-item-info">
+                                        <div class="search-item-title">${escapeHtml(project.name)}</div>
+                                        <div class="search-item-meta">${project.tasks_count} tugas</div>
+                                    </div>
+                                </a>
+                            `;
+                        });
+                        html += '</div>';
+                    }
+                    
+                    if (data.tasks.length > 0) {
+                        html += '<div class="search-section"><div class="search-section-title">✅ Tugas</div>';
+                        data.tasks.forEach(task => {
+                            html += `
+                                <a href="/tasks/${task.id}" class="search-item">
+                                    <div class="search-item-icon task"><i class="fas fa-check-circle"></i></div>
+                                    <div class="search-item-info">
+                                        <div class="search-item-title">${escapeHtml(task.title)}</div>
+                                        <div class="search-item-meta">${escapeHtml(task.project_name)}</div>
+                                    </div>
+                                </a>
+                            `;
+                        });
+                        html += '</div>';
+                    }
+                    
+                    if (data.documents.length > 0) {
+                        html += '<div class="search-section"><div class="search-section-title">📄 Dokumen</div>';
+                        data.documents.forEach(doc => {
+                            html += `
+                                <a href="/documents/${doc.id}" class="search-item">
+                                    <div class="search-item-icon document"><i class="fas fa-file-alt"></i></div>
+                                    <div class="search-item-info">
+                                        <div class="search-item-title">${escapeHtml(doc.title)}</div>
+                                        <div class="search-item-meta">${escapeHtml(doc.project_name)}</div>
+                                    </div>
+                                </a>
+                            `;
+                        });
+                        html += '</div>';
+                    }
+                    
+                    searchContent.innerHTML = html;
+                })
+                .catch(error => {
+                    searchLoading.style.display = 'none';
+                    searchEmpty.style.display = 'block';
+                });
+            }, 300);
+        });
+
+        searchInput.addEventListener('focus', function() {
+            if (this.value.trim().length >= 2) {
+                searchResults.style.display = 'block';
+            }
+        });
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    })();
 </script>

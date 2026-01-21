@@ -53,6 +53,9 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'check_status'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    
+    // Global Search
+    Route::get('/search', [\App\Http\Controllers\SearchController::class, 'search'])->name('search');
 
     // Projects (index excluded - projects shown in dashboard)
     Route::resource('projects', ProjectController::class)->except(['index']);
