@@ -144,6 +144,26 @@
             .fc-daygrid-day-frame { padding: 8px; }
             .fc-event { border-radius: 4px; border: none; font-size: 11px; padding: 2px 4px; margin-bottom: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
             
+            /* Make dragged event follow cursor - hide default mirror */
+            .fc-event-mirror {
+                display: none !important;
+            }
+            
+            /* Custom drag helper */
+            .fc-drag-helper {
+                position: fixed !important;
+                z-index: 99999 !important;
+                pointer-events: none !important;
+                background: #3b82f6;
+                color: white;
+                padding: 8px 16px;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 600;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                white-space: nowrap;
+            }
+            
             /* Gantt Customization */
             .bar-wrapper { cursor: pointer; }
             .bar-progress { fill: #6366f1 !important; }
@@ -250,6 +270,7 @@
                     ],
                     editable: true,
                     droppable: true,
+                    dragScroll: false,
                     dayMaxEvents: 3,
                     eventContent: function(arg) {
                          let title = arg.event.title;
@@ -263,6 +284,29 @@
                             window.location.href = info.event.url;
                             info.jsEvent.preventDefault();
                         }
+                    },
+                    eventDragStart: function(info) {
+                        // Create custom drag helper that follows cursor
+                        const helper = document.createElement('div');
+                        helper.className = 'fc-drag-helper';
+                        helper.textContent = info.event.title;
+                        // Use event's background color (status-based)
+                        helper.style.background = info.event.backgroundColor || '#3b82f6';
+                        document.body.appendChild(helper);
+                        
+                        function moveHandler(e) {
+                            helper.style.left = (e.clientX + 15) + 'px';
+                            helper.style.top = (e.clientY + 15) + 'px';
+                        }
+                        moveHandler(info.jsEvent); // Initial position
+                        document.addEventListener('mousemove', moveHandler);
+                        
+                        function stopHandler() {
+                            helper.remove();
+                            document.removeEventListener('mousemove', moveHandler);
+                            document.removeEventListener('mouseup', stopHandler);
+                        }
+                        document.addEventListener('mouseup', stopHandler);
                     },
                     eventDrop: handleDateUpdate,
                     eventResize: handleDateUpdate

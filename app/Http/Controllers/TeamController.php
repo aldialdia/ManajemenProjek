@@ -101,6 +101,45 @@ class TeamController extends Controller
     }
 
     /**
+     * Show member profile.
+     */
+    public function showMemberProfile(Project $project, User $user)
+    {
+        $currentUser = auth()->user();
+        $userRole = $currentUser->getRoleInProject($project);
+
+        // Check if current user is member of project
+        if (!$userRole) {
+            return response()->json(['error' => 'Anda bukan anggota project ini.'], 403);
+        }
+
+        // Check if target user is member of this project
+        $memberRole = $user->getRoleInProject($project);
+        if (!$memberRole) {
+            return response()->json(['error' => 'User bukan anggota project ini.'], 404);
+        }
+
+        // Get member statistics for this project
+        $tasksInProject = $user->tasks()->where('project_id', $project->id)->count();
+        $completedTasksInProject = $user->tasks()->where('project_id', $project->id)->where('status', 'done')->count();
+        $pendingTasksInProject = $user->tasks()->where('project_id', $project->id)->whereIn('status', ['todo', 'in_progress'])->count();
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'initials' => $user->initials,
+            'role' => $memberRole,
+            'joined_at' => $user->created_at->format('d M Y'),
+            'stats' => [
+                'total_tasks' => $tasksInProject,
+                'completed_tasks' => $completedTasksInProject,
+                'pending_tasks' => $pendingTasksInProject,
+            ]
+        ]);
+    }
+
+    /**
      * Cancel a pending invitation.
      */
     public function cancelInvitation(ProjectInvitation $invitation): RedirectResponse

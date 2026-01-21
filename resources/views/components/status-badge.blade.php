@@ -13,7 +13,7 @@
         'task' => [
             'todo' => ['class' => 'badge-secondary', 'label' => 'To Do'],
             'in_progress' => ['class' => 'badge-primary', 'label' => 'In Progress'],
-            'review' => ['class' => 'badge-warning', 'label' => 'Review'],
+            'review' => ['class' => 'badge-warning', 'label' => 'In Review'],
             'done' => ['class' => 'badge-success', 'label' => 'Done'],
         ],
         'priority' => [

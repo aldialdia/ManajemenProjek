@@ -331,6 +331,49 @@
         .kanban-cards.drag-over .drop-zone {
             display: block;
         }
+
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .card-header-row .card-title {
+            flex: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .approval-badge {
+            font-size: 0.6rem;
+            font-weight: 600;
+            padding: 0.2rem 0.5rem;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            white-space: nowrap;
+        }
+
+        .approval-badge.pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .approval-badge.approved {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .kanban-card.not-draggable {
+            cursor: default;
+            opacity: 0.85;
+        }
+
+        .kanban-card.not-draggable:hover {
+            transform: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
     </style>
 
     @push('scripts')
@@ -347,41 +390,48 @@
 
                     document.getElementById(`count-${status}`).textContent = statusTasks.length;
 
-                    column.innerHTML = statusTasks.map(task => `
-                                                                                        <div class="kanban-card" draggable="true" data-task-id="${task.id}">
-                                                                                            <div class="card-title">
-                                                                                                <a href="/tasks/${task.id}">${task.title}</a>
-                                                                                            </div>
-                                                                                            ${task.parent ? `
-                                                                                                <div class="subtask-indicator">
-                                                                                                    <i class="fas fa-level-up-alt fa-rotate-90"></i>
-                                                                                                    Sub-task dari: ${task.parent.title}
-                                                                                                </div>
-                                                                                            ` : ''}
-                                                                                            <div class="card-project">
-                                                                                                <i class="fas fa-folder"></i>
-                                                                                                ${task.project?.name || 'No Project'}
-                                                                                            </div>
-                                                                                            <div class="card-meta">
-                                                                                                <span class="card-priority priority-${task.priority}">
-                                                                                                    ${task.priority}
-                                                                                                </span>
-                                                                                                ${task.assignee ? `
-                                                                                                    <div class="avatar avatar-sm" style="width: 28px; height: 28px; font-size: 0.7rem;">
-                                                                                                        ${getInitials(task.assignee.name)}
-                                                                                                    </div>
-                                                                                                ` : ''}
-                                                                                            </div>
-                                                                                            ${task.due_date ? `
-                                                                                                <div class="card-footer">
-                                                                                                    <span class="card-due ${isOverdue(task.due_date) ? 'overdue' : ''}">
-                                                                                                        <i class="fas fa-calendar"></i>
-                                                                                                        ${formatDate(task.due_date)}
-                                                                                                    </span>
-                                                                                                </div>
-                                                                                            ` : ''}
-                                                                                        </div>
-                                                                                    `).join('');
+                    column.innerHTML = statusTasks.map(task => {
+                        // Check if user can drag this card
+                        const canDrag = task.can_update_status;
+                        const draggableAttr = canDrag ? 'draggable="true"' : '';
+                        const notDraggableClass = canDrag ? '' : 'not-draggable';
+
+                        return `
+                                    <div class="kanban-card ${notDraggableClass}" ${draggableAttr} data-task-id="${task.id}">
+                                        <div class="card-title">
+                                            <a href="/tasks/${task.id}">${task.title}</a>
+                                        </div>
+                                                                ${task.parent ? `
+                                                                    <div class="subtask-indicator">
+                                                                        <i class="fas fa-level-up-alt fa-rotate-90"></i>
+                                                                        Sub-task dari: ${task.parent.title}
+                                                                    </div>
+                                                                ` : ''}
+                                                                <div class="card-project">
+                                                                    <i class="fas fa-folder"></i>
+                                                                    ${task.project?.name || 'No Project'}
+                                                                </div>
+                                                                <div class="card-meta">
+                                                                    <span class="card-priority priority-${task.priority}">
+                                                                        ${task.priority}
+                                                                    </span>
+                                                                    ${task.assignee ? `
+                                                                        <div class="avatar avatar-sm" style="width: 28px; height: 28px; font-size: 0.7rem;">
+                                                                            ${getInitials(task.assignee.name)}
+                                                                        </div>
+                                                                    ` : ''}
+                                                                </div>
+                                                                ${task.due_date ? `
+                                                                    <div class="card-footer">
+                                                                        <span class="card-due ${isOverdue(task.due_date) ? 'overdue' : ''}">
+                                                                            <i class="fas fa-calendar"></i>
+                                                                            ${formatDate(task.due_date)}
+                                                                        </span>
+                                                                    </div>
+                                                                ` : ''}
+                                                            </div>
+                                                        `;
+                    }).join('');
                 });
 
                 initDragAndDrop();

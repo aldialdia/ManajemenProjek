@@ -4,6 +4,7 @@ namespace App\Http\Requests\Task;
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Models\Project;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -24,6 +25,18 @@ class StoreTaskRequest extends FormRequest
      */
     public function rules(): array
     {
+        // Get project end_date for validation
+        $projectId = $this->input('project_id') ?? $this->route('task')?->project_id;
+        $project = Project::find($projectId);
+        $projectEndDate = $project?->end_date?->format('Y-m-d');
+
+        $dueDateRules = ['required', 'date', 'after_or_equal:today'];
+
+        // Add project deadline validation if project has end_date
+        if ($projectEndDate) {
+            $dueDateRules[] = 'before_or_equal:' . $projectEndDate;
+        }
+
         return [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
@@ -32,7 +45,7 @@ class StoreTaskRequest extends FormRequest
             'parent_task_id' => ['nullable', 'exists:tasks,id'],
             'priority' => ['required', Rule::enum(TaskPriority::class)],
             'status' => ['required', Rule::enum(TaskStatus::class)],
-            'due_date' => ['required', 'date', 'after_or_equal:today'],
+            'due_date' => $dueDateRules,
         ];
     }
 
@@ -53,8 +66,14 @@ class StoreTaskRequest extends FormRequest
      */
     public function messages(): array
     {
+        // Get project end_date for error message
+        $projectId = $this->input('project_id') ?? $this->route('task')?->project_id;
+        $project = Project::find($projectId);
+        $projectEndDate = $project?->end_date?->format('d M Y');
+
         return [
             'due_date.after_or_equal' => 'Due date tidak boleh sebelum hari ini.',
+            'due_date.before_or_equal' => 'Due date tidak boleh melebihi deadline project (' . ($projectEndDate ?? 'N/A') . ').',
         ];
     }
 }

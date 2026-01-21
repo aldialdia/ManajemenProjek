@@ -34,9 +34,10 @@ class TimeTrackingController extends Controller
             abort(403, 'Anda bukan anggota project ini.');
         }
 
-        // Get available tasks (not done) for this project
+        // Get available tasks - only tasks assigned to current user (not done/approved)
         $availableTasks = Task::where('project_id', $project->id)
-            ->where('status', '!=', 'done')
+            ->where('assigned_to', $user->id)
+            ->whereNotIn('status', ['done', 'done_approved'])
             ->orderBy('title')
             ->get();
 
@@ -106,6 +107,11 @@ class TimeTrackingController extends Controller
             abort(403, 'Anda bukan anggota project ini.');
         }
 
+        // Check if user is assignee of this task
+        if ($task->assigned_to !== $user->id) {
+            abort(403, 'Anda hanya dapat melacak waktu untuk task yang ditugaskan kepada Anda.');
+        }
+
         // Stop any running timer for this user in this project
         TimeEntry::forUser($user->id)
             ->forProject($project->id)
@@ -141,6 +147,12 @@ class TimeTrackingController extends Controller
 
         $timeEntry->stop();
 
+        // Auto-update task status from todo to in_progress
+        $task = $timeEntry->task;
+        if ($task->status->value === 'todo') {
+            $task->update(['status' => 'in_progress']);
+        }
+
         return redirect()
             ->route('time-tracking.index', ['project_id' => $timeEntry->task->project_id])
             ->with('success', 'Timer dihentikan. Durasi: ' . $timeEntry->formatted_duration);
@@ -167,6 +179,11 @@ class TimeTrackingController extends Controller
             abort(403, 'Anda bukan anggota project ini.');
         }
 
+        // Check if user is assignee of this task
+        if ($task->assigned_to !== $user->id) {
+            abort(403, 'Anda hanya dapat melacak waktu untuk task yang ditugaskan kepada Anda.');
+        }
+
         $startedAt = \Carbon\Carbon::parse($request->started_at);
         $endedAt = \Carbon\Carbon::parse($request->ended_at);
         $durationSeconds = $startedAt->diffInSeconds($endedAt);
@@ -180,6 +197,11 @@ class TimeTrackingController extends Controller
             'description' => $request->description,
             'is_running' => false,
         ]);
+
+        // Auto-update task status from todo to in_progress
+        if ($task->status->value === 'todo') {
+            $task->update(['status' => 'in_progress']);
+        }
 
         return redirect()
             ->route('time-tracking.index', ['project_id' => $project->id])

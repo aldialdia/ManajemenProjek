@@ -53,17 +53,26 @@
                     @forelse($task->attachments as $attachment)
                         <div class="attachment-item">
                             <div class="attachment-icon">
-                                @if($attachment->isImage())
-                                    <i class="fas fa-image" style="color: #6366f1;"></i>
-                                @elseif($attachment->mime_type === 'application/pdf')
-                                    <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
-                                @elseif(str_contains($attachment->mime_type ?? '', 'word'))
-                                    <i class="fas fa-file-word" style="color: #2563eb;"></i>
-                                @elseif(str_contains($attachment->mime_type ?? '', 'excel') || str_contains($attachment->mime_type ?? '', 'spreadsheet'))
-                                    <i class="fas fa-file-excel" style="color: #16a34a;"></i>
-                                @else
-                                    <i class="fas fa-file-alt" style="color: #64748b;"></i>
-                                @endif
+                                @php
+                                    $ext = strtolower(pathinfo($attachment->filename ?? '', PATHINFO_EXTENSION));
+                                    $iconClass = 'fa-file';
+                                    $iconColor = '#64748b';
+
+                                    if (in_array($ext, ['pdf', 'doc', 'docx', 'txt'])) {
+                                        $iconClass = 'fa-file-alt';
+                                        $iconColor = '#ef4444';
+                                    } elseif (in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'])) {
+                                        $iconClass = 'fa-image';
+                                        $iconColor = '#ec4899';
+                                    } elseif (in_array($ext, ['xls', 'xlsx', 'csv'])) {
+                                        $iconClass = 'fa-file-excel';
+                                        $iconColor = '#22c55e';
+                                    } elseif (in_array($ext, ['zip', 'rar', 'sql', 'js', 'php', 'html', 'css', 'json', 'py'])) {
+                                        $iconClass = 'fa-file-code';
+                                        $iconColor = '#3b82f6';
+                                    }
+                                @endphp
+                                <i class="fas {{ $iconClass }}" style="color: {{ $iconColor }};"></i>
                             </div>
                             <div class="attachment-info">
                                 <a href="{{ route('attachments.download', $attachment) }}" class="attachment-name" target="_blank">{{ $attachment->filename }}</a>
@@ -104,9 +113,13 @@
                     @endforelse
                 </div>
 
-                <!-- Upload Form - Hanya File -->
+                <!-- Upload Form - Hanya Manager, Admin, atau Assignee -->
                 @auth
-                    @if($task->status->value !== 'done')
+                    @php
+                        $canUploadAttachment = auth()->user()->isManagerInProject($task->project) 
+                            || $task->assigned_to === auth()->id();
+                    @endphp
+                    @if($canUploadAttachment && $task->status->value !== 'done')
                         <div class="attachment-form-wrapper">
                             <form action="{{ route('tasks.attachments.store', $task) }}" method="POST" enctype="multipart/form-data" class="attachment-form">
                                 @csrf
@@ -129,7 +142,7 @@
                                 <span><strong>Format:</strong> PDF, DOC, XLS, PPT, PNG, JPG, GIF, TXT, ZIP, RAR, SQL, JS, PHP, HTML, CSS, JSON, PY — Max 10MB</span>
                             </div>
                         </div>
-                    @else
+                    @elseif($canUploadAttachment && $task->status->value === 'done')
                         <div class="attachment-form-wrapper">
                             <div class="task-completed-notice">
                                 <i class="fas fa-check-circle"></i>
@@ -251,34 +264,74 @@
 
 
             <!-- Quick Actions -->
-            @canany(['updateStatus', 'update', 'delete'], $task)
+            @canany(['updateStatus', 'update', 'delete', 'approve'], $task)
                 <div class="card">
                     <div class="card-header">Actions</div>
                     <div class="card-body">
                         <div class="quick-actions">
-                            @can('updateStatus', $task)
-                                @if($task->status->value !== 'done')
+                            @php
+                                $isManager = auth()->user()->isManagerInProject($task->project);
+                                $isAssignee = $task->assigned_to === auth()->id();
+                                $statusValue = $task->status->value;
+                            @endphp
+
+                            {{-- Status: Not review/done - Show "Mark as Done" for assignee/manager --}}
+                            @if(!in_array($statusValue, ['review', 'done']))
+                                @can('updateStatus', $task)
                                     <form action="{{ route('tasks.update-status', $task) }}" method="POST">
                                         @csrf
                                         @method('PATCH')
-                                        <input type="hidden" name="status" value="done">
+                                        <input type="hidden" name="status" value="review">
                                         <button type="submit" class="btn btn-success" style="width: 100%;">
                                             <i class="fas fa-check"></i>
                                             Mark as Done
                                         </button>
                                     </form>
-                                @else
+                                @endcan
+                            @endif
+
+                            {{-- Status: review (pending approval) --}}
+                            @if($statusValue === 'review')
+                                {{-- Manager/Admin sees Approve button --}}
+                                @can('approve', $task)
+                                    <form action="{{ route('tasks.approve', $task) }}" method="POST">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="btn btn-warning" style="width: 100%;">
+                                            <i class="fas fa-check-double"></i>
+                                            Approve Task
+                                        </button>
+                                    </form>
+                                @endcan
+
+                                {{-- Assignee/Manager can Reopen --}}
+                                @can('updateStatus', $task)
                                     <form action="{{ route('tasks.update-status', $task) }}" method="POST">
                                         @csrf
                                         @method('PATCH')
-                                        <input type="hidden" name="status" value="todo">
+                                        <input type="hidden" name="status" value="in_progress">
+                                        <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                                            <i class="fas fa-undo"></i>
+                                            Reopen Task
+                                        </button>
+                                    </form>
+                                @endcan
+                            @endif
+
+                            {{-- Status: done - Only Manager/Admin can Reopen --}}
+                            @if($statusValue === 'done')
+                                @if($isManager)
+                                    <form action="{{ route('tasks.update-status', $task) }}" method="POST">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="status" value="in_progress">
                                         <button type="submit" class="btn btn-secondary" style="width: 100%;">
                                             <i class="fas fa-undo"></i>
                                             Reopen Task
                                         </button>
                                     </form>
                                 @endif
-                            @endcan
+                            @endif
 
                             @can('update', $task)
                                 <a href="{{ route('tasks.edit', $task) }}" class="btn btn-secondary" style="width: 100%;">
@@ -626,6 +679,7 @@
         .attachment-empty {
             text-align: center;
             color: #94a3b8;
+            padding: 2rem 1rem;
         }
 
         .attachment-empty i {

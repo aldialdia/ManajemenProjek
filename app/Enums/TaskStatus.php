@@ -6,15 +6,15 @@ enum TaskStatus: string
 {
     case TODO = 'todo';
     case IN_PROGRESS = 'in_progress';
-    case REVIEW = 'review';
-    case DONE = 'done';
+    case REVIEW = 'review';  // Pending approval (after assignee marks as done)
+    case DONE = 'done';      // Final state (after manager/admin approves)
 
     public function label(): string
     {
         return match ($this) {
             self::TODO => 'To Do',
             self::IN_PROGRESS => 'In Progress',
-            self::REVIEW => 'Review',
+            self::REVIEW => 'In Review',
             self::DONE => 'Done',
         };
     }
@@ -53,5 +53,13 @@ enum TaskStatus: string
             self::REVIEW => ['bar' => '#fcd34d', 'progress' => '#f59e0b'],
             self::DONE => ['bar' => '#6ee7b7', 'progress' => '#10b981'],
         };
+    }
+
+    /**
+     * Check if task is considered complete
+     */
+    public function isCompleted(): bool
+    {
+        return $this === self::DONE;
     }
 }

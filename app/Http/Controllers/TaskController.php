@@ -104,6 +104,19 @@ class TaskController extends Controller
 
         $tasks = $query->get();
 
+        // Add permission info for each task (for frontend validation)
+        $tasks->each(function ($task) use ($user) {
+            $isManager = $user->isManagerInProject($task->project);
+            $isAssignee = $task->assigned_to === $user->id;
+
+            // For review and done tasks, only manager can change status (approve/reopen)
+            if (in_array($task->status->value, ['review', 'done'])) {
+                $task->can_update_status = $isManager;
+            } else {
+                $task->can_update_status = $isManager || $isAssignee;
+            }
+        });
+
         return view('tasks.kanban', compact('tasks', 'project', 'showSubtasks'));
     }
 
@@ -130,7 +143,7 @@ class TaskController extends Controller
 
         $calendarTasks = $query->get()->map(function ($task) {
             $hexColor = $task->status->hexColor();
-            
+
             return [
                 'id' => $task->id,
                 'title' => $task->title,
@@ -150,7 +163,7 @@ class TaskController extends Controller
         });
 
         // Gantt Data - All tasks with actual dates
-        $ganttTasks = $query->get()->map(function($task) {
+        $ganttTasks = $query->get()->map(function ($task) {
             return [
                 'id' => (string) $task->id,
                 'name' => $task->title,
@@ -298,6 +311,22 @@ class TaskController extends Controller
     {
         $this->authorize('updateStatus', $task);
 
+        $user = auth()->user();
+        $isManager = $user->isManagerInProject($task->project);
+
+        // Only Manager/Admin can reopen a done task
+        if ($task->status->value === 'done' && !$isManager) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hanya Manager atau Admin yang dapat membuka kembali task yang sudah selesai.',
+                ], 403);
+            }
+            return redirect()
+                ->route('tasks.show', $task)
+                ->with('error', 'Hanya Manager atau Admin yang dapat membuka kembali task yang sudah selesai.');
+        }
+
         $this->taskService->updateStatus($task, $request->validated('status'));
 
         // Return JSON for AJAX requests (Kanban), redirect for form submissions
@@ -328,5 +357,27 @@ class TaskController extends Controller
         return redirect()
             ->route('tasks.index', ['project_id' => $projectId])
             ->with('success', 'Task berhasil dihapus.');
+    }
+
+    /**
+     * Approve a task (change from review to done).
+     * Only Manager or Admin can approve.
+     */
+    public function approve(Task $task): RedirectResponse
+    {
+        $this->authorize('approve', $task);
+
+        // Only approve if task is in 'review' status (pending approval)
+        if ($task->status !== \App\Enums\TaskStatus::REVIEW) {
+            return redirect()
+                ->route('tasks.show', $task)
+                ->with('error', 'Task hanya bisa di-approve jika statusnya Pending Approval.');
+        }
+
+        $task->update(['status' => 'done']);
+
+        return redirect()
+            ->route('tasks.show', $task)
+            ->with('success', 'Task berhasil di-approve.');
     }
 }

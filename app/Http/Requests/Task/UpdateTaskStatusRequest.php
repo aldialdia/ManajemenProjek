@@ -23,8 +23,21 @@ class UpdateTaskStatusRequest extends FormRequest
      */
     public function rules(): array
     {
+        // Exclude done_approved - it can only be set via approve route
+        $allowedStatuses = ['todo', 'in_progress', 'review', 'done'];
+
         return [
-            'status' => ['required', Rule::enum(TaskStatus::class)],
+            'status' => ['required', 'in:' . implode(',', $allowedStatuses)],
+        ];
+    }
+
+    /**
+     * Get custom error messages.
+     */
+    public function messages(): array
+    {
+        return [
+            'status.in' => 'Status tidak valid. Status yang diizinkan: todo, in_progress, review, done.',
         ];
     }
 }
