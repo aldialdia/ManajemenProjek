@@ -269,8 +269,10 @@
                         }
                         @endif
                     ],
-                    editable: true,
-                    droppable: true,
+                    editable: {{ $isManager ? 'true' : 'false' }},
+                    eventStartEditable: {{ $isManager ? 'true' : 'false' }},
+                    eventDurationEditable: false, // No resize in calendar
+                    droppable: {{ $isManager ? 'true' : 'false' }},
                     dragScroll: false,
                     dayMaxEvents: 3,
                     eventContent: function(arg) {
@@ -309,8 +311,8 @@
                         }
                         document.addEventListener('mouseup', stopHandler);
                     },
-                    eventDrop: handleDateUpdate,
-                    eventResize: handleDateUpdate
+                    eventDrop: handleDateUpdate
+                    // eventResize disabled - calendar only shows due date marker
                 });
                 calendar.render();
 
