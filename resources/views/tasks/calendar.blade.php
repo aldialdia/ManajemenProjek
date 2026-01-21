@@ -234,15 +234,16 @@
                     headerToolbar: false, // We use custom toolbar
                     events: [
                         ...@json($calendarTasks),
-                        @if($projectEndDate)
+                        @if($projectEndDate && $project)
                         {
+                            id: 'project-deadline-{{ $project->id }}',
                             title: '📌 Deadline Project',
                             start: '{{ $projectEndDate }}',
                             backgroundColor: '#dc2626',
                             borderColor: '#dc2626',
                             textColor: '#ffffff',
                             allDay: true,
-                            editable: false,
+                            editable: {{ $isManager ? 'true' : 'false' }},
                             classNames: ['project-deadline-event']
                         }
                         @endif
@@ -479,11 +480,47 @@
                 }
 
                 function handleDateUpdate(info) {
-                    // Calendar only shows due_date, so we only update due_date when dragging
-                    var newDueDate = info.event.startStr; // The new position is the new due_date
-                    
-                    // Validate: due date cannot be in the past
+                    var newDueDate = info.event.startStr;
                     var today = moment().startOf('day');
+                    
+                    // Check if this is a project deadline event
+                    if (info.event.id && info.event.id.startsWith('project-deadline-')) {
+                        // Validate: project deadline cannot be in the past
+                        if (moment(newDueDate).isBefore(today)) {
+                            info.revert();
+                            showDeadlinePopup();
+                            return;
+                        }
+                        
+                        // Update project end date
+                        const projectId = info.event.id.replace('project-deadline-', '');
+                        fetch(`/projects/${projectId}/update-end-date`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            },
+                            body: JSON.stringify({ end_date: newDueDate })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                calendar.gotoDate(newDueDate);
+                                setTimeout(() => window.location.reload(), 100);
+                            } else {
+                                info.revert();
+                                alert('Gagal memperbarui deadline project.');
+                            }
+                        })
+                        .catch(error => {
+                            info.revert();
+                            alert('Terjadi kesalahan.');
+                        });
+                        return;
+                    }
+                    
+                    // Regular task date update
+                    // Validate: due date cannot be in the past
                     if (moment(newDueDate).isBefore(today)) {
                         info.revert();
                         showDeadlinePopup();
