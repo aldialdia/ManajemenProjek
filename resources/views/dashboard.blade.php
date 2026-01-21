@@ -7,10 +7,9 @@
         $user = auth()->user();
         $userProjectIds = $user->projects()->pluck('projects.id')->toArray();
 
-        // Check if user can create projects (is admin or manager in any project)
-        $canCreateProject = $user->projects()
-            ->wherePivotIn('role', ['admin', 'manager'])
-            ->exists();
+        // All authenticated users can create projects
+        // (the creator will automatically become manager)
+        $canCreateProject = true;
 
         // User-specific stats
         $totalProjects = count($userProjectIds);
@@ -344,9 +343,9 @@
                 labels: ['Selesai', 'Dikerjakan', 'Review', 'Pending'],
                 datasets: [{
                     data: [
-                            {{ $tasksByStatus['done'] }},
-                            {{ $tasksByStatus['in_progress'] }},
-                            {{ $tasksByStatus['review'] }},
+                                {{ $tasksByStatus['done'] }},
+                                {{ $tasksByStatus['in_progress'] }},
+                                {{ $tasksByStatus['review'] }},
                         {{ $tasksByStatus['todo'] }}
                     ],
                     backgroundColor: ['#22c55e', '#f59e0b', '#8b5cf6', '#3b82f6'],
