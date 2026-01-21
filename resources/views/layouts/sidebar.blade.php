@@ -58,7 +58,7 @@
                             <span>Kalender</span>
                         </a>
 
-                        <a href="{{ route('projects.team.index', $project) }}" class="submenu-item">
+                        <a href="{{ route('projects.team.index', $project) }}" class="submenu-item {{ request()->routeIs('projects.team.*') && request()->segment(2) == $project->id ? 'active' : '' }}">
                             <i class="fas fa-users icon-tim"></i>
                             <span>Tim</span>
                         </a>

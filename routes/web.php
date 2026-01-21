@@ -107,6 +107,7 @@ Route::middleware(['auth', 'check_status'])->group(function () {
 
     // Team Management
     Route::get('/projects/{project}/team', [TeamController::class, 'index'])->name('projects.team.index');
+    Route::get('/projects/{project}/team/{user}/profile', [TeamController::class, 'showMemberProfile'])->name('projects.team.profile');
     Route::patch('/projects/{project}/team/{user}/role', [TeamController::class, 'updateRole'])->name('projects.team.updateRole');
     Route::delete('/projects/{project}/team/{user}', [TeamController::class, 'remove'])->name('projects.team.remove');
     Route::delete('/invitations/{invitation}/cancel', [TeamController::class, 'cancelInvitation'])->name('projects.team.cancelInvitation');
