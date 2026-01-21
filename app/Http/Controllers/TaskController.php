@@ -177,8 +177,11 @@ class TaskController extends Controller
 
         // Project end date for marking on calendar/gantt
         $projectEndDate = $project?->end_date?->format('Y-m-d');
+        
+        // Check if current user is manager/admin for this project (can edit project deadline)
+        $isManager = $project ? auth()->user()->isManagerInProject($project) : false;
 
-        return view('tasks.calendar', compact('calendarTasks', 'ganttTasks', 'project', 'projectEndDate'));
+        return view('tasks.calendar', compact('calendarTasks', 'ganttTasks', 'project', 'projectEndDate', 'isManager'));
     }
 
     /**

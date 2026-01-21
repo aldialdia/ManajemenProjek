@@ -53,9 +53,13 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'check_status'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    
+    // Global Search
+    Route::get('/search', [\App\Http\Controllers\SearchController::class, 'search'])->name('search');
 
     // Projects (index excluded - projects shown in dashboard)
     Route::resource('projects', ProjectController::class)->except(['index']);
+    Route::patch('/projects/{project}/update-end-date', [ProjectController::class, 'updateEndDate'])->name('projects.update-end-date');
 
     // Documents (Module 8)
     Route::get('/projects/{project}/documents', [DocumentController::class, 'index'])->name('projects.documents.index');

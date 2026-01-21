@@ -93,4 +93,24 @@ class ProjectController extends Controller
             ->route('dashboard')
             ->with('success', 'Project deleted successfully.');
     }
+
+    /**
+     * Update project end date via AJAX (Calendar Drag & Drop).
+     * Only managers/admins can do this.
+     */
+    public function updateEndDate(\Illuminate\Http\Request $request, Project $project): \Illuminate\Http\JsonResponse
+    {
+        // Check if user is manager/admin
+        if (!auth()->user()->isManagerInProject($project)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'end_date' => 'required|date',
+        ]);
+
+        $project->update(['end_date' => $validated['end_date']]);
+
+        return response()->json(['success' => true]);
+    }
 }
