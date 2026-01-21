@@ -3,6 +3,12 @@
 @section('title', 'Time Tracking - ' . $project->name)
 
 @section('content')
+    @php
+        $projectOnHold = $project->isOnHold();
+        $isManager = auth()->user()->isManagerInProject($project);
+        $canTrack = !$projectOnHold || $isManager;
+    @endphp
+
     <div class="page-header">
         <div>
             <h1 class="page-title">Time Tracking</h1>
@@ -14,7 +20,13 @@
     <div class="timer-card">
         <div class="timer-header">
             <span class="timer-label">Timer Aktif</span>
-            <span class="timer-sublabel">Mulai tracking waktu untuk tugas Anda</span>
+            <span class="timer-sublabel">
+                @if($canTrack)
+                    Mulai tracking waktu untuk tugas Anda
+                @else
+                    <i class="fas fa-pause-circle"></i> Project ditunda - Time tracking tidak tersedia
+                @endif
+            </span>
         </div>
 
         <div class="timer-display" id="timerDisplay">
@@ -26,35 +38,44 @@
         <div class="timer-task" id="timerTask">
             @if($runningEntry)
                 {{ $runningEntry->task->title }}
-            @else
+            @elseif($canTrack)
                 Pilih tugas untuk memulai
+            @else
+                Time tracking tidak tersedia
             @endif
         </div>
 
         <div class="timer-controls">
-            @if($runningEntry)
-                <form action="{{ route('time-tracking.stop', $runningEntry) }}" method="POST" style="display: inline;">
-                    @csrf
-                    <button type="submit" class="btn-timer btn-stop">
-                        <i class="fas fa-stop"></i>
-                        Stop
-                    </button>
-                </form>
+            @if($canTrack)
+                @if($runningEntry)
+                    <form action="{{ route('time-tracking.stop', $runningEntry) }}" method="POST" style="display: inline;">
+                        @csrf
+                        <button type="submit" class="btn-timer btn-stop">
+                            <i class="fas fa-stop"></i>
+                            Stop
+                        </button>
+                    </form>
+                @else
+                    <form action="{{ route('time-tracking.start') }}" method="POST" id="startTimerForm"
+                        style="display: flex; gap: 0.75rem; align-items: center;">
+                        @csrf
+                        <select name="task_id" class="form-control task-select" required>
+                            <option value="">-- Pilih Tugas --</option>
+                            @foreach($availableTasks as $task)
+                                <option value="{{ $task->id }}">{{ $task->title }}</option>
+                            @endforeach
+                        </select>
+                        <button type="submit" class="btn-timer btn-start">
+                            <i class="fas fa-play"></i>
+                            Mulai
+                        </button>
+                    </form>
+                @endif
             @else
-                <form action="{{ route('time-tracking.start') }}" method="POST" id="startTimerForm"
-                    style="display: flex; gap: 0.75rem; align-items: center;">
-                    @csrf
-                    <select name="task_id" class="form-control task-select" required>
-                        <option value="">-- Pilih Tugas --</option>
-                        @foreach($availableTasks as $task)
-                            <option value="{{ $task->id }}">{{ $task->title }}</option>
-                        @endforeach
-                    </select>
-                    <button type="submit" class="btn-timer btn-start">
-                        <i class="fas fa-play"></i>
-                        Mulai
-                    </button>
-                </form>
+                <div class="timer-disabled-notice">
+                    <i class="fas fa-info-circle"></i>
+                    Project sedang ditunda. Anda tidak dapat melacak waktu.
+                </div>
             @endif
         </div>
     </div>
@@ -79,7 +100,7 @@
             <div class="stat-info">
                 <span class="stat-label">Total Minggu Ini</span>
                 <span class="stat-value">{{ round($weekSeconds / 3600, 1) }}j</span>
-                
+
             </div>
             <div class="stat-icon green">
                 <i class="fas fa-calendar-week"></i>
@@ -361,6 +382,17 @@
             color: #94a3b8;
         }
 
+        .timer-disabled-notice {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
         @media (max-width: 1024px) {
             .stats-grid {
                 grid-template-columns: 1fr;
@@ -389,6 +421,13 @@
 
                 updateTimer();
                 setInterval(updateTimer, 1000);
+            @endif
+
+            // Show warning popup for members when project is on hold
+            @if($project->isOnHold() && !auth()->user()->isManagerInProject($project))
+                document.addEventListener('DOMContentLoaded', function() {
+                    showProjectOnHoldModal('Project "{{ $project->name }}" sedang ditunda. Anda hanya dapat melihat data project.');
+                });
             @endif
         </script>
     @endpush

@@ -124,12 +124,17 @@ class DocumentController extends Controller
      */
     public function store(Request $request, Project $project)
     {
+        // Check if project is on_hold - only manager can upload
+        if ($project->isOnHold() && !auth()->user()->isManagerInProject($project)) {
+            abort(403, 'Project sedang ditunda. Anda tidak dapat mengupload dokumen.');
+        }
+
         // Allowed file extensions
         $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'gif', 'txt', 'zip', 'rar', 'sql', 'js', 'php', 'html', 'css', 'json', 'py'];
 
         // Compressible image types can be larger (will be auto-compressed)
         $compressibleTypes = ['jpg', 'jpeg', 'png'];
-        
+
         $request->validate([
             'title' => 'nullable|string|max:255',
             'file' => [
@@ -140,13 +145,13 @@ class DocumentController extends Controller
                     $fileSize = $value->getSize();
                     $maxImageSize = 50 * 1024 * 1024; // 50MB for compressible images
                     $maxOtherSize = 10 * 1024 * 1024; // 10MB for other files
-                    
+        
                     // Check extension first
                     if (!in_array($extension, $allowedExtensions)) {
                         $fail('Format file tidak diizinkan. Format yang diizinkan: ' . implode(', ', $allowedExtensions));
                         return;
                     }
-                    
+
                     // Check size based on file type
                     if (in_array($extension, $compressibleTypes)) {
                         // Images up to 50MB allowed (will be compressed)
@@ -165,10 +170,10 @@ class DocumentController extends Controller
         ]);
 
         $file = $request->file('file');
-        
+
         // Use original filename as title if not provided
         $title = $request->title ?? pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        
+
         $path = $this->storeAndCompressFile($file, 'documents/' . $project->id);
 
         // Check if upload is from overview
@@ -223,6 +228,12 @@ class DocumentController extends Controller
      */
     public function storeVersion(Request $request, Document $document)
     {
+        // Check if project is on_hold - only manager can upload
+        $project = $document->project;
+        if ($project->isOnHold() && !auth()->user()->isManagerInProject($project)) {
+            abort(403, 'Project sedang ditunda. Anda tidak dapat mengupload dokumen.');
+        }
+
         // Allowed file extensions
         $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'gif', 'txt', 'zip', 'rar', 'sql', 'js', 'php', 'html', 'css', 'json', 'py'];
 
@@ -238,13 +249,13 @@ class DocumentController extends Controller
                     $fileSize = $value->getSize();
                     $maxImageSize = 50 * 1024 * 1024; // 50MB for compressible images
                     $maxOtherSize = 10 * 1024 * 1024; // 10MB for other files
-                    
+        
                     // Check extension first
                     if (!in_array($extension, $allowedExtensions)) {
                         $fail('Format file tidak diizinkan. Format yang diizinkan: ' . implode(', ', $allowedExtensions));
                         return;
                     }
-                    
+
                     // Check size based on file type
                     if (in_array($extension, $compressibleTypes)) {
                         // Images up to 50MB allowed (will be compressed)

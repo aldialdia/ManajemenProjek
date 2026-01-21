@@ -108,9 +108,14 @@ class TaskController extends Controller
         $tasks->each(function ($task) use ($user) {
             $isManager = $user->isManagerInProject($task->project);
             $isAssignee = $task->assigned_to === $user->id;
+            $projectOnHold = $task->project->isOnHold();
 
+            // If project is on_hold, only manager can change status
+            if ($projectOnHold) {
+                $task->can_update_status = $isManager;
+            }
             // For review and done tasks, only manager can change status (approve/reopen)
-            if (in_array($task->status->value, ['review', 'done'])) {
+            elseif (in_array($task->status->value, ['review', 'done'])) {
                 $task->can_update_status = $isManager;
             } else {
                 $task->can_update_status = $isManager || $isAssignee;
@@ -177,7 +182,7 @@ class TaskController extends Controller
 
         // Project end date for marking on calendar/gantt
         $projectEndDate = $project?->end_date?->format('Y-m-d');
-        
+
         // Check if current user is manager/admin for this project (can edit project deadline)
         $isManager = $project ? auth()->user()->isManagerInProject($project) : false;
 

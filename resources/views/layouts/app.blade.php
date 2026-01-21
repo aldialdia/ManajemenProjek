@@ -537,6 +537,27 @@
         </div>
     </div>
 
+    <!-- Project On Hold Warning Modal -->
+    <div id="projectOnHoldModal" class="confirm-modal-overlay" style="display: none;">
+        <div class="confirm-modal-box">
+            <div class="confirm-modal-header">
+                <div class="confirm-modal-icon warning-hold">
+                    <i class="fas fa-pause-circle"></i>
+                </div>
+                <h3 class="confirm-modal-title">Project Ditunda</h3>
+            </div>
+            <div class="confirm-modal-body">
+                <p id="projectOnHoldMessage">Project ini sedang ditunda. Anda hanya dapat melihat data project.</p>
+            </div>
+            <div class="confirm-modal-footer" style="justify-content: center;">
+                <button type="button" class="confirm-modal-btn confirm-modal-btn-confirm"
+                    onclick="closeProjectOnHoldModal()">
+                    <i class="fas fa-check"></i> Mengerti
+                </button>
+            </div>
+        </div>
+    </div>
+
     <style>
         /* Custom Confirm Modal - Premium Design */
         .confirm-modal-overlay {
@@ -639,6 +660,13 @@
             border-color: #86efac;
             color: #16a34a;
             box-shadow: 0 8px 24px -4px rgba(22, 163, 74, 0.2);
+        }
+
+        .confirm-modal-icon.warning-hold {
+            background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+            border-color: #fde047;
+            color: #ca8a04;
+            box-shadow: 0 8px 24px -4px rgba(202, 138, 4, 0.25);
         }
 
         .confirm-modal-title {
@@ -817,6 +845,30 @@
         document.getElementById('infoModal').addEventListener('click', function (e) {
             if (e.target === this) {
                 closeInfoModal();
+            }
+        });
+
+        // Project On Hold Modal Functions
+        function showProjectOnHoldModal(message) {
+            const modal = document.getElementById('projectOnHoldModal');
+            const messageEl = document.getElementById('projectOnHoldMessage');
+            if (message) {
+                messageEl.textContent = message;
+            }
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeProjectOnHoldModal() {
+            const modal = document.getElementById('projectOnHoldModal');
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        // Close project on hold modal on overlay click
+        document.getElementById('projectOnHoldModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeProjectOnHoldModal();
             }
         });
     </script>

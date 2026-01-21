@@ -36,6 +36,7 @@ class TaskPolicy
     /**
      * Determine whether the user can update the task.
      * Only Manager or Admin can update.
+     * If project is on_hold, only Manager can update.
      */
     public function update(User $user, Task $task): bool
     {
@@ -45,18 +46,29 @@ class TaskPolicy
         }
 
         // Only Manager or Admin can update tasks
-        return $user->isManagerInProject($task->project);
+        if (!$user->isManagerInProject($task->project)) {
+            return false;
+        }
+
+        // If project is on_hold, still allow manager to update
+        return true;
     }
 
     /**
      * Determine whether the user can update task status.
      * Only Manager, Admin, or Assignee can update status.
+     * If project is on_hold, only Manager can update status.
      */
     public function updateStatus(User $user, Task $task): bool
     {
         // Must be project member first
         if (!$user->isMemberOfProject($task->project)) {
             return false;
+        }
+
+        // If project is on_hold, only Manager can update status
+        if ($task->project->isOnHold()) {
+            return $user->isManagerInProject($task->project);
         }
 
         // Manager or Admin can update status
@@ -107,5 +119,43 @@ class TaskPolicy
         }
 
         return $user->isManagerInProject($task->project);
+    }
+
+    /**
+     * Determine whether the user can upload attachments.
+     * If project is on_hold, only Manager can upload.
+     */
+    public function uploadAttachment(User $user, Task $task): bool
+    {
+        if (!$user->isMemberOfProject($task->project)) {
+            return false;
+        }
+
+        // If project is on_hold, only Manager can upload
+        if ($task->project->isOnHold()) {
+            return $user->isManagerInProject($task->project);
+        }
+
+        // Manager or Assignee can upload
+        return $user->isManagerInProject($task->project) || $task->assigned_to === $user->id;
+    }
+
+    /**
+     * Determine whether the user can add comments.
+     * If project is on_hold, only Manager can comment.
+     */
+    public function addComment(User $user, Task $task): bool
+    {
+        if (!$user->isMemberOfProject($task->project)) {
+            return false;
+        }
+
+        // If project is on_hold, only Manager can comment
+        if ($task->project->isOnHold()) {
+            return $user->isManagerInProject($task->project);
+        }
+
+        // All project members can comment
+        return true;
     }
 }

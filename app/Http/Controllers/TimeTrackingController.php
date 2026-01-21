@@ -107,6 +107,11 @@ class TimeTrackingController extends Controller
             abort(403, 'Anda bukan anggota project ini.');
         }
 
+        // If project is on_hold, only manager can start timer
+        if ($project->isOnHold() && !$user->isManagerInProject($project)) {
+            abort(403, 'Project sedang ditunda. Anda tidak dapat melacak waktu.');
+        }
+
         // Check if user is assignee of this task
         if ($task->assigned_to !== $user->id) {
             abort(403, 'Anda hanya dapat melacak waktu untuk task yang ditugaskan kepada Anda.');
@@ -177,6 +182,11 @@ class TimeTrackingController extends Controller
         // Check if user is member of this project
         if (!$user->isMemberOfProject($project)) {
             abort(403, 'Anda bukan anggota project ini.');
+        }
+
+        // If project is on_hold, only manager can add manual time entry
+        if ($project->isOnHold() && !$user->isManagerInProject($project)) {
+            abort(403, 'Project sedang ditunda. Anda tidak dapat melacak waktu.');
         }
 
         // Check if user is assignee of this task
