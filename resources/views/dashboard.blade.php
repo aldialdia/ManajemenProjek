@@ -26,13 +26,29 @@
         })->count();
 
         // Calculate actual work hours from TimeEntry (user's own hours)
-        $totalHoursThisMonth = \App\Models\TimeEntry::where('user_id', $user->id)
+        // Include completed entries + currently running timers
+        $completedHoursThisMonth = \App\Models\TimeEntry::where('user_id', $user->id)
             ->whereMonth('started_at', now()->month)
             ->whereYear('started_at', now()->year)
+            ->where('is_running', false)
+            ->whereNotNull('ended_at')
             ->sum('duration_seconds') / 3600;
+        
+        // Add running timer elapsed time
+        $runningEntryThisMonth = \App\Models\TimeEntry::where('user_id', $user->id)
+            ->whereMonth('started_at', now()->month)
+            ->whereYear('started_at', now()->year)
+            ->where('is_running', true)
+            ->first();
+        $runningSecondsThisMonth = $runningEntryThisMonth ? $runningEntryThisMonth->current_elapsed_seconds : 0;
+        $totalHoursThisMonth = $completedHoursThisMonth + ($runningSecondsThisMonth / 3600);
+
+        // Last month (only completed, no running timers from last month)
         $totalHoursLastMonth = \App\Models\TimeEntry::where('user_id', $user->id)
             ->whereMonth('started_at', now()->subMonth()->month)
             ->whereYear('started_at', now()->subMonth()->year)
+            ->where('is_running', false)
+            ->whereNotNull('ended_at')
             ->sum('duration_seconds') / 3600;
 
         // Calculate percentage changes (user-specific)

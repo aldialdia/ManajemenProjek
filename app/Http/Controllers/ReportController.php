@@ -67,11 +67,25 @@ class ReportController extends Controller
             ->count();
         
         // Total hours from all team members in THIS PROJECT within period
-        $totalHours = round(\App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+        // Include completed entries
+        $completedHours = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
             $q->where('project_id', $project->id);
         })
         ->whereBetween('started_at', [$startDate, $endDate])
-        ->sum('duration_seconds') / 3600, 1);
+        ->where('is_running', false)
+        ->whereNotNull('ended_at')
+        ->sum('duration_seconds') / 3600;
+        
+        // Add running timer elapsed time for this project
+        $runningEntries = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+            $q->where('project_id', $project->id);
+        })
+        ->whereBetween('started_at', [$startDate, $endDate])
+        ->where('is_running', true)
+        ->get();
+        $runningSeconds = $runningEntries->sum(fn($entry) => $entry->current_elapsed_seconds);
+        
+        $totalHours = round($completedHours + ($runningSeconds / 3600), 1);
         
         // Team members in THIS PROJECT
         $totalMembers = $project->users()->count();
@@ -94,14 +108,18 @@ class ReportController extends Controller
             ? round((($tasksThisPeriod - $tasksLastPeriod) / $tasksLastPeriod) * 100) 
             : ($tasksThisPeriod > 0 ? 100 : 0);
 
-        // Hours change
+        // Hours change (only completed entries for fair comparison)
         $hoursThisPeriod = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
             $q->where('project_id', $project->id);
         })->whereBetween('started_at', [$startDate, $endDate])
+          ->where('is_running', false)
+          ->whereNotNull('ended_at')
           ->sum('duration_seconds') / 3600;
         $hoursLastPeriod = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
             $q->where('project_id', $project->id);
         })->whereBetween('started_at', [$prevStartDate, $prevEndDate])
+          ->where('is_running', false)
+          ->whereNotNull('ended_at')
           ->sum('duration_seconds') / 3600;
         $hoursChange = $hoursLastPeriod > 0 
             ? round((($hoursThisPeriod - $hoursLastPeriod) / $hoursLastPeriod) * 100) 
