@@ -53,6 +53,17 @@
                 <i class="fas fa-chart-line"></i>
             </div>
         </div>
+
+        <div class="stat-card">
+            <div class="stat-info">
+                <span class="stat-label">Total Waktu</span>
+                <span class="stat-value">{{ floor($totalSeconds / 3600) }}j {{ floor(($totalSeconds % 3600) / 60) }}m {{ $totalSeconds % 60 }}d</span>
+                <span class="stat-meta">Keseluruhan project</span>
+            </div>
+            <div class="stat-icon orange">
+                <i class="fas fa-hourglass-half"></i>
+            </div>
+        </div>
     </div>
 
     <!-- Recent Entries -->
@@ -61,7 +72,7 @@
             <h3>Entri Waktu Terbaru</h3>
             <span class="text-muted">Daftar waktu yang telah dicatat</span>
         </div>
-        <div class="card-body" style="padding: 0;">
+        <div class="card-body" style="padding: 0; max-height: 400px; overflow-y: auto;">
             @forelse($recentEntries as $entry)
                 <div class="time-entry">
                     <div class="entry-main">
@@ -241,7 +252,7 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 1.5rem;
             margin-bottom: 1.5rem;
         }
@@ -311,6 +322,11 @@
         .stat-icon.purple {
             background: #f3e8ff;
             color: #a855f7;
+        }
+
+        .stat-icon.orange {
+            background: #ffedd5;
+            color: #f97316;
         }
 
         .time-entry {

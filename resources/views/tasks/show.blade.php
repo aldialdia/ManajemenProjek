@@ -383,7 +383,7 @@
                                     <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
                                         <span style="color: #64748b;">Total Waktu:</span>
                                         <span style="font-weight: 600; color: #1e293b;">
-                                            {{ floor($totalTimeSeconds / 3600) }}j {{ floor(($totalTimeSeconds % 3600) / 60) }}m
+                                            {{ floor($totalTimeSeconds / 3600) }}j {{ floor(($totalTimeSeconds % 3600) / 60) }}m {{ $totalTimeSeconds % 60 }}d
                                         </span>
                                     </div>
                                 </div>

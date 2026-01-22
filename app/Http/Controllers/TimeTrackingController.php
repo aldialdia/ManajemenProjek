@@ -88,6 +88,12 @@ class TimeTrackingController extends Controller
             ->limit(20)
             ->get();
 
+        // Get total time for this project (all time)
+        $totalSeconds = TimeEntry::forUser($user->id)
+            ->forProject($project->id)
+            ->completed()
+            ->sum('duration_seconds');
+
         return view('time-tracking.index', compact(
             'project',
             'availableTasks',
@@ -96,7 +102,8 @@ class TimeTrackingController extends Controller
             'weekSeconds',
             'avgDailySeconds',
             'recentEntries',
-            'recentLogs'
+            'recentLogs',
+            'totalSeconds'
         ));
     }
 
