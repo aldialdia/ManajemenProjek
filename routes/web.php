@@ -82,8 +82,8 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     // Clients
     Route::resource('clients', ClientController::class);
 
-    // Reports
-    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    // Reports (per project)
+    Route::get('/projects/{project}/reports', [ReportController::class, 'index'])->name('projects.reports.index');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');

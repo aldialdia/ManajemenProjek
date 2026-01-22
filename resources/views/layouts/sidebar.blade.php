@@ -97,8 +97,8 @@
                             <i class="fas fa-users icon-tim"></i>
                             <span>Tim</span>
                         </a>
-                        <a href="{{ route('reports.index', ['project_id' => $project->id]) }}"
-                            class="submenu-item {{ request()->routeIs('reports.*') && request('project_id') == $project->id ? 'active' : '' }}">
+                        <a href="{{ route('projects.reports.index', $project) }}"
+                            class="submenu-item {{ request()->routeIs('projects.reports.*') && request()->segment(2) == $project->id ? 'active' : '' }}">
                             <i class="fas fa-chart-bar icon-laporan"></i>
                             <span>Laporan</span>
                         </a>

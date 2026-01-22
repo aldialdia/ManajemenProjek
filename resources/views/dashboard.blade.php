@@ -7,9 +7,11 @@
         $user = auth()->user();
         $userProjectIds = $user->projects()->pluck('projects.id')->toArray();
 
-        // All authenticated users can create projects
-        // (the creator will automatically become manager)
-        $canCreateProject = true;
+        // Only managers/admins can create projects
+        // Check if user is system admin OR has manager/admin role in any project
+        $canCreateProject = $user->isAdmin() || $user->projects()
+            ->wherePivotIn('role', ['manager', 'admin'])
+            ->exists();
 
         // User-specific stats
         $totalProjects = count($userProjectIds);
@@ -82,10 +84,11 @@
             ->take(5)
             ->get();
 
-        // Upcoming deadlines (user's tasks only)
+        // Upcoming deadlines (user's tasks only) - within 7 days
         $upcomingDeadlines = \App\Models\Task::where('assigned_to', $user->id)
             ->whereNotNull('due_date')
             ->where('due_date', '>=', now())
+            ->where('due_date', '<=', now()->addDays(7))
             ->where('status', '!=', 'done')
             ->orderBy('due_date')
             ->with(['project'])
@@ -258,7 +261,10 @@
                                 <i class="fas fa-calendar"></i> {{ $task->due_date->format('Y-m-d') }}
                             </span>
                             <span class="deadline-remaining">
-                                <i class="fas fa-clock"></i> {{ $task->due_date->diffForHumans() }}
+                                @php
+                                    $daysLeft = now()->startOfDay()->diffInDays($task->due_date->startOfDay());
+                                @endphp
+                                <i class="fas fa-clock"></i> {{ $daysLeft }} hari lagi
                             </span>
                         </div>
                     </div>

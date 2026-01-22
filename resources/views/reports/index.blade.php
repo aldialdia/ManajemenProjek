@@ -99,13 +99,14 @@
     <!-- Tab Content: Overview -->
     <div id="tab-overview" class="tab-content active">
         <div class="grid grid-cols-2" style="margin-bottom: 1.5rem;">
-            <!-- Status Proyek Pie Chart -->
+            <!-- Status Tugas Pie Chart -->
             <div class="card">
                 <div class="card-header">
-                    <span>Status Proyek</span>
+                    <span>Status Tugas</span>
+                    <span class="text-muted text-sm">Distribusi berdasarkan status</span>
                 </div>
                 <div class="card-body">
-                    <canvas id="statusProyekChart" height="280"></canvas>
+                    <canvas id="statusTugasChart" height="280"></canvas>
                 </div>
             </div>
 
@@ -145,8 +146,8 @@
                 <table class="activity-table">
                     <thead>
                         <tr>
-                            <th>Proyek</th>
                             <th>Aktivitas</th>
+                            <th>Ditugaskan</th>
                             <th>Tanggal</th>
                             <th>Waktu</th>
                             <th>Status</th>
@@ -155,13 +156,21 @@
                     <tbody>
                         @foreach($recentActivities as $activity)
                             <tr>
-                                <td>{{ $activity['project'] }}</td>
                                 <td>{{ $activity['activity'] }}</td>
+                                <td>{{ $activity['user'] }}</td>
                                 <td>{{ $activity['date'] }}</td>
                                 <td>{{ $activity['time'] }}</td>
                                 <td>
-                                    <span
-                                        class="status-badge {{ $activity['status'] === 'Selesai' ? 'status-success' : 'status-pending' }}">
+                                    @php
+                                        $statusClass = match($activity['status']) {
+                                            'Selesai' => 'status-done',
+                                            'Dikerjakan' => 'status-in-progress',
+                                            'Review' => 'status-review',
+                                            'Pending' => 'status-pending',
+                                            default => 'status-pending'
+                                        };
+                                    @endphp
+                                    <span class="status-badge {{ $statusClass }}">
                                         {{ $activity['status'] }}
                                     </span>
                                 </td>
@@ -196,20 +205,21 @@
             window.location.href = url.toString();
         }
 
-        // Status Proyek Pie Chart
-        const statusCtx = document.getElementById('statusProyekChart').getContext('2d');
+
+        // Status Tugas Pie Chart
+        const statusCtx = document.getElementById('statusTugasChart').getContext('2d');
         new Chart(statusCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Selesai', 'Sedang Berjalan', 'Ditunda', 'Baru'],
+                labels: ['Selesai', 'Dikerjakan', 'Review', 'Pending'],
                 datasets: [{
                     data: [
-                            {{ $projectsByStatus['completed'] ?? 0 }},
-                            {{ $projectsByStatus['active'] ?? 0 }},
-                            {{ $projectsByStatus['on_hold'] ?? 0 }},
-                        {{ $projectsByStatus['cancelled'] ?? 0 }}
+                            {{ $tasksByStatus['done'] ?? 0 }},
+                            {{ $tasksByStatus['in_progress'] ?? 0 }},
+                            {{ $tasksByStatus['review'] ?? 0 }},
+                        {{ $tasksByStatus['todo'] ?? 0 }}
                     ],
-                    backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6'],
+                    backgroundColor: ['#22c55e', '#3b82f6', '#8b5cf6', '#f59e0b'],
                     borderWidth: 0
                 }]
             },
@@ -476,9 +486,19 @@
             font-weight: 500;
         }
 
-        .status-success {
+        .status-done {
             background: #dcfce7;
             color: #16a34a;
+        }
+
+        .status-in-progress {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .status-review {
+            background: #ede9fe;
+            color: #7c3aed;
         }
 
         .status-pending {
