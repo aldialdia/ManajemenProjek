@@ -170,10 +170,10 @@ class ReportController extends Controller
             ->get()
             ->map(function ($task) {
                 $statusLabel = match($task->status->value) {
-                    'done' => 'Selesai',
-                    'in_progress' => 'Dikerjakan',
+                    'done' => 'Done',
+                    'in_progress' => 'In Progress',
                     'review' => 'Review',
-                    'todo' => 'Pending',
+                    'todo' => 'To Do',
                     default => 'Unknown'
                 };
                 return [

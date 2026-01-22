@@ -346,7 +346,7 @@
         const taskDistChart = new Chart(taskDistCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Selesai', 'Dikerjakan', 'Review', 'Pending'],
+                labels: ['Done', 'In Progress', 'Review', 'To Do'],
                 datasets: [{
                     data: [
                                 {{ $tasksByStatus['done'] }},

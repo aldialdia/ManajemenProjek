@@ -163,10 +163,10 @@
                                 <td>
                                     @php
                                         $statusClass = match($activity['status']) {
-                                            'Selesai' => 'status-done',
-                                            'Dikerjakan' => 'status-in-progress',
+                                            'Done' => 'status-done',
+                                            'In Progress' => 'status-in-progress',
                                             'Review' => 'status-review',
-                                            'Pending' => 'status-pending',
+                                            'To Do' => 'status-pending',
                                             default => 'status-pending'
                                         };
                                     @endphp
@@ -211,7 +211,7 @@
         new Chart(statusCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Selesai', 'Dikerjakan', 'Review', 'Pending'],
+                labels: ['Done', 'In Progress', 'Review', 'To Do'],
                 datasets: [{
                     data: [
                             {{ $tasksByStatus['done'] ?? 0 }},
@@ -246,7 +246,7 @@
         new Chart(waktuCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Selesai', 'Dikerjakan', 'Review', 'Pending'],
+                labels: ['Done', 'In Progress', 'Review', 'To Do'],
                 datasets: [{
                     data: [
                             {{ $timeDistribution['done'] ?? 0 }},
