@@ -19,11 +19,11 @@
             <div class="card-body" style="text-align: center; padding: 2rem;">
                 <div class="avatar avatar-lg"
                     style="width: 100px; height: 100px; font-size: 2.5rem; margin: 0 auto 1.5rem;">
-                    @if(auth()->user()->avatar ?? false)
-                        <img src="{{ auth()->user()->avatar }}" alt="Avatar"
+                    @if($user->avatar)
+                        <img src="{{ asset('storage/' . $user->avatar) }}" alt="Avatar"
                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                     @else
-                        {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
+                        {{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}
                     @endif
                 </div>
                 <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem;">

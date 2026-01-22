@@ -16,70 +16,6 @@
         </div>
     </div>
 
-    <!-- Active Timer Card -->
-    <div class="timer-card">
-        <div class="timer-header">
-            <span class="timer-label">Timer Aktif</span>
-            <span class="timer-sublabel">
-                @if($canTrack)
-                    Mulai tracking waktu untuk tugas Anda
-                @else
-                    <i class="fas fa-pause-circle"></i> Project ditunda - Time tracking tidak tersedia
-                @endif
-            </span>
-        </div>
-
-        <div class="timer-display" id="timerDisplay">
-            <span id="timerHours">0</span>j
-            <span id="timerMinutes">0</span>m
-            <span id="timerSeconds">0</span>d
-        </div>
-
-        <div class="timer-task" id="timerTask">
-            @if($runningEntry)
-                {{ $runningEntry->task->title }}
-            @elseif($canTrack)
-                Pilih tugas untuk memulai
-            @else
-                Time tracking tidak tersedia
-            @endif
-        </div>
-
-        <div class="timer-controls">
-            @if($canTrack)
-                @if($runningEntry)
-                    <form action="{{ route('time-tracking.stop', $runningEntry) }}" method="POST" style="display: inline;">
-                        @csrf
-                        <button type="submit" class="btn-timer btn-stop">
-                            <i class="fas fa-stop"></i>
-                            Stop
-                        </button>
-                    </form>
-                @else
-                    <form action="{{ route('time-tracking.start') }}" method="POST" id="startTimerForm"
-                        style="display: flex; gap: 0.75rem; align-items: center;">
-                        @csrf
-                        <select name="task_id" class="form-control task-select" required>
-                            <option value="">-- Pilih Tugas --</option>
-                            @foreach($availableTasks as $task)
-                                <option value="{{ $task->id }}">{{ $task->title }}</option>
-                            @endforeach
-                        </select>
-                        <button type="submit" class="btn-timer btn-start">
-                            <i class="fas fa-play"></i>
-                            Mulai
-                        </button>
-                    </form>
-                @endif
-            @else
-                <div class="timer-disabled-notice">
-                    <i class="fas fa-info-circle"></i>
-                    Project sedang ditunda. Anda tidak dapat melacak waktu.
-                </div>
-            @endif
-        </div>
-    </div>
-
     <!-- Stats Cards -->
     <div class="stats-grid">
         <div class="stat-card">
@@ -117,6 +53,17 @@
                 <i class="fas fa-chart-line"></i>
             </div>
         </div>
+
+        <div class="stat-card">
+            <div class="stat-info">
+                <span class="stat-label">Total Waktu</span>
+                <span class="stat-value">{{ floor($totalSeconds / 3600) }}j {{ floor(($totalSeconds % 3600) / 60) }}m {{ $totalSeconds % 60 }}d</span>
+                <span class="stat-meta">Keseluruhan project</span>
+            </div>
+            <div class="stat-icon orange">
+                <i class="fas fa-hourglass-half"></i>
+            </div>
+        </div>
     </div>
 
     <!-- Recent Entries -->
@@ -125,7 +72,7 @@
             <h3>Entri Waktu Terbaru</h3>
             <span class="text-muted">Daftar waktu yang telah dicatat</span>
         </div>
-        <div class="card-body" style="padding: 0;">
+        <div class="card-body" style="padding: 0; max-height: 400px; overflow-y: auto;">
             @forelse($recentEntries as $entry)
                 <div class="time-entry">
                     <div class="entry-main">
@@ -162,6 +109,42 @@
             @endforelse
         </div>
     </div>
+
+    <!-- Activity Logs -->
+    @if(isset($recentLogs) && $recentLogs->count() > 0)
+    <div class="card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+            <h3><i class="fas fa-history" style="margin-right: 0.5rem;"></i>Activity Log</h3>
+            <span class="text-muted">Riwayat aktivitas time tracking</span>
+        </div>
+        <div class="card-body" style="padding: 0; max-height: 400px; overflow-y: auto;">
+            <div class="activity-log-list">
+                @foreach($recentLogs as $log)
+                    <div class="activity-log-item">
+                        <div class="activity-log-icon {{ $log->action_color }}">
+                            <i class="fas {{ $log->action_icon }}"></i>
+                        </div>
+                        <div class="activity-log-content">
+                            <div class="activity-log-header">
+                                <span class="activity-log-action">{{ $log->action_label }}</span>
+                                <span class="activity-log-task">{{ $log->task->title }}</span>
+                            </div>
+                            <div class="activity-log-meta">
+                                <span><i class="fas fa-user"></i> {{ $log->user->name }}</span>
+                                <span>•</span>
+                                <span><i class="fas fa-clock"></i> {{ $log->created_at->format('d M Y H:i') }}</span>
+                                @if($log->duration_at_action > 0)
+                                    <span>•</span>
+                                    <span><i class="fas fa-stopwatch"></i> {{ $log->formatted_duration }}</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+    @endif
 
     <style>
         .timer-card {
@@ -258,9 +241,18 @@
             background: #dc2626;
         }
 
+        .btn-pause {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-pause:hover {
+            background: #d97706;
+        }
+
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 1.5rem;
             margin-bottom: 1.5rem;
         }
@@ -332,6 +324,11 @@
             color: #a855f7;
         }
 
+        .stat-icon.orange {
+            background: #ffedd5;
+            color: #f97316;
+        }
+
         .time-entry {
             display: flex;
             justify-content: space-between;
@@ -393,6 +390,102 @@
             opacity: 0.9;
         }
 
+        /* Activity Log Styles */
+        .activity-log-list {
+            padding: 0;
+        }
+
+        .activity-log-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.15s;
+        }
+
+        .activity-log-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-log-item:hover {
+            background: #f8fafc;
+        }
+
+        .activity-log-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .activity-log-icon.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .activity-log-icon.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .activity-log-icon.info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .activity-log-icon.primary {
+            background: #e0e7ff;
+            color: #4338ca;
+        }
+
+        .activity-log-icon.secondary {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .activity-log-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .activity-log-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+            flex-wrap: wrap;
+        }
+
+        .activity-log-action {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 0.9rem;
+        }
+
+        .activity-log-task {
+            color: #6366f1;
+            font-size: 0.85rem;
+            background: #f1f5f9;
+            padding: 0.125rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .activity-log-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .activity-log-meta i {
+            margin-right: 0.25rem;
+        }
+
         @media (max-width: 1024px) {
             .stats-grid {
                 grid-template-columns: 1fr;
@@ -403,12 +496,13 @@
     @push('scripts')
         <script>
             // Timer functionality
-            @if($runningEntry)
+            @if($runningEntry && $runningEntry->is_running)
                 const startTime = new Date('{{ $runningEntry->started_at->toIso8601String() }}');
 
                 function updateTimer() {
                     const now = new Date();
-                    const diff = Math.floor((now - startTime) / 1000);
+                    let diff = Math.floor((now - startTime) / 1000);
+                    if (diff < 0) diff = 0;
 
                     const hours = Math.floor(diff / 3600);
                     const minutes = Math.floor((diff % 3600) / 60);

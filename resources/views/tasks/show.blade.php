@@ -294,9 +294,135 @@
                                 <span class="info-label">Updated</span>
                                 <span>{{ $task->updated_at->diffForHumans() }}</span>
                             </div>
-                        </div>
                     </div>
 
+                    @php
+                        $isAssigneeForTimer = $task->assigned_to === auth()->id();
+                        $statusValue = $task->status->value;
+                        $canTrackTime = $isAssigneeForTimer && !in_array($statusValue, ['done', 'review']);
+                        
+                        // Get active time entry for this task
+                        $activeTimeEntry = \App\Models\TimeEntry::forUser(auth()->id())
+                            ->forTask($task->id)
+                            ->active()
+                            ->first();
+                        
+                        // Get recent logs for this task
+                        $taskLogs = \App\Models\TimeTrackingLog::forTask($task->id)
+                            ->with('user')
+                            ->orderByDesc('created_at')
+                            ->limit(10)
+                            ->get();
+                        
+                        // Get total time spent on this task
+                        $totalTimeSeconds = \App\Models\TimeEntry::forTask($task->id)
+                            ->completed()
+                            ->sum('duration_seconds');
+                    @endphp
+
+                    <!-- Time Tracking Card (Only for assignee) -->
+                    @if($isAssigneeForTimer)
+                        <div class="card" style="margin-bottom: 1.5rem;">
+                            <div class="card-header" style="display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-clock"></i>
+                                Time Tracking
+                            </div>
+                            <div class="card-body">
+                                <!-- Timer Display -->
+                                <div class="timer-display-task" id="taskTimerDisplay" style="text-align: center; margin-bottom: 1rem;">
+                                    <div class="timer-value" id="timerValue" style="font-size: 2rem; font-weight: 700; color: #1e293b;">
+                                        @if($activeTimeEntry)
+                                            <span id="timerHours">0</span>:<span id="timerMinutes">00</span>:<span id="timerSeconds">00</span>
+                                        @else
+                                            00:00:00
+                                        @endif
+                                    </div>
+                                    <div class="timer-status" style="font-size: 0.8rem; color: #64748b;">
+                                        @if($activeTimeEntry && $activeTimeEntry->is_running)
+                                            <span class="timer-status-badge running">
+                                                <i class="fas fa-circle"></i> Sedang Berjalan
+                                            </span>
+                                        @else
+                                            <span class="timer-status-badge idle">Belum Dimulai</span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <!-- Timer Controls -->
+                                <div class="timer-controls-task" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    @if($canTrackTime)
+                                        @if(!$activeTimeEntry || !$activeTimeEntry->is_running)
+                                            <!-- Start Button -->
+                                            <form action="{{ route('tasks.timer.start', $task) }}" method="POST">
+                                                @csrf
+                                                <button type="submit" class="btn btn-success" style="width: 100%;">
+                                                    <i class="fas fa-play"></i> Mulai
+                                                </button>
+                                            </form>
+                                        @else
+                                            <!-- Stop Button (with square icon) -->
+                                            <form action="{{ route('time-tracking.stop', $activeTimeEntry) }}" method="POST">
+                                                @csrf
+                                                <button type="submit" class="btn btn-danger" style="width: 100%;">
+                                                    <i class="fas fa-square"></i> Berhenti
+                                                </button>
+                                            </form>
+                                        @endif
+                                    @else
+                                        <div class="timer-disabled-msg" style="text-align: center; color: #94a3b8; font-size: 0.85rem;">
+                                            @if(in_array($statusValue, ['done', 'review']))
+                                                <i class="fas fa-check-circle" style="color: #22c55e;"></i>
+                                                Task sudah selesai
+                                            @endif
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- Total Time Summary -->
+                                <div class="timer-summary" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                                        <span style="color: #64748b;">Total Waktu:</span>
+                                        <span style="font-weight: 600; color: #1e293b;">
+                                            {{ floor($totalTimeSeconds / 3600) }}j {{ floor(($totalTimeSeconds % 3600) / 60) }}m {{ $totalTimeSeconds % 60 }}d
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Activity Logs Card -->
+                        @if($taskLogs->count() > 0)
+                            <div class="card" style="margin-bottom: 1.5rem;">
+                                <div class="card-header" style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <i class="fas fa-history"></i>
+                                    Activity Log
+                                </div>
+                                <div class="card-body" style="padding: 0; max-height: 250px; overflow-y: auto;">
+                                    <div class="activity-timeline">
+                                        @foreach($taskLogs as $log)
+                                            <div class="activity-item">
+                                                <div class="activity-icon {{ $log->action_color }}">
+                                                    <i class="fas {{ $log->action_icon }}"></i>
+                                                </div>
+                                                <div class="activity-content">
+                                                    <div class="activity-title">{{ $log->action_label }}</div>
+                                                    <div class="activity-meta">
+                                                        <span>{{ $log->user->name }}</span>
+                                                        <span>•</span>
+                                                        <span>{{ $log->created_at->diffForHumans() }}</span>
+                                                        @if($log->duration_at_action > 0)
+                                                            <span>•</span>
+                                                            <span>{{ $log->formatted_duration }}</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    @endif
 
 
                     <!-- Quick Actions -->
@@ -314,15 +440,27 @@
                                     {{-- Status: Not review/done - Show "Mark as Done" for assignee/manager --}}
                                     @if(!in_array($statusValue, ['review', 'done']))
                                         @can('updateStatus', $task)
-                                            <form action="{{ route('tasks.update-status', $task) }}" method="POST">
-                                                @csrf
-                                                @method('PATCH')
-                                                <input type="hidden" name="status" value="review">
-                                                <button type="submit" class="btn btn-success" style="width: 100%;">
-                                                    <i class="fas fa-check"></i>
-                                                    Mark as Done
-                                                </button>
-                                            </form>
+                                            @if($isAssignee && isset($activeTimeEntry) && $activeTimeEntry)
+                                                {{-- If assignee has active timer, use complete route that stops timer --}}
+                                                <form action="{{ route('tasks.timer.complete', $task) }}" method="POST">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-success" style="width: 100%;">
+                                                        <i class="fas fa-check"></i>
+                                                        Mark as Done
+                                                    </button>
+                                                </form>
+                                            @else
+                                                {{-- Normal Mark as Done --}}
+                                                <form action="{{ route('tasks.update-status', $task) }}" method="POST">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <input type="hidden" name="status" value="review">
+                                                    <button type="submit" class="btn btn-success" style="width: 100%;">
+                                                        <i class="fas fa-check"></i>
+                                                        Mark as Done
+                                                    </button>
+                                                </form>
+                                            @endif
                                         @endcan
                                     @endif
 
@@ -1054,4 +1192,151 @@
                 @endif
             });
         </script>
+
+        <style>
+            /* Timer Status Badges */
+            .timer-status-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.375rem;
+                padding: 0.25rem 0.75rem;
+                border-radius: 20px;
+                font-size: 0.75rem;
+                font-weight: 600;
+            }
+            
+            .timer-status-badge.running {
+                background: #dcfce7;
+                color: #166534;
+            }
+            
+            .timer-status-badge.running i {
+                font-size: 0.5rem;
+                animation: pulse 1.5s infinite;
+            }
+            
+            .timer-status-badge.paused {
+                background: #fef3c7;
+                color: #92400e;
+            }
+            
+            .timer-status-badge.idle {
+                background: #f1f5f9;
+                color: #64748b;
+            }
+            
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.3; }
+            }
+            
+            /* Activity Timeline */
+            .activity-timeline {
+                padding: 0;
+            }
+            
+            .activity-item {
+                display: flex;
+                gap: 0.75rem;
+                padding: 0.875rem 1rem;
+                border-bottom: 1px solid #f1f5f9;
+                transition: background 0.15s;
+            }
+            
+            .activity-item:last-child {
+                border-bottom: none;
+            }
+            
+            .activity-item:hover {
+                background: #f8fafc;
+            }
+            
+            .activity-icon {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.7rem;
+                flex-shrink: 0;
+            }
+            
+            .activity-icon.success {
+                background: #dcfce7;
+                color: #166534;
+            }
+            
+            .activity-icon.warning {
+                background: #fef3c7;
+                color: #92400e;
+            }
+            
+            .activity-icon.info {
+                background: #dbeafe;
+                color: #1e40af;
+            }
+            
+            .activity-icon.primary {
+                background: #e0e7ff;
+                color: #4338ca;
+            }
+            
+            .activity-icon.secondary {
+                background: #f1f5f9;
+                color: #64748b;
+            }
+            
+            .activity-content {
+                flex: 1;
+                min-width: 0;
+            }
+            
+            .activity-title {
+                font-size: 0.8rem;
+                font-weight: 500;
+                color: #1e293b;
+                margin-bottom: 0.125rem;
+            }
+            
+            .activity-meta {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.375rem;
+                font-size: 0.7rem;
+                color: #94a3b8;
+            }
+        </style>
+
+        @if(isset($activeTimeEntry) && $activeTimeEntry?->is_running)
+        <script>
+            // Timer functionality for task detail page
+            document.addEventListener('DOMContentLoaded', function() {
+                const startTime = new Date('{{ $activeTimeEntry->started_at->toIso8601String() }}');
+                
+                function updateTaskTimer() {
+                    const now = new Date();
+                    let diff = Math.floor((now - startTime) / 1000);
+                    if (diff < 0) diff = 0;
+                    
+                    const hours = Math.floor(diff / 3600);
+                    const minutes = Math.floor((diff % 3600) / 60);
+                    const seconds = diff % 60;
+                    
+                    const timerHours = document.getElementById('timerHours');
+                    const timerMinutes = document.getElementById('timerMinutes');
+                    const timerSeconds = document.getElementById('timerSeconds');
+                    
+                    if (timerHours && timerMinutes && timerSeconds) {
+                        timerHours.textContent = hours;
+                        timerMinutes.textContent = String(minutes).padStart(2, '0');
+                        timerSeconds.textContent = String(seconds).padStart(2, '0');
+                    }
+                }
+                
+                updateTaskTimer();
+                setInterval(updateTaskTimer, 1000);
+            });
+        </script>
+        @endif
 @endsection

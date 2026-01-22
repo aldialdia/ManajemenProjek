@@ -97,8 +97,13 @@
         <div class="dropdown" id="userDropdown">
             <button class="user-menu" onclick="toggleDropdown('userDropdown')">
                 @auth
-                    <div class="avatar avatar-sm">
-                        {{ auth()->user()->initials }}
+                    <div class="avatar avatar-sm" style="overflow: hidden;">
+                        @if(auth()->user()->avatar)
+                            <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="Avatar"
+                                style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                        @else
+                            {{ auth()->user()->initials }}
+                        @endif
                     </div>
                     <span class="user-menu-name">{{ auth()->user()->name }}</span>
                 @else
