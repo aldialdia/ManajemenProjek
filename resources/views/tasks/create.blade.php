@@ -103,6 +103,9 @@
                                     <i class="fas fa-info-circle"></i> Deadline project: {{ $project->end_date->format('d M Y') }}
                                 </small>
                             @endif
+                            <small id="parent-deadline-info" class="text-muted" style="display: none; color: #f59e0b;">
+                                <i class="fas fa-exclamation-triangle"></i> <span></span>
+                            </small>
                             @error('due_date')
                                 <span class="error-message">{{ $message }}</span>
                             @enderror
@@ -112,9 +115,12 @@
                         <div class="form-group">
                             <label for="parent_task_id" class="form-label">Sub-task dari</label>
                             <select id="parent_task_id" name="parent_task_id" class="form-control">
-                                <option value="">-- Tidak ada (Task utama) --</option>
+                                <option value="" data-due-date="">-- Tidak ada (Task utama) --</option>
                                 @foreach($parentTasks as $parentTask)
-                                    <option value="{{ $parentTask->id }}" {{ old('parent_task_id') == $parentTask->id ? 'selected' : '' }}>
+                                    <option value="{{ $parentTask->id }}" 
+                                            data-due-date="{{ $parentTask->due_date?->format('Y-m-d') }}"
+                                            data-due-date-label="{{ $parentTask->due_date?->format('d M Y') }}"
+                                            {{ old('parent_task_id') == $parentTask->id ? 'selected' : '' }}>
                                         {{ $parentTask->title }}
                                     </option>
                                 @endforeach
@@ -157,4 +163,53 @@
             color: #1e293b;
         }
     </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const parentSelect = document.getElementById('parent_task_id');
+            const dueDateInput = document.getElementById('due_date');
+            const parentDeadlineInfo = document.getElementById('parent-deadline-info');
+            const projectEndDate = "{{ $project->end_date?->format('Y-m-d') }}";
+            
+            if (parentSelect && dueDateInput) {
+                parentSelect.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const parentDueDate = selectedOption.getAttribute('data-due-date');
+                    const parentDueDateLabel = selectedOption.getAttribute('data-due-date-label');
+                    
+                    if (parentDueDate) {
+                        // Set max to parent task's due date
+                        dueDateInput.setAttribute('max', parentDueDate);
+                        
+                        // Show parent deadline info
+                        if (parentDeadlineInfo) {
+                            parentDeadlineInfo.style.display = 'block';
+                            parentDeadlineInfo.querySelector('span').textContent = 
+                                'Deadline tugas utama: ' + parentDueDateLabel;
+                        }
+                        
+                        // Reset due_date if it exceeds parent's due_date
+                        if (dueDateInput.value && dueDateInput.value > parentDueDate) {
+                            dueDateInput.value = parentDueDate;
+                        }
+                    } else {
+                        // Reset to project end date
+                        if (projectEndDate) {
+                            dueDateInput.setAttribute('max', projectEndDate);
+                        } else {
+                            dueDateInput.removeAttribute('max');
+                        }
+                        
+                        // Hide parent deadline info
+                        if (parentDeadlineInfo) {
+                            parentDeadlineInfo.style.display = 'none';
+                        }
+                    }
+                });
+                
+                // Trigger on page load if parent is pre-selected
+                parentSelect.dispatchEvent(new Event('change'));
+            }
+        });
+    </script>
 @endsection

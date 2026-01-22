@@ -37,6 +37,15 @@ class StoreTaskRequest extends FormRequest
             $dueDateRules[] = 'before_or_equal:' . $projectEndDate;
         }
 
+        // Add parent task deadline validation if this is a subtask
+        $parentTaskId = $this->input('parent_task_id');
+        if ($parentTaskId) {
+            $parentTask = \App\Models\Task::find($parentTaskId);
+            if ($parentTask && $parentTask->due_date) {
+                $dueDateRules[] = 'before_or_equal:' . $parentTask->due_date->format('Y-m-d');
+            }
+        }
+
         return [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
@@ -71,9 +80,21 @@ class StoreTaskRequest extends FormRequest
         $project = Project::find($projectId);
         $projectEndDate = $project?->end_date?->format('d M Y');
 
+        // Get parent task due_date for error message
+        $parentTaskId = $this->input('parent_task_id');
+        $parentTask = $parentTaskId ? \App\Models\Task::find($parentTaskId) : null;
+        $parentDueDate = $parentTask?->due_date?->format('d M Y');
+
+        $beforeOrEqualMsg = 'Due date tidak boleh melebihi deadline';
+        if ($parentDueDate) {
+            $beforeOrEqualMsg .= ' tugas utama (' . $parentDueDate . ')';
+        } elseif ($projectEndDate) {
+            $beforeOrEqualMsg .= ' project (' . $projectEndDate . ')';
+        }
+
         return [
             'due_date.after_or_equal' => 'Due date tidak boleh sebelum hari ini.',
-            'due_date.before_or_equal' => 'Due date tidak boleh melebihi deadline project (' . ($projectEndDate ?? 'N/A') . ').',
+            'due_date.before_or_equal' => $beforeOrEqualMsg . '.',
         ];
     }
 }
