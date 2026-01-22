@@ -133,7 +133,7 @@ class TaskController extends Controller
         $user = auth()->user();
         $project = null;
 
-        $query = Task::with(['project', 'assignee'])
+        $query = Task::with(['project', 'assignee', 'parent'])
             ->whereNotNull('due_date');
 
         if ($request->filled('project_id')) {
@@ -163,6 +163,8 @@ class TaskController extends Controller
                     'status' => $task->status->label(),
                     'assignee' => $task->assignee?->name ?? 'Unassigned',
                     'description' => Str::limit($task->description, 50),
+                    'parent_task_id' => $task->parent_task_id,
+                    'parent_due_date' => $task->parent?->due_date?->format('Y-m-d'),
                 ]
             ];
         });
@@ -173,12 +175,12 @@ class TaskController extends Controller
         $ganttTasks = $query->get()->map(function ($task) use ($projectEnd) {
             $startDate = $task->start_date ?? now();
             $endDate = $task->due_date ?? now()->addDay();
-            
+
             // Cap end date at project end date
             if ($projectEnd && $endDate->gt($projectEnd)) {
                 $endDate = $projectEnd;
             }
-            
+
             // Cap subtask end date at parent task's due date
             if ($task->parent_task_id && $task->parentTask && $task->parentTask->due_date) {
                 $parentDueDate = $task->parentTask->due_date;
@@ -186,19 +188,19 @@ class TaskController extends Controller
                     $endDate = $parentDueDate;
                 }
             }
-            
+
             // Ensure end date is not before start date
             if ($endDate->lt($startDate)) {
                 $endDate = $startDate->copy()->addDay();
             }
-            
+
             // Add subtask indicator
             $name = $task->parent_task_id ? '↳ ' . $task->title : $task->title;
             $customClass = 'bar-' . $task->status->value;
             if ($task->parent_task_id) {
                 $customClass .= ' subtask-bar';
             }
-            
+
             return [
                 'id' => (string) $task->id,
                 'name' => $name,
@@ -206,6 +208,8 @@ class TaskController extends Controller
                 'end' => $endDate->format('Y-m-d'),
                 'progress' => $task->status === \App\Enums\TaskStatus::DONE ? 100 : ($task->status === \App\Enums\TaskStatus::IN_PROGRESS ? 50 : 0),
                 'custom_class' => $customClass,
+                'parent_task_id' => $task->parent_task_id,
+                'parent_due_date' => $task->parent?->due_date?->format('Y-m-d'),
             ];
         });
 
@@ -232,7 +236,7 @@ class TaskController extends Controller
 
         $newStartDate = $validated['start_date'] ?? null;
         $newDueDate = $validated['due_date'];
-        
+
         // If this is a subtask, cap due_date at parent task's due_date
         if ($task->parent_task_id && $task->parentTask && $task->parentTask->due_date) {
             $parentDueDate = $task->parentTask->due_date;
@@ -241,7 +245,7 @@ class TaskController extends Controller
                 $newDueDate = $validated['due_date'];
             }
         }
-        
+
         $task->update($validated);
 
         // If this is a parent task, adjust subtasks as needed
@@ -255,7 +259,7 @@ class TaskController extends Controller
                         $subtask->update(['start_date' => $newStartDate]);
                     });
             }
-            
+
             // Cap subtasks with due_date exceeding new parent due_date
             $task->subtasks()
                 ->whereNotNull('due_date')
@@ -263,7 +267,7 @@ class TaskController extends Controller
                 ->each(function ($subtask) use ($newDueDate) {
                     $oldDeadline = $subtask->due_date->format('Y-m-d');
                     $subtask->update(['due_date' => $newDueDate]);
-                    
+
                     // Notify assignee if exists
                     if ($subtask->assignee) {
                         $subtask->assignee->notify(new \App\Notifications\TaskDeadlineAdjusted(
