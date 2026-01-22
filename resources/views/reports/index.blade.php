@@ -206,21 +206,26 @@
         }
 
 
-        // Status Tugas Pie Chart
+        // Status Tugas Pie Chart with count details
         const statusCtx = document.getElementById('statusTugasChart').getContext('2d');
+        const statusData = [
+            {{ $tasksByStatus['done'] ?? 0 }},
+            {{ $tasksByStatus['in_progress'] ?? 0 }},
+            {{ $tasksByStatus['review'] ?? 0 }},
+            {{ $tasksByStatus['todo'] ?? 0 }}
+        ];
+        const statusLabels = ['Done', 'In Progress', 'Review', 'To Do'];
+        const statusTotal = statusData.reduce((a, b) => a + b, 0);
+        
         new Chart(statusCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Done', 'In Progress', 'Review', 'To Do'],
+                labels: statusLabels.map((label, i) => label + ' (' + statusData[i] + ')'),
                 datasets: [{
-                    data: [
-                            {{ $tasksByStatus['done'] ?? 0 }},
-                            {{ $tasksByStatus['in_progress'] ?? 0 }},
-                            {{ $tasksByStatus['review'] ?? 0 }},
-                        {{ $tasksByStatus['todo'] ?? 0 }}
-                    ],
+                    data: statusData,
                     backgroundColor: ['#22c55e', '#3b82f6', '#8b5cf6', '#f59e0b'],
-                    borderWidth: 0
+                    borderWidth: 0,
+                    hoverOffset: 8
                 }]
             },
             options: {
@@ -232,8 +237,17 @@
                         position: 'right',
                         labels: {
                             usePointStyle: true,
-                            padding: 20,
-                            font: { size: 13 }
+                            padding: 15,
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.raw;
+                                const percentage = statusTotal > 0 ? Math.round((value / statusTotal) * 100) : 0;
+                                return value + ' tugas (' + percentage + '%)';
+                            }
                         }
                     }
                 },
