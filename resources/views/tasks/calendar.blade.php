@@ -72,8 +72,11 @@
             <h3 style="font-size: 1.125rem; font-weight: 600; color: #1e293b; margin-bottom: 1.5rem;">Gantt Chart</h3>
             
             @if($ganttTasks->count() > 0)
-                <div style="overflow-x: auto;">
+                <div style="overflow-x: auto; position: relative;">
                     <svg id="gantt"></svg>
+                    @if(!$isManager)
+                    <div id="gantt-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; cursor: pointer;"></div>
+                    @endif
                 </div>
             @else
                 <div style="text-align: center; padding: 2rem; color: #64748b;">
@@ -169,6 +172,20 @@
             .bar-wrapper { cursor: pointer; }
             .bar-progress { fill: #6366f1 !important; }
             
+            /* Disable drag for non-managers - block all SVG interactions */
+            @if(!$isManager)
+            #gantt svg * {
+                pointer-events: none !important;
+                cursor: default !important;
+                user-select: none;
+                -webkit-user-drag: none;
+            }
+            #gantt svg .bar-wrapper {
+                pointer-events: auto !important;
+                cursor: pointer !important;
+            }
+            @endif
+            
             /* Hide default popup, show on bar hover */
             .gantt .popup-wrapper { 
                 display: none !important;
@@ -225,6 +242,14 @@
             .bar-{{ $status->value }} .bar { fill: {{ $status->ganttColors()['bar'] }} !important; }
             .bar-{{ $status->value }} .bar-progress { fill: {{ $status->ganttColors()['progress'] }} !important; }
             @endforeach
+            
+            /* Subtask bar styling */
+            .subtask-bar .bar {
+                opacity: 0.85;
+            }
+            .subtask-bar .bar-label {
+                font-style: italic;
+            }
             
             /* Popup Animation */
             @keyframes popIn {
@@ -381,6 +406,8 @@
                 const ganttTasks = @json($ganttTasks);
                 
                 if (ganttTasks.length > 0) {
+                    const isManager = {{ $isManager ? 'true' : 'false' }};
+                    
                     new Gantt("#gantt", ganttTasks, {
                         header_height: 50,
                         column_width: 30,
@@ -392,9 +419,10 @@
                         padding: 18,
                         view_mode: 'Day',
                         date_format: 'YYYY-MM-DD',
-                        on_date_change: function(task, start, end) {
+                        readonly: !isManager, // Disable editing for non-managers
+                        on_date_change: isManager ? function(task, start, end) {
                             updateTaskDates(task.id, moment(start).format('YYYY-MM-DD'), moment(end).format('YYYY-MM-DD'), null, true);
-                        },
+                        } : null,
                         on_click: function (task) {
                             // Navigate to task detail (popup disabled)
                             window.location.href = `/tasks/${task.id}`;
@@ -406,6 +434,54 @@
                     setInterval(function() {
                         document.querySelectorAll('.popup-wrapper').forEach(p => p.remove());
                     }, 100);
+                    
+                    // Completely disable drag for non-managers
+                    if (!isManager) {
+                        setTimeout(function() {
+                            const ganttEl = document.querySelector('#gantt');
+                            if (!ganttEl) return;
+                            
+                            // Block all drag-related events on bars
+                            ganttEl.addEventListener('mousedown', function(e) {
+                                const bar = e.target.closest('.bar-wrapper .bar, .handle-group');
+                                if (bar) {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                }
+                            }, true);
+                            
+                            ganttEl.addEventListener('touchstart', function(e) {
+                                const bar = e.target.closest('.bar-wrapper .bar, .handle-group');
+                                if (bar) {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                }
+                            }, true);
+                            
+                            // Remove drag handles completely
+                            document.querySelectorAll('.handle-group').forEach(h => h.remove());
+                            
+                            // Add click handler on overlay to detect bar clicks
+                            const overlay = document.getElementById('gantt-overlay');
+                            if (overlay) {
+                                overlay.addEventListener('click', function(e) {
+                                    const rect = overlay.getBoundingClientRect();
+                                    const x = e.clientX;
+                                    const y = e.clientY;
+                                    
+                                    // Find which bar was clicked based on position
+                                    document.querySelectorAll('.bar-wrapper').forEach(wrapper => {
+                                        const barRect = wrapper.getBoundingClientRect();
+                                        if (x >= barRect.left && x <= barRect.right && 
+                                            y >= barRect.top && y <= barRect.bottom) {
+                                            const taskId = wrapper.getAttribute('data-id');
+                                            if (taskId) window.location.href = '/tasks/' + taskId;
+                                        }
+                                    });
+                                });
+                            }
+                        }, 300);
+                    }
                     
                     // Add month start markers
                     setTimeout(function() {
@@ -456,7 +532,7 @@
                             
                             // Calculate days from today to project end date
                             const daysDiff = projectEndDate.diff(today, 'days');
-                            const x = todayX + (daysDiff * columnWidth) + (columnWidth / 2); // center of the day
+                            const x = todayX + (daysDiff * columnWidth) + columnWidth; // right edge - where bar ends
                             
                             const gridBg = svg.querySelector('.grid-background');
                             if (gridBg) {
@@ -552,6 +628,10 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
+                                // Show message if tasks were adjusted
+                                if (data.adjusted_tasks > 0) {
+                                    alert(`Deadline project berhasil diubah. ${data.adjusted_tasks} tugas disesuaikan otomatis.`);
+                                }
                                 calendar.gotoDate(newDueDate);
                                 setTimeout(() => window.location.reload(), 100);
                             } else {
