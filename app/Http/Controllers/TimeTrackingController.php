@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
+use App\Models\TimeTrackingLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,10 +42,10 @@ class TimeTrackingController extends Controller
             ->orderBy('title')
             ->get();
 
-        // Get running timer for current user
+        // Get running or paused timer for current user
         $runningEntry = TimeEntry::forUser($user->id)
             ->forProject($project->id)
-            ->running()
+            ->active()
             ->with('task')
             ->first();
 
@@ -78,6 +79,15 @@ class TimeTrackingController extends Controller
             ->limit(10)
             ->get();
 
+        // Get recent activity logs for this project
+        $recentLogs = TimeTrackingLog::whereHas('task', function ($q) use ($project) {
+            $q->where('project_id', $project->id);
+        })
+            ->with(['task', 'user'])
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
+
         return view('time-tracking.index', compact(
             'project',
             'availableTasks',
@@ -85,7 +95,8 @@ class TimeTrackingController extends Controller
             'todaySeconds',
             'weekSeconds',
             'avgDailySeconds',
-            'recentEntries'
+            'recentEntries',
+            'recentLogs'
         ));
     }
 
@@ -120,21 +131,88 @@ class TimeTrackingController extends Controller
         // Stop any running timer for this user in this project
         TimeEntry::forUser($user->id)
             ->forProject($project->id)
-            ->running()
+            ->active()
             ->each(function ($entry) {
                 $entry->stop();
             });
 
         // Create new time entry
-        TimeEntry::create([
+        $timeEntry = TimeEntry::create([
             'user_id' => $user->id,
             'task_id' => $task->id,
             'started_at' => now(),
             'is_running' => true,
         ]);
 
+        // Create log
+        TimeTrackingLog::create([
+            'task_id' => $task->id,
+            'user_id' => $user->id,
+            'time_entry_id' => $timeEntry->id,
+            'action' => 'started',
+            'duration_at_action' => 0,
+        ]);
+
         return redirect()
             ->route('time-tracking.index', ['project_id' => $project->id])
+            ->with('success', 'Timer dimulai untuk: ' . $task->title);
+    }
+
+    /**
+     * Start a timer from task detail page.
+     */
+    public function startFromTask(Task $task): RedirectResponse
+    {
+        $user = auth()->user();
+        $project = $task->project;
+
+        // Check if user is member of this project
+        if (!$user->isMemberOfProject($project)) {
+            abort(403, 'Anda bukan anggota project ini.');
+        }
+
+        // If project is on_hold, only manager can start timer
+        if ($project->isOnHold() && !$user->isManagerInProject($project)) {
+            abort(403, 'Project sedang ditunda. Anda tidak dapat melacak waktu.');
+        }
+
+        // Check if user is assignee of this task
+        if ($task->assigned_to !== $user->id) {
+            abort(403, 'Anda hanya dapat melacak waktu untuk task yang ditugaskan kepada Anda.');
+        }
+
+        // Stop any running timer for this user in this project
+        TimeEntry::forUser($user->id)
+            ->forProject($project->id)
+            ->active()
+            ->each(function ($entry) {
+                $entry->stop();
+            });
+
+        // Create new time entry
+        $timeEntry = TimeEntry::create([
+            'user_id' => $user->id,
+            'task_id' => $task->id,
+            'started_at' => now(),
+            'is_running' => true,
+        ]);
+
+        // Create log
+        TimeTrackingLog::create([
+            'task_id' => $task->id,
+            'user_id' => $user->id,
+            'time_entry_id' => $timeEntry->id,
+            'action' => 'started',
+            'duration_at_action' => 0,
+        ]);
+
+        // Auto-update task status from todo to in_progress
+        if ($task->status->value === 'todo') {
+            $task->update(['status' => 'in_progress']);
+        }
+
+        return redirect()
+            ->back()
             ->with('success', 'Timer dimulai untuk: ' . $task->title);
     }
 
@@ -159,8 +237,119 @@ class TimeTrackingController extends Controller
         }
 
         return redirect()
-            ->route('time-tracking.index', ['project_id' => $timeEntry->task->project_id])
+            ->back()
             ->with('success', 'Timer dihentikan. Durasi: ' . $timeEntry->formatted_duration);
+    }
+
+    /**
+     * Pause a running timer.
+     */
+    public function pause(TimeEntry $timeEntry): RedirectResponse
+    {
+        $user = auth()->user();
+
+        // Check ownership
+        if ($timeEntry->user_id !== $user->id) {
+            abort(403, 'Anda tidak dapat menjeda timer orang lain.');
+        }
+
+        if (!$timeEntry->is_running) {
+            return redirect()->back()->with('warning', 'Timer tidak sedang berjalan.');
+        }
+
+        $timeEntry->pause();
+
+        return redirect()
+            ->back()
+            ->with('success', 'Timer dijeda. Durasi sementara: ' . gmdate('H:i:s', $timeEntry->current_elapsed_seconds));
+    }
+
+    /**
+     * Resume a paused timer.
+     */
+    public function resume(TimeEntry $timeEntry): RedirectResponse
+    {
+        $user = auth()->user();
+
+        // Check ownership
+        if ($timeEntry->user_id !== $user->id) {
+            abort(403, 'Anda tidak dapat melanjutkan timer orang lain.');
+        }
+
+        if (!$timeEntry->is_paused) {
+            return redirect()->back()->with('warning', 'Timer tidak sedang dijeda.');
+        }
+
+        $timeEntry->resume();
+
+        return redirect()
+            ->back()
+            ->with('success', 'Timer dilanjutkan.');
+    }
+
+    /**
+     * Complete task and stop timer.
+     */
+    public function completeTask(Task $task): RedirectResponse
+    {
+        $user = auth()->user();
+        $project = $task->project;
+
+        // Check if user is assignee of this task
+        if ($task->assigned_to !== $user->id) {
+            abort(403, 'Anda hanya dapat menyelesaikan task yang ditugaskan kepada Anda.');
+        }
+
+        // Stop any active timer for this task
+        $activeEntry = TimeEntry::forUser($user->id)
+            ->forTask($task->id)
+            ->active()
+            ->first();
+
+        if ($activeEntry) {
+            $activeEntry->complete();
+        }
+
+        // Update task status to review (pending approval)
+        $task->update(['status' => 'review']);
+
+        return redirect()
+            ->back()
+            ->with('success', 'Task ditandai sebagai selesai dan menunggu persetujuan.');
+    }
+
+    /**
+     * Get activity logs for a task.
+     */
+    public function getTaskLogs(Task $task): JsonResponse
+    {
+        $user = auth()->user();
+
+        // Check if user is member of this project
+        if (!$user->isMemberOfProject($task->project)) {
+            return response()->json(['error' => 'Anda bukan anggota project ini.'], 403);
+        }
+
+        $logs = TimeTrackingLog::forTask($task->id)
+            ->with('user:id,name')
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get()
+            ->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'action' => $log->action,
+                    'action_label' => $log->action_label,
+                    'action_icon' => $log->action_icon,
+                    'action_color' => $log->action_color,
+                    'duration' => $log->formatted_duration,
+                    'user' => $log->user->name,
+                    'created_at' => $log->created_at->format('d M Y H:i'),
+                    'time_ago' => $log->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json($logs);
     }
 
     /**
@@ -248,22 +437,24 @@ class TimeTrackingController extends Controller
 
         $runningEntry = TimeEntry::forUser($user->id)
             ->forProject($projectId)
-            ->running()
+            ->active()
             ->with('task:id,title')
             ->first();
 
         if (!$runningEntry) {
-            return response()->json(['running' => false]);
+            return response()->json(['running' => false, 'paused' => false]);
         }
 
-        $elapsedSeconds = $runningEntry->started_at->diffInSeconds(now());
-
         return response()->json([
-            'running' => true,
+            'running' => $runningEntry->is_running,
+            'paused' => $runningEntry->is_paused,
+            'entry_id' => $runningEntry->id,
             'task_id' => $runningEntry->task_id,
             'task_title' => $runningEntry->task->title,
             'started_at' => $runningEntry->started_at->toIso8601String(),
-            'elapsed_seconds' => $elapsedSeconds,
+            'elapsed_seconds' => $runningEntry->current_elapsed_seconds,
+            'paused_duration' => $runningEntry->paused_duration_seconds,
         ]);
     }
 }
+

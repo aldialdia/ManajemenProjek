@@ -126,9 +126,16 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::get('/time-tracking', [TimeTrackingController::class, 'index'])->name('time-tracking.index');
     Route::post('/time-tracking/start', [TimeTrackingController::class, 'start'])->name('time-tracking.start');
     Route::post('/time-tracking/{timeEntry}/stop', [TimeTrackingController::class, 'stop'])->name('time-tracking.stop');
+    Route::post('/time-tracking/{timeEntry}/pause', [TimeTrackingController::class, 'pause'])->name('time-tracking.pause');
+    Route::post('/time-tracking/{timeEntry}/resume', [TimeTrackingController::class, 'resume'])->name('time-tracking.resume');
     Route::post('/time-tracking', [TimeTrackingController::class, 'store'])->name('time-tracking.store');
     Route::delete('/time-tracking/{timeEntry}', [TimeTrackingController::class, 'destroy'])->name('time-tracking.destroy');
     Route::get('/time-tracking/status', [TimeTrackingController::class, 'status'])->name('time-tracking.status');
+
+    // Task Timer (accessible from task detail page)
+    Route::post('/tasks/{task}/timer/start', [TimeTrackingController::class, 'startFromTask'])->name('tasks.timer.start');
+    Route::post('/tasks/{task}/timer/complete', [TimeTrackingController::class, 'completeTask'])->name('tasks.timer.complete');
+    Route::get('/tasks/{task}/timer/logs', [TimeTrackingController::class, 'getTaskLogs'])->name('tasks.timer.logs');
 
     // API - Search users for @mentions
     Route::get('/api/users/search', [UserController::class, 'search'])->name('api.users.search');
