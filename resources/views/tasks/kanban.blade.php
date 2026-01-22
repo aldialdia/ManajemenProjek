@@ -397,40 +397,40 @@
                         const notDraggableClass = canDrag ? '' : 'not-draggable';
 
                         return `
-                                    <div class="kanban-card ${notDraggableClass}" ${draggableAttr} data-task-id="${task.id}">
-                                        <div class="card-title">
-                                            <a href="/tasks/${task.id}">${task.title}</a>
-                                        </div>
-                                                                ${task.parent ? `
-                                                                    <div class="subtask-indicator">
-                                                                        <i class="fas fa-level-up-alt fa-rotate-90"></i>
-                                                                        Sub-task dari: ${task.parent.title}
-                                                                    </div>
-                                                                ` : ''}
-                                                                <div class="card-project">
-                                                                    <i class="fas fa-folder"></i>
-                                                                    ${task.project?.name || 'No Project'}
-                                                                </div>
-                                                                <div class="card-meta">
-                                                                    <span class="card-priority priority-${task.priority}">
-                                                                        ${task.priority}
-                                                                    </span>
-                                                                    ${task.assignee ? `
-                                                                        <div class="avatar avatar-sm" style="width: 28px; height: 28px; font-size: 0.7rem;">
-                                                                            ${getInitials(task.assignee.name)}
+                                            <div class="kanban-card ${notDraggableClass}" ${draggableAttr} data-task-id="${task.id}">
+                                                <div class="card-title">
+                                                    <a href="/tasks/${task.id}">${task.title}</a>
+                                                </div>
+                                                                        ${task.parent ? `
+                                                                            <div class="subtask-indicator">
+                                                                                <i class="fas fa-level-up-alt fa-rotate-90"></i>
+                                                                                Sub-task dari: ${task.parent.title}
+                                                                            </div>
+                                                                        ` : ''}
+                                                                        <div class="card-project">
+                                                                            <i class="fas fa-folder"></i>
+                                                                            ${task.project?.name || 'No Project'}
                                                                         </div>
-                                                                    ` : ''}
-                                                                </div>
-                                                                ${task.due_date ? `
-                                                                    <div class="card-footer">
-                                                                        <span class="card-due ${isOverdue(task.due_date) ? 'overdue' : ''}">
-                                                                            <i class="fas fa-calendar"></i>
-                                                                            ${formatDate(task.due_date)}
-                                                                        </span>
+                                                                        <div class="card-meta">
+                                                                            <span class="card-priority priority-${task.priority}">
+                                                                                ${task.priority}
+                                                                            </span>
+                                                                            ${task.assignee ? `
+                                                                                <div class="avatar avatar-sm" style="width: 28px; height: 28px; font-size: 0.7rem;">
+                                                                                    ${getInitials(task.assignee.name)}
+                                                                                </div>
+                                                                            ` : ''}
+                                                                        </div>
+                                                                        ${task.due_date ? `
+                                                                            <div class="card-footer">
+                                                                                <span class="card-due ${isOverdue(task.due_date) ? 'overdue' : ''}">
+                                                                                    <i class="fas fa-calendar"></i>
+                                                                                    ${formatDate(task.due_date)}
+                                                                                </span>
+                                                                            </div>
+                                                                        ` : ''}
                                                                     </div>
-                                                                ` : ''}
-                                                            </div>
-                                                        `;
+                                                                `;
                     }).join('');
                 });
 
@@ -520,7 +520,14 @@
                 window.location.href = url.toString();
             }
 
-            document.addEventListener('DOMContentLoaded', renderTasks);
+            document.addEventListener('DOMContentLoaded', function () {
+                renderTasks();
+
+                // Show warning popup for members when project is on hold
+                @if($project && $project->isOnHold() && !auth()->user()->isManagerInProject($project))
+                    showProjectOnHoldModal('Project "{{ $project->name }}" sedang ditunda. Anda tidak dapat memindahkan task.');
+                @endif
+                    });
         </script>
     @endpush
 @endsection

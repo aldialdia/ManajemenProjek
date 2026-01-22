@@ -11,19 +11,21 @@
                 <div class="info-card-content">
                     <div class="info-card-title-row">
                         <h2 class="info-card-title">{{ $project->name }}</h2>
-                        <div class="info-card-actions">
-                            <a href="{{ route('projects.edit', $project) }}" class="btn-sm btn-edit-sm">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <form action="{{ route('projects.destroy', $project) }}" method="POST" style="display: inline;"
-                                onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus project ini? Semua tugas dalam project juga akan terhapus.')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn-sm btn-delete-sm">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                        </div>
+                        @can('update', $project)
+                            <div class="info-card-actions">
+                                <a href="{{ route('projects.edit', $project) }}" class="btn-sm btn-edit-sm">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ route('projects.destroy', $project) }}" method="POST" style="display: inline;"
+                                    onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus project ini? Semua tugas dalam project juga akan terhapus.')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn-sm btn-delete-sm">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        @endcan
                     </div>
                     <p class="info-card-desc">{{ $project->description ?? 'Tidak ada deskripsi' }}</p>
                     @if($project->goals)
@@ -227,13 +229,27 @@
 
             <!-- Add Comment Form with @mention -->
             @auth
-                <div class="chat-input-area">
-                    @include('components.mention-comment-box', [
-                        'action' => route('projects.comments.store', $project),
-                        'id' => 'project-' . $project->id,
-                        'placeholder' => 'Tulis pesan... (@ untuk mention)'
-                    ])
-                </div>
+                @php
+                    $canComment = $project->isOnHold() 
+                        ? auth()->user()->isManagerInProject($project)
+                        : true;
+                @endphp
+                @if($canComment)
+                    <div class="chat-input-area">
+                        @include('components.mention-comment-box', [
+                            'action' => route('projects.comments.store', $project),
+                            'id' => 'project-' . $project->id,
+                            'placeholder' => 'Tulis pesan... (@ untuk mention)'
+                        ])
+                    </div>
+                @else
+                    <div class="chat-input-area">
+                        <div class="project-onhold-notice">
+                            <i class="fas fa-pause-circle"></i>
+                            <span>Project sedang ditunda. Komentar tidak tersedia.</span>
+                        </div>
+                    </div>
+                @endif
             @endauth
         </div>
 
@@ -1038,6 +1054,24 @@
             background: white;
         }
 
+        .project-onhold-notice {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+            border: 1px solid #fde047;
+            border-radius: 10px;
+            color: #854d0e;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .project-onhold-notice i {
+            font-size: 1.25rem;
+            color: #ca8a04;
+        }
+
         /* Mention text - hanya warna, tanpa background */
         .mention-text {
             color: #6366f1;
@@ -1486,4 +1520,15 @@
             color: #ef4444;
         }
     </style>
+
+    @push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            @if($project->isOnHold() && !auth()->user()->isManagerInProject($project))
+                // Show warning popup for members when project is on hold
+                showProjectOnHoldModal('Project "{{ $project->name }}" sedang ditunda. Anda hanya dapat melihat data project.');
+            @endif
+        });
+    </script>
+    @endpush
 @endsection

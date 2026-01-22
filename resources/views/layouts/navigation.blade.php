@@ -116,10 +116,6 @@
                         <i class="fas fa-user"></i>
                         My Profile
                     </a>
-                    <a href="{{ route('profile.edit') }}" class="dropdown-item">
-                        <i class="fas fa-cog"></i>
-                        Settings
-                    </a>
                     <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #e2e8f0;">
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf

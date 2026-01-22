@@ -10,9 +10,18 @@
                 <h1 class="doc-main-title">Manajemen Dokumen</h1>
                 <p class="doc-subtitle">Kelola semua file dan dokumen proyek</p>
             </div>
-            <a href="{{ route('projects.documents.create', $project) }}" class="doc-upload-btn">
-                <i class="fas fa-cloud-upload-alt"></i> Upload File
-            </a>
+            @php
+                $canUpload = !$project->isOnHold() || auth()->user()->isManagerInProject($project);
+            @endphp
+            @if($canUpload)
+                <a href="{{ route('projects.documents.create', $project) }}" class="doc-upload-btn">
+                    <i class="fas fa-cloud-upload-alt"></i> Upload File
+                </a>
+            @else
+                <span class="doc-upload-btn disabled" title="Project sedang ditunda">
+                    <i class="fas fa-pause-circle"></i> Upload Tidak Tersedia
+                </span>
+            @endif
         </div>
 
         <!-- Search Bar -->
@@ -629,21 +638,35 @@
         });
 
         // Delete document handler - uses hidden form and custom modal
-        document.querySelectorAll('.btn-delete-doc').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
+        document.querySelectorAll('.btn-delete-doc').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 const actionUrl = this.dataset.action;
                 const message = this.dataset.message || 'Yakin ingin menghapus?';
                 const deleteForm = document.getElementById('deleteDocumentForm');
-                
-                showConfirmModal(message, function() {
+
+                showConfirmModal(message, function () {
                     // Set form action and submit
                     deleteForm.action = actionUrl;
                     deleteForm.submit();
                 });
             });
         });
+
+        // Show warning popup for members when project is on hold
+        @if($project->isOnHold() && !auth()->user()->isManagerInProject($project))
+            showProjectOnHoldModal('Project "{{ $project->name }}" sedang ditunda. Anda hanya dapat melihat data project.');
+        @endif
     </script>
+
+    <style>
+        .doc-upload-btn.disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+    </style>
 @endsection

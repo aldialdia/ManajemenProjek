@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\ProjectService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class ProjectController extends Controller
@@ -35,13 +36,17 @@ class ProjectController extends Controller
     {
         $project = $this->projectService->create($request->validated());
 
+        /** @var User $user */
+        $user = Auth::user();
+        $userId = $user->id;
+
         // Assign pembuat project sebagai Manager otomatis
         // Cek jika user belum terdaftar di project (untuk menghindari duplikasi jika dia memilih dirinya sendiri di form)
-        if (!$project->users()->where('user_id', auth()->id())->exists()) {
-            $project->users()->attach(auth()->id(), ['role' => 'manager']);
+        if (!$project->users()->where('user_id', $userId)->exists()) {
+            $project->users()->attach($userId, ['role' => 'manager']);
         } else {
             // Jika sudah terdaftar (misal dipilih sbg member), update jadi manager
-            $project->users()->updateExistingPivot(auth()->id(), ['role' => 'manager']);
+            $project->users()->updateExistingPivot($userId, ['role' => 'manager']);
         }
 
         return redirect()
@@ -100,8 +105,11 @@ class ProjectController extends Controller
      */
     public function updateEndDate(\Illuminate\Http\Request $request, Project $project): \Illuminate\Http\JsonResponse
     {
+        /** @var User $user */
+        $user = Auth::user();
+
         // Check if user is manager/admin
-        if (!auth()->user()->isManagerInProject($project)) {
+        if (!$user->isManagerInProject($project)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
