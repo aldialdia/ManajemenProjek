@@ -99,13 +99,14 @@
     <!-- Tab Content: Overview -->
     <div id="tab-overview" class="tab-content active">
         <div class="grid grid-cols-2" style="margin-bottom: 1.5rem;">
-            <!-- Status Proyek Pie Chart -->
+            <!-- Status Tugas Pie Chart -->
             <div class="card">
                 <div class="card-header">
-                    <span>Status Proyek</span>
+                    <span>Status Tugas</span>
+                    <span class="text-muted text-sm">Distribusi berdasarkan status</span>
                 </div>
                 <div class="card-body">
-                    <canvas id="statusProyekChart" height="280"></canvas>
+                    <canvas id="statusTugasChart" height="280"></canvas>
                 </div>
             </div>
 
@@ -145,8 +146,8 @@
                 <table class="activity-table">
                     <thead>
                         <tr>
-                            <th>Proyek</th>
                             <th>Aktivitas</th>
+                            <th>Ditugaskan</th>
                             <th>Tanggal</th>
                             <th>Waktu</th>
                             <th>Status</th>
@@ -155,13 +156,21 @@
                     <tbody>
                         @foreach($recentActivities as $activity)
                             <tr>
-                                <td>{{ $activity['project'] }}</td>
                                 <td>{{ $activity['activity'] }}</td>
+                                <td>{{ $activity['user'] }}</td>
                                 <td>{{ $activity['date'] }}</td>
                                 <td>{{ $activity['time'] }}</td>
                                 <td>
-                                    <span
-                                        class="status-badge {{ $activity['status'] === 'Selesai' ? 'status-success' : 'status-pending' }}">
+                                    @php
+                                        $statusClass = match($activity['status']) {
+                                            'Done' => 'status-done',
+                                            'In Progress' => 'status-in-progress',
+                                            'Review' => 'status-review',
+                                            'To Do' => 'status-pending',
+                                            default => 'status-pending'
+                                        };
+                                    @endphp
+                                    <span class="status-badge {{ $statusClass }}">
                                         {{ $activity['status'] }}
                                     </span>
                                 </td>
@@ -196,21 +205,27 @@
             window.location.href = url.toString();
         }
 
-        // Status Proyek Pie Chart
-        const statusCtx = document.getElementById('statusProyekChart').getContext('2d');
+
+        // Status Tugas Pie Chart with count details
+        const statusCtx = document.getElementById('statusTugasChart').getContext('2d');
+        const statusData = [
+            {{ $tasksByStatus['done'] ?? 0 }},
+            {{ $tasksByStatus['in_progress'] ?? 0 }},
+            {{ $tasksByStatus['review'] ?? 0 }},
+            {{ $tasksByStatus['todo'] ?? 0 }}
+        ];
+        const statusLabels = ['Done', 'In Progress', 'Review', 'To Do'];
+        const statusTotal = statusData.reduce((a, b) => a + b, 0);
+        
         new Chart(statusCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Selesai', 'Sedang Berjalan', 'Ditunda', 'Baru'],
+                labels: statusLabels.map((label, i) => label + ' (' + statusData[i] + ')'),
                 datasets: [{
-                    data: [
-                            {{ $projectsByStatus['completed'] ?? 0 }},
-                            {{ $projectsByStatus['active'] ?? 0 }},
-                            {{ $projectsByStatus['on_hold'] ?? 0 }},
-                        {{ $projectsByStatus['cancelled'] ?? 0 }}
-                    ],
-                    backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6'],
-                    borderWidth: 0
+                    data: statusData,
+                    backgroundColor: ['#22c55e', '#3b82f6', '#8b5cf6', '#f59e0b'],
+                    borderWidth: 0,
+                    hoverOffset: 8
                 }]
             },
             options: {
@@ -222,8 +237,17 @@
                         position: 'right',
                         labels: {
                             usePointStyle: true,
-                            padding: 20,
-                            font: { size: 13 }
+                            padding: 15,
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.raw;
+                                const percentage = statusTotal > 0 ? Math.round((value / statusTotal) * 100) : 0;
+                                return value + ' tugas (' + percentage + '%)';
+                            }
                         }
                     }
                 },
@@ -236,7 +260,7 @@
         new Chart(waktuCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Selesai', 'Dikerjakan', 'Review', 'Pending'],
+                labels: ['Done', 'In Progress', 'Review', 'To Do'],
                 datasets: [{
                     data: [
                             {{ $timeDistribution['done'] ?? 0 }},
@@ -476,9 +500,19 @@
             font-weight: 500;
         }
 
-        .status-success {
+        .status-done {
             background: #dcfce7;
             color: #16a34a;
+        }
+
+        .status-in-progress {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .status-review {
+            background: #ede9fe;
+            color: #7c3aed;
         }
 
         .status-pending {

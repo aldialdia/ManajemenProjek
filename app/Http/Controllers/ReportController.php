@@ -40,68 +40,67 @@ class ReportController extends Controller
         return [$startDate, $endDate];
     }
 
-    public function index(Request $request)
+    /**
+     * Display reports for a specific project
+     */
+    public function index(Request $request, Project $project)
     {
         $user = auth()->user();
-        $userProjectIds = $user->projects()->pluck('projects.id')->toArray();
-        
-        $projectId = $request->get('project_id');
-        $project = $projectId ? Project::find($projectId) : null;
         $period = $request->get('period', '30'); // Default 30 days
 
         // Get date range for filtering
         [$startDate, $endDate] = $this->getDateRange($period);
 
-        // ===== PROJECT-WIDE STATS (all data from user's projects) =====
-        $totalProjects = count($userProjectIds);
+        // ===== PROJECT-SPECIFIC STATS =====
         
-        // All tasks in user's projects within period (based on created_at or updated_at)
-        $totalTasks = Task::whereIn('project_id', $userProjectIds)
+        // All tasks in THIS PROJECT within period
+        $totalTasks = Task::where('project_id', $project->id)
             ->where(function($q) use ($startDate, $endDate) {
                 $q->whereBetween('created_at', [$startDate, $endDate])
                   ->orWhereBetween('updated_at', [$startDate, $endDate]);
             })
             ->count();
             
-        $completedTasks = Task::whereIn('project_id', $userProjectIds)
+        $completedTasks = Task::where('project_id', $project->id)
             ->where('status', 'done')
             ->whereBetween('updated_at', [$startDate, $endDate])
             ->count();
         
-        // Total hours from all team members in user's projects within period
-        $totalHours = round(\App\Models\TimeEntry::whereHas('task', function($q) use ($userProjectIds) {
-            $q->whereIn('project_id', $userProjectIds);
+        // Total hours from all team members in THIS PROJECT within period
+        // Include completed entries
+        $completedHours = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+            $q->where('project_id', $project->id);
         })
         ->whereBetween('started_at', [$startDate, $endDate])
-        ->sum('duration_seconds') / 3600, 1);
+        ->where('is_running', false)
+        ->whereNotNull('ended_at')
+        ->sum('duration_seconds') / 3600;
         
-        // Team members in user's projects (not filtered by period - this is a static count)
-        $totalMembers = User::whereHas('projects', function($q) use ($userProjectIds) {
-            $q->whereIn('projects.id', $userProjectIds);
-        })->count();
+        // Add running timer elapsed time for this project
+        $runningEntries = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+            $q->where('project_id', $project->id);
+        })
+        ->whereBetween('started_at', [$startDate, $endDate])
+        ->where('is_running', true)
+        ->get();
+        $runningSeconds = $runningEntries->sum(fn($entry) => $entry->current_elapsed_seconds);
+        
+        $totalHours = round($completedHours + ($runningSeconds / 3600), 1);
+        
+        // Team members in THIS PROJECT
+        $totalMembers = $project->users()->count();
 
-        // ===== PERCENTAGE CHANGE CALCULATIONS (comparing current period vs previous period) =====
+        // ===== PERCENTAGE CHANGE CALCULATIONS =====
         $periodDays = $startDate->diffInDays($endDate);
         $prevEndDate = $startDate->copy()->subDay();
         $prevStartDate = $prevEndDate->copy()->subDays($periodDays);
 
-        // Projects change
-        $projectsThisPeriod = Project::whereIn('id', $userProjectIds)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->count();
-        $projectsLastPeriod = Project::whereIn('id', $userProjectIds)
-            ->whereBetween('created_at', [$prevStartDate, $prevEndDate])
-            ->count();
-        $projectChange = $projectsLastPeriod > 0 
-            ? round((($projectsThisPeriod - $projectsLastPeriod) / $projectsLastPeriod) * 100) 
-            : ($projectsThisPeriod > 0 ? 100 : 0);
-
-        // Tasks completed change (all tasks in user's projects)
-        $tasksThisPeriod = Task::whereIn('project_id', $userProjectIds)
+        // Tasks completed change
+        $tasksThisPeriod = Task::where('project_id', $project->id)
             ->where('status', 'done')
             ->whereBetween('updated_at', [$startDate, $endDate])
             ->count();
-        $tasksLastPeriod = Task::whereIn('project_id', $userProjectIds)
+        $tasksLastPeriod = Task::where('project_id', $project->id)
             ->where('status', 'done')
             ->whereBetween('updated_at', [$prevStartDate, $prevEndDate])
             ->count();
@@ -109,47 +108,48 @@ class ReportController extends Controller
             ? round((($tasksThisPeriod - $tasksLastPeriod) / $tasksLastPeriod) * 100) 
             : ($tasksThisPeriod > 0 ? 100 : 0);
 
-        // Hours change (all hours in user's projects)
-        $hoursThisPeriod = \App\Models\TimeEntry::whereHas('task', function($q) use ($userProjectIds) {
-            $q->whereIn('project_id', $userProjectIds);
+        // Hours change (only completed entries for fair comparison)
+        $hoursThisPeriod = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+            $q->where('project_id', $project->id);
         })->whereBetween('started_at', [$startDate, $endDate])
+          ->where('is_running', false)
+          ->whereNotNull('ended_at')
           ->sum('duration_seconds') / 3600;
-        $hoursLastPeriod = \App\Models\TimeEntry::whereHas('task', function($q) use ($userProjectIds) {
-            $q->whereIn('project_id', $userProjectIds);
+        $hoursLastPeriod = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+            $q->where('project_id', $project->id);
         })->whereBetween('started_at', [$prevStartDate, $prevEndDate])
+          ->where('is_running', false)
+          ->whereNotNull('ended_at')
           ->sum('duration_seconds') / 3600;
         $hoursChange = $hoursLastPeriod > 0 
             ? round((($hoursThisPeriod - $hoursLastPeriod) / $hoursLastPeriod) * 100) 
             : ($hoursThisPeriod > 0 ? 100 : 0);
 
-        // Member change
+        // Member change (static, no change for now)
         $memberChange = 0;
 
-        // Project status distribution (user's projects only - not filtered by period as it shows current state)
-        $projectsByStatus = [
-            'completed' => Project::whereIn('id', $userProjectIds)->where('status', 'completed')->count(),
-            'active' => Project::whereIn('id', $userProjectIds)->where('status', 'active')->count(),
-            'on_hold' => Project::whereIn('id', $userProjectIds)->where('status', 'on_hold')->count(),
-            'cancelled' => Project::whereIn('id', $userProjectIds)->where('status', 'cancelled')->count(),
+        // ===== TASKS BY STATUS (for Status Tugas chart) =====
+        $tasksByStatus = [
+            'done' => Task::where('project_id', $project->id)->where('status', 'done')->count(),
+            'in_progress' => Task::where('project_id', $project->id)->where('status', 'in_progress')->count(),
+            'review' => Task::where('project_id', $project->id)->where('status', 'review')->count(),
+            'todo' => Task::where('project_id', $project->id)->where('status', 'todo')->count(),
         ];
 
-        // ===== TIME DISTRIBUTION BY TASK STATUS (filtered by period) =====
+        // ===== TIME DISTRIBUTION BY TASK STATUS =====
         $timeByStatus = \App\Models\TimeEntry::selectRaw('
                 tasks.status,
                 SUM(time_entries.duration_seconds) as total_seconds
             ')
             ->join('tasks', 'time_entries.task_id', '=', 'tasks.id')
-            ->whereIn('tasks.project_id', $userProjectIds)
+            ->where('tasks.project_id', $project->id)
             ->whereBetween('time_entries.started_at', [$startDate, $endDate])
-            ->when($project, function($q) use ($project) {
-                $q->where('tasks.project_id', $project->id);
-            })
             ->groupBy('tasks.status')
             ->get()
             ->pluck('total_seconds', 'status')
             ->toArray();
 
-        $totalTimeSeconds = array_sum($timeByStatus) ?: 1; // Avoid division by zero
+        $totalTimeSeconds = array_sum($timeByStatus) ?: 1;
 
         $timeDistribution = [
             'done' => round(($timeByStatus['done'] ?? 0) / $totalTimeSeconds * 100),
@@ -158,46 +158,43 @@ class ReportController extends Controller
             'todo' => round(($timeByStatus['todo'] ?? 0) / $totalTimeSeconds * 100),
         ];
 
-        // Tasks by user - filtered by period, with percentage calculation
-        $tasksByUser = User::whereHas('projects', function($q) use ($userProjectIds) {
-            $q->whereIn('projects.id', $userProjectIds);
-        })->withCount([
-            'assignedTasks as completed_count' => function ($q) use ($userProjectIds, $startDate, $endDate) {
+        // Tasks by user in THIS PROJECT
+        $tasksByUser = $project->users()->withCount([
+            'assignedTasks as completed_count' => function ($q) use ($project, $startDate, $endDate) {
                 $q->where('status', 'done')
-                  ->whereIn('project_id', $userProjectIds)
+                  ->where('project_id', $project->id)
                   ->whereBetween('updated_at', [$startDate, $endDate]);
             },
-            'assignedTasks as total_tasks_count' => function ($q) use ($userProjectIds, $startDate, $endDate) {
-                $q->whereIn('project_id', $userProjectIds)
+            'assignedTasks as total_tasks_count' => function ($q) use ($project, $startDate, $endDate) {
+                $q->where('project_id', $project->id)
                   ->where(function($subQ) use ($startDate, $endDate) {
                       $subQ->whereBetween('created_at', [$startDate, $endDate])
                            ->orWhereBetween('updated_at', [$startDate, $endDate]);
                   });
             }
-        ])->take(10)->get()->map(function ($user) {
+        ])->get()->map(function ($user) {
             $user->completion_percentage = $user->total_tasks_count > 0 
                 ? round(($user->completed_count / $user->total_tasks_count) * 100) 
                 : 0;
             return $user;
         });
 
-        // Recent activities - all tasks from user's projects within period
-        $recentActivities = Task::whereIn('project_id', $userProjectIds)
-            ->with(['project', 'assignee'])
+        // Recent activities - tasks from THIS PROJECT only
+        $recentActivities = Task::where('project_id', $project->id)
+            ->with(['assignee'])
             ->whereBetween('updated_at', [$startDate, $endDate])
             ->latest('updated_at')
             ->take(10)
             ->get()
             ->map(function ($task) {
                 $statusLabel = match($task->status->value) {
-                    'done' => 'Selesai',
-                    'in_progress' => 'Dikerjakan',
+                    'done' => 'Done',
+                    'in_progress' => 'In Progress',
                     'review' => 'Review',
-                    'todo' => 'Pending',
+                    'todo' => 'To Do',
                     default => 'Unknown'
                 };
                 return [
-                    'project' => $task->project?->name ?? 'No Project',
                     'activity' => $task->title,
                     'user' => $task->assignee?->name ?? 'Unassigned',
                     'date' => $task->updated_at->format('d M Y'),
@@ -209,16 +206,14 @@ class ReportController extends Controller
         return view('reports.index', compact(
             'project',
             'period',
-            'totalProjects',
             'totalTasks',
             'completedTasks',
             'totalHours',
             'totalMembers',
-            'projectChange',
             'taskChange',
             'hoursChange',
             'memberChange',
-            'projectsByStatus',
+            'tasksByStatus',
             'timeDistribution',
             'tasksByUser',
             'recentActivities'

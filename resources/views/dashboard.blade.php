@@ -7,9 +7,11 @@
         $user = auth()->user();
         $userProjectIds = $user->projects()->pluck('projects.id')->toArray();
 
-        // All authenticated users can create projects
-        // (the creator will automatically become manager)
-        $canCreateProject = true;
+        // Only managers/admins can create projects
+        // Check if user is system admin OR has manager/admin role in any project
+        $canCreateProject = $user->isAdmin() || $user->projects()
+            ->wherePivotIn('role', ['manager', 'admin'])
+            ->exists();
 
         // User-specific stats
         $totalProjects = count($userProjectIds);
@@ -24,13 +26,29 @@
         })->count();
 
         // Calculate actual work hours from TimeEntry (user's own hours)
-        $totalHoursThisMonth = \App\Models\TimeEntry::where('user_id', $user->id)
+        // Include completed entries + currently running timers
+        $completedHoursThisMonth = \App\Models\TimeEntry::where('user_id', $user->id)
             ->whereMonth('started_at', now()->month)
             ->whereYear('started_at', now()->year)
+            ->where('is_running', false)
+            ->whereNotNull('ended_at')
             ->sum('duration_seconds') / 3600;
+        
+        // Add running timer elapsed time
+        $runningEntryThisMonth = \App\Models\TimeEntry::where('user_id', $user->id)
+            ->whereMonth('started_at', now()->month)
+            ->whereYear('started_at', now()->year)
+            ->where('is_running', true)
+            ->first();
+        $runningSecondsThisMonth = $runningEntryThisMonth ? $runningEntryThisMonth->current_elapsed_seconds : 0;
+        $totalHoursThisMonth = $completedHoursThisMonth + ($runningSecondsThisMonth / 3600);
+
+        // Last month (only completed, no running timers from last month)
         $totalHoursLastMonth = \App\Models\TimeEntry::where('user_id', $user->id)
             ->whereMonth('started_at', now()->subMonth()->month)
             ->whereYear('started_at', now()->subMonth()->year)
+            ->where('is_running', false)
+            ->whereNotNull('ended_at')
             ->sum('duration_seconds') / 3600;
 
         // Calculate percentage changes (user-specific)
@@ -82,10 +100,11 @@
             ->take(5)
             ->get();
 
-        // Upcoming deadlines (user's tasks only)
+        // Upcoming deadlines (user's tasks only) - within 7 days
         $upcomingDeadlines = \App\Models\Task::where('assigned_to', $user->id)
             ->whereNotNull('due_date')
             ->where('due_date', '>=', now())
+            ->where('due_date', '<=', now()->addDays(7))
             ->where('status', '!=', 'done')
             ->orderBy('due_date')
             ->with(['project'])
@@ -258,7 +277,10 @@
                                 <i class="fas fa-calendar"></i> {{ $task->due_date->format('Y-m-d') }}
                             </span>
                             <span class="deadline-remaining">
-                                <i class="fas fa-clock"></i> {{ $task->due_date->diffForHumans() }}
+                                @php
+                                    $daysLeft = now()->startOfDay()->diffInDays($task->due_date->startOfDay());
+                                @endphp
+                                <i class="fas fa-clock"></i> {{ $daysLeft }} hari lagi
                             </span>
                         </div>
                     </div>
@@ -340,7 +362,7 @@
         const taskDistChart = new Chart(taskDistCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Selesai', 'Dikerjakan', 'Review', 'Pending'],
+                labels: ['Done', 'In Progress', 'Review', 'To Do'],
                 datasets: [{
                     data: [
                                 {{ $tasksByStatus['done'] }},

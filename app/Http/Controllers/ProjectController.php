@@ -118,8 +118,38 @@ class ProjectController extends Controller
             'end_date' => 'required|date',
         ]);
 
-        $project->update(['end_date' => $validated['end_date']]);
+        $newEndDate = $validated['end_date'];
+        
+        // Find tasks with deadlines exceeding the new project end date
+        $affectedTasks = $project->tasks()
+            ->whereNotNull('due_date')
+            ->where('due_date', '>', $newEndDate)
+            ->get();
 
-        return response()->json(['success' => true]);
+        // Update task deadlines and notify assigned users
+        foreach ($affectedTasks as $task) {
+            $oldDeadline = $task->due_date->format('Y-m-d');
+            
+            // Update task deadline to match project end date
+            $task->update(['due_date' => $newEndDate]);
+            
+            // Notify assigned user if exists
+            if ($task->assignee) {
+                $task->assignee->notify(new \App\Notifications\TaskDeadlineAdjusted(
+                    $task,
+                    $oldDeadline,
+                    $newEndDate,
+                    'penyesuaian deadline project'
+                ));
+            }
+        }
+
+        // Update project end date
+        $project->update(['end_date' => $newEndDate]);
+
+        return response()->json([
+            'success' => true,
+            'adjusted_tasks' => $affectedTasks->count()
+        ]);
     }
 }

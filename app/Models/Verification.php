@@ -9,5 +9,8 @@ class Verification extends Model
 {
     use HasFactory;
     protected $guarded = [];
+
+    protected $casts = [
+        'expires_at' => 'datetime',
+    ];
 }
- 

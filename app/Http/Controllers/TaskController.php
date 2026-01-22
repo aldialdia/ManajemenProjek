@@ -133,7 +133,7 @@ class TaskController extends Controller
         $user = auth()->user();
         $project = null;
 
-        $query = Task::with(['project', 'assignee'])
+        $query = Task::with(['project', 'assignee', 'parent'])
             ->whereNotNull('due_date');
 
         if ($request->filled('project_id')) {
@@ -163,20 +163,53 @@ class TaskController extends Controller
                     'status' => $task->status->label(),
                     'assignee' => $task->assignee?->name ?? 'Unassigned',
                     'description' => Str::limit($task->description, 50),
+                    'parent_task_id' => $task->parent_task_id,
+                    'parent_due_date' => $task->parent?->due_date?->format('Y-m-d'),
                 ]
             ];
         });
 
         // Gantt Data - All tasks with actual dates
-        $ganttTasks = $query->get()->map(function ($task) {
+        // Cap end date at project end date if it exceeds
+        $projectEnd = $project?->end_date;
+        $ganttTasks = $query->get()->map(function ($task) use ($projectEnd) {
+            $startDate = $task->start_date ?? now();
+            $endDate = $task->due_date ?? now()->addDay();
+
+            // Cap end date at project end date
+            if ($projectEnd && $endDate->gt($projectEnd)) {
+                $endDate = $projectEnd;
+            }
+
+            // Cap subtask end date at parent task's due date
+            if ($task->parent_task_id && $task->parentTask && $task->parentTask->due_date) {
+                $parentDueDate = $task->parentTask->due_date;
+                if ($endDate->gt($parentDueDate)) {
+                    $endDate = $parentDueDate;
+                }
+            }
+
+            // Ensure end date is not before start date
+            if ($endDate->lt($startDate)) {
+                $endDate = $startDate->copy()->addDay();
+            }
+
+            // Add subtask indicator
+            $name = $task->parent_task_id ? '↳ ' . $task->title : $task->title;
+            $customClass = 'bar-' . $task->status->value;
+            if ($task->parent_task_id) {
+                $customClass .= ' subtask-bar';
+            }
+
             return [
                 'id' => (string) $task->id,
-                'name' => $task->title,
-                'start' => $task->start_date ? $task->start_date->format('Y-m-d') : now()->format('Y-m-d'),
-                'end' => $task->due_date ? $task->due_date->format('Y-m-d') : now()->addDay()->format('Y-m-d'),
+                'name' => $name,
+                'start' => $startDate->format('Y-m-d'),
+                'end' => $endDate->format('Y-m-d'),
                 'progress' => $task->status === \App\Enums\TaskStatus::DONE ? 100 : ($task->status === \App\Enums\TaskStatus::IN_PROGRESS ? 50 : 0),
-                'dependencies' => $task->parent_task_id ? (string) $task->parent_task_id : null,
-                'custom_class' => 'bar-' . $task->status->value,
+                'custom_class' => $customClass,
+                'parent_task_id' => $task->parent_task_id,
+                'parent_due_date' => $task->parent?->due_date?->format('Y-m-d'),
             ];
         });
 
@@ -201,7 +234,51 @@ class TaskController extends Controller
             'due_date' => 'required|date|after_or_equal:start_date',
         ]);
 
+        $newStartDate = $validated['start_date'] ?? null;
+        $newDueDate = $validated['due_date'];
+
+        // If this is a subtask, cap due_date at parent task's due_date
+        if ($task->parent_task_id && $task->parentTask && $task->parentTask->due_date) {
+            $parentDueDate = $task->parentTask->due_date;
+            if (\Carbon\Carbon::parse($newDueDate)->gt($parentDueDate)) {
+                $validated['due_date'] = $parentDueDate->format('Y-m-d');
+                $newDueDate = $validated['due_date'];
+            }
+        }
+
         $task->update($validated);
+
+        // If this is a parent task, adjust subtasks as needed
+        if ($task->subtasks()->count() > 0) {
+            // Cap subtasks with start_date earlier than new parent start_date
+            if ($newStartDate) {
+                $task->subtasks()
+                    ->whereNotNull('start_date')
+                    ->where('start_date', '<', $newStartDate)
+                    ->each(function ($subtask) use ($newStartDate) {
+                        $subtask->update(['start_date' => $newStartDate]);
+                    });
+            }
+
+            // Cap subtasks with due_date exceeding new parent due_date
+            $task->subtasks()
+                ->whereNotNull('due_date')
+                ->where('due_date', '>', $newDueDate)
+                ->each(function ($subtask) use ($newDueDate) {
+                    $oldDeadline = $subtask->due_date->format('Y-m-d');
+                    $subtask->update(['due_date' => $newDueDate]);
+
+                    // Notify assignee if exists
+                    if ($subtask->assignee) {
+                        $subtask->assignee->notify(new \App\Notifications\TaskDeadlineAdjusted(
+                            $subtask,
+                            $oldDeadline,
+                            $newDueDate,
+                            'penyesuaian deadline tugas utama'
+                        ));
+                    }
+                });
+        }
 
         return response()->json([
             'success' => true,
@@ -256,6 +333,16 @@ class TaskController extends Controller
         $data = $request->validated();
         $data['created_by'] = auth()->id();
 
+        // If this is a subtask, cap due_date at parent task's due_date
+        if (!empty($data['parent_task_id'])) {
+            $parentTask = Task::find($data['parent_task_id']);
+            if ($parentTask && $parentTask->due_date && !empty($data['due_date'])) {
+                if (\Carbon\Carbon::parse($data['due_date'])->gt($parentTask->due_date)) {
+                    $data['due_date'] = $parentTask->due_date->format('Y-m-d');
+                }
+            }
+        }
+
         $task = $this->taskService->create($data);
 
         return redirect()
@@ -302,7 +389,19 @@ class TaskController extends Controller
     {
         $this->authorize('update', $task);
 
-        $this->taskService->update($task, $request->validated());
+        $data = $request->validated();
+
+        // If this is a subtask, cap due_date at parent task's due_date
+        if ($task->parent_task_id) {
+            $parentTask = $task->parentTask;
+            if ($parentTask && $parentTask->due_date && !empty($data['due_date'])) {
+                if (\Carbon\Carbon::parse($data['due_date'])->gt($parentTask->due_date)) {
+                    $data['due_date'] = $parentTask->due_date->format('Y-m-d');
+                }
+            }
+        }
+
+        $this->taskService->update($task, $data);
 
         return redirect()
             ->route('tasks.show', $task)

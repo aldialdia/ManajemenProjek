@@ -54,8 +54,8 @@
             </div>
         @endif
 
-        <!-- Pending Invitations -->
-        @if($pendingInvitations->count() > 0)
+        <!-- Pending Invitations (Only visible to managers/admins who can invite) -->
+        @if($canInvite && $pendingInvitations->count() > 0)
             <div class="card">
                 <div class="card-header">
                     <i class="fas fa-clock"></i>

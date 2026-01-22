@@ -33,6 +33,13 @@ class VerificationController extends Controller
 
         if (!$verify)
             abort(404);
+
+        // Check if OTP has expired
+        if ($verify->expires_at && now()->gt($verify->expires_at)) {
+            $verify->update(['status' => 'invalid']);
+            return redirect('/verify')->with('Failed', 'Kode OTP sudah kadaluarsa! Silakan minta kode baru.');
+        }
+
         if (md5($request->otp) != $verify->otp) {
             $verify->update(['status' => 'invalid']);
             return redirect('/verify')->with('Failed', 'Kode OTP salah!');
@@ -69,6 +76,7 @@ class VerificationController extends Controller
             'otp' => md5($otp),
             'type' => $request->type == 'resend' ? 'register' : $request->type,
             'send_via' => 'email',
+            'expires_at' => now()->addMinutes(10), // OTP valid for 10 minutes
         ]);
 
         try {
