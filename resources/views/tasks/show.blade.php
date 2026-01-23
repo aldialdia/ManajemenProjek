@@ -356,34 +356,49 @@
                         $statusValue = $task->status->value;
                         $canTrackTime = $isAssigneeForTimer && !in_array($statusValue, ['done', 'review']);
                         
-                        // Get active time entry for this task
-                        $activeTimeEntry = \App\Models\TimeEntry::forUser(auth()->id())
-                            ->forTask($task->id)
-                            ->active()
-                            ->first();
+                        // Get active time entry for this task (only for assignee)
+                        $activeTimeEntry = null;
+                        if ($isAssigneeForTimer) {
+                            $activeTimeEntry = \App\Models\TimeEntry::forUser(auth()->id())
+                                ->forTask($task->id)
+                                ->active()
+                                ->first();
+                        }
                         
-                        // Get recent logs for this task
+                        // Get recent logs for this task (visible to all members)
                         $taskLogs = \App\Models\TimeTrackingLog::forTask($task->id)
                             ->with('user')
                             ->orderByDesc('created_at')
                             ->limit(10)
                             ->get();
                         
-                        // Get total time spent on this task
+                        // Get total time spent on this task (visible to all members)
                         $totalTimeSeconds = \App\Models\TimeEntry::forTask($task->id)
                             ->completed()
                             ->sum('duration_seconds');
+                        
+                        // Add running time if there's an active entry
+                        $runningTimeEntry = \App\Models\TimeEntry::forTask($task->id)
+                            ->active()
+                            ->first();
+                        if ($runningTimeEntry) {
+                            $totalTimeSeconds += $runningTimeEntry->current_elapsed_seconds;
+                        }
                     @endphp
 
-                    <!-- Time Tracking Card (Only for assignee) -->
-                    @if($isAssigneeForTimer)
-                        <div class="card" style="margin-bottom: 1.5rem;">
-                            <div class="card-header" style="display: flex; align-items: center; gap: 0.5rem;">
-                                <i class="fas fa-clock"></i>
+                    <!-- Time Tracking & Total Time Card (Combined) -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="card-header" style="display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-clock"></i>
+                            @if($isAssigneeForTimer)
                                 Time Tracking
-                            </div>
-                            <div class="card-body">
-                                <!-- Timer Display -->
+                            @else
+                                Waktu Pengerjaan
+                            @endif
+                        </div>
+                        <div class="card-body">
+                            @if($isAssigneeForTimer)
+                                <!-- Timer Display (for assignee) -->
                                 <div class="timer-display-task" id="taskTimerDisplay" style="text-align: center; margin-bottom: 1rem;">
                                     <div class="timer-value" id="timerValue" style="font-size: 2rem; font-weight: 700; color: #1e293b;">
                                         @if($activeTimeEntry)
@@ -403,8 +418,8 @@
                                     </div>
                                 </div>
 
-                                <!-- Timer Controls -->
-                                <div class="timer-controls-task" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <!-- Timer Controls (for assignee) -->
+                                <div class="timer-controls-task" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
                                     @if($canTrackTime)
                                         @if(!$activeTimeEntry || !$activeTimeEntry->is_running)
                                             <!-- Start Button -->
@@ -415,7 +430,7 @@
                                                 </button>
                                             </form>
                                         @else
-                                            <!-- Stop Button (with square icon) -->
+                                            <!-- Stop Button -->
                                             <form action="{{ route('time-tracking.stop', $activeTimeEntry) }}" method="POST">
                                                 @csrf
                                                 <button type="submit" class="btn btn-danger" style="width: 100%;">
@@ -432,53 +447,65 @@
                                         </div>
                                     @endif
                                 </div>
+                            @endif
 
-                                <!-- Total Time Summary -->
-                                <div class="timer-summary" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
-                                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-                                        <span style="color: #64748b;">Total Waktu:</span>
-                                        <span style="font-weight: 600; color: #1e293b;">
-                                            {{ floor($totalTimeSeconds / 3600) }}j {{ floor(($totalTimeSeconds % 3600) / 60) }}m {{ $totalTimeSeconds % 60 }}d
-                                        </span>
+                            <!-- Total Time Summary (visible to all) -->
+                            <div class="timer-summary" style="@if($isAssigneeForTimer) padding-top: 1rem; border-top: 1px solid #e2e8f0; @endif">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.25rem;">
+                                        Waktu yang dihabiskan untuk task ini
                                     </div>
+                                    <div style="font-size: 1.5rem; font-weight: 700; color: #1e293b;">
+                                        @php
+                                            $hours = floor($totalTimeSeconds / 3600);
+                                            $minutes = floor(($totalTimeSeconds % 3600) / 60);
+                                            $seconds = $totalTimeSeconds % 60;
+                                        @endphp
+                                        {{ $hours }}j {{ $minutes }}m {{ $seconds }}d
+                                    </div>
+                                    @if($runningTimeEntry)
+                                        <div style="font-size: 0.75rem; color: #22c55e; margin-top: 0.25rem;">
+                                            <i class="fas fa-circle" style="font-size: 0.4rem; animation: pulse 1.5s infinite;"></i>
+                                            Timer sedang berjalan
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Activity Logs Card -->
-                        @if($taskLogs->count() > 0)
-                            <div class="card" style="margin-bottom: 1.5rem;">
-                                <div class="card-header" style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <i class="fas fa-history"></i>
-                                    Activity Log
-                                </div>
-                                <div class="card-body" style="padding: 0; max-height: 250px; overflow-y: auto;">
-                                    <div class="activity-timeline">
-                                        @foreach($taskLogs as $log)
-                                            <div class="activity-item">
-                                                <div class="activity-icon {{ $log->action_color }}">
-                                                    <i class="fas {{ $log->action_icon }}"></i>
-                                                </div>
-                                                <div class="activity-content">
-                                                    <div class="activity-title">{{ $log->action_label }}</div>
-                                                    <div class="activity-meta">
-                                                        <span>{{ $log->user->name }}</span>
+                    <!-- Activity Logs Card (Only for assignee) -->
+                    @if($isAssigneeForTimer && $taskLogs->count() > 0)
+                        <div class="card" style="margin-bottom: 1.5rem;">
+                            <div class="card-header" style="display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-history"></i>
+                                Activity Log
+                            </div>
+                            <div class="card-body" style="padding: 0; max-height: 250px; overflow-y: auto;">
+                                <div class="activity-timeline">
+                                    @foreach($taskLogs as $log)
+                                        <div class="activity-item">
+                                            <div class="activity-icon {{ $log->action_color }}">
+                                                <i class="fas {{ $log->action_icon }}"></i>
+                                            </div>
+                                            <div class="activity-content">
+                                                <div class="activity-title">{{ $log->action_label }}</div>
+                                                <div class="activity-meta">
+                                                    <span>{{ $log->user->name }}</span>
+                                                    <span>•</span>
+                                                    <span>{{ $log->created_at->diffForHumans() }}</span>
+                                                    @if($log->duration_at_action > 0)
                                                         <span>•</span>
-                                                        <span>{{ $log->created_at->diffForHumans() }}</span>
-                                                        @if($log->duration_at_action > 0)
-                                                            <span>•</span>
-                                                            <span>{{ $log->formatted_duration }}</span>
-                                                        @endif
-                                                    </div>
+                                                        <span>{{ $log->formatted_duration }}</span>
+                                                    @endif
                                                 </div>
                                             </div>
-                                        @endforeach
-                                    </div>
+                                        </div>
+                                    @endforeach
                                 </div>
                             </div>
-                        @endif
+                        </div>
                     @endif
-
 
                     <!-- Quick Actions -->
                     @canany(['updateStatus', 'update', 'delete', 'approve'], $task)

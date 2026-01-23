@@ -39,13 +39,9 @@ class ProjectPolicy
      */
     public function update(User $user, Project $project): bool
     {
-        // Only project manager can update
-        // Cek pivot role via relation yang sudah di-load atau query ulang
-        // Karena $project->managers adalah collection dari relationship users() dengan wherePivot
-        // Kita cek manual aja biar aman
-
+        // Manager or Admin can update project
         $member = $project->users()->where('user_id', $user->id)->first();
-        return $member && $member->pivot->role === 'manager';
+        return $member && in_array($member->pivot->role, ['manager', 'admin']);
     }
 
     /**

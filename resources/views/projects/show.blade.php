@@ -11,11 +11,13 @@
                 <div class="info-card-content">
                     <div class="info-card-title-row">
                         <h2 class="info-card-title">{{ $project->name }}</h2>
-                        @can('update', $project)
-                            <div class="info-card-actions">
+                        <div class="info-card-actions">
+                            @can('update', $project)
                                 <a href="{{ route('projects.edit', $project) }}" class="btn-sm btn-edit-sm">
                                     <i class="fas fa-edit"></i>
                                 </a>
+                            @endcan
+                            @can('delete', $project)
                                 <form action="{{ route('projects.destroy', $project) }}" method="POST" style="display: inline;"
                                     onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus project ini? Semua tugas dalam project juga akan terhapus.')">
                                     @csrf
@@ -24,8 +26,8 @@
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </form>
-                            </div>
-                        @endcan
+                            @endcan
+                        </div>
                     </div>
                     <p class="info-card-desc">{{ $project->description ?? 'Tidak ada deskripsi' }}</p>
                     @if($project->goals)
