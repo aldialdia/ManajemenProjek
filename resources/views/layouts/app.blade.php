@@ -254,6 +254,27 @@
             color: #3730a3;
         }
 
+        /* Task Status Badges - Matching Kanban Colors */
+        .badge-todo {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .badge-inprogress {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .badge-review {
+            background: #ffedd5;
+            color: #ea580c;
+        }
+
+        .badge-done {
+            background: #d1fae5;
+            color: #059669;
+        }
+
         /* Page Header */
         .page-header {
             display: flex;

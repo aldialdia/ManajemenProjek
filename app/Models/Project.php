@@ -102,11 +102,27 @@ class Project extends Model
     }
 
     /**
-     * Check if project is active.
+     * Check if project is in progress.
      */
-    public function isActive(): bool
+    public function isInProgress(): bool
     {
-        return $this->status === ProjectStatus::ACTIVE;
+        return $this->status === ProjectStatus::IN_PROGRESS;
+    }
+
+    /**
+     * Check if project is new.
+     */
+    public function isNew(): bool
+    {
+        return $this->status === ProjectStatus::NEW;
+    }
+
+    /**
+     * Check if project is done.
+     */
+    public function isDone(): bool
+    {
+        return $this->status === ProjectStatus::DONE;
     }
 
     /**
@@ -128,5 +144,39 @@ class Project extends Model
         }
         $completed = $this->tasks()->where('status', 'done')->count();
         return (int) round(($completed / $total) * 100);
+    }
+
+    /**
+     * Check if all tasks are completed and update project status accordingly.
+     */
+    public function checkAndUpdateStatusBasedOnTasks(): void
+    {
+        $totalTasks = $this->tasks()->count();
+
+        // If no tasks, don't change status
+        if ($totalTasks === 0) {
+            return;
+        }
+
+        $doneTasks = $this->tasks()->where('status', 'done')->count();
+
+        // If all tasks are done, mark project as done
+        if ($doneTasks === $totalTasks && $this->status !== ProjectStatus::DONE) {
+            $this->update(['status' => ProjectStatus::DONE]);
+        }
+        // If project was done but now has incomplete tasks (task reopened), revert to in_progress
+        elseif ($doneTasks < $totalTasks && $this->status === ProjectStatus::DONE) {
+            $this->update(['status' => ProjectStatus::IN_PROGRESS]);
+        }
+    }
+
+    /**
+     * Set project to in_progress if it's currently new.
+     */
+    public function startIfNew(): void
+    {
+        if ($this->status === ProjectStatus::NEW) {
+            $this->update(['status' => ProjectStatus::IN_PROGRESS]);
+        }
     }
 }

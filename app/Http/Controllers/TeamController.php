@@ -129,6 +129,7 @@ class TeamController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'initials' => $user->initials,
+            'avatar' => $user->avatar,
             'role' => $memberRole,
             'joined_at' => $user->created_at->format('d M Y'),
             'stats' => [

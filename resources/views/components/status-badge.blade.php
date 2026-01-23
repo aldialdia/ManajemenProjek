@@ -1,20 +1,20 @@
 @props([
-    'status' => 'active',
+    'status' => 'new',
     'type' => 'project', // project, task, priority
 ])
 @php
     $badges = [
         'project' => [
-            'active' => ['class' => 'badge-success', 'label' => 'Active'],
-            'on_hold' => ['class' => 'badge-warning', 'label' => 'On Hold'],
-            'completed' => ['class' => 'badge-info', 'label' => 'Completed'],
-            'cancelled' => ['class' => 'badge-danger', 'label' => 'Cancelled'],
+            'new' => ['class' => 'badge-todo', 'label' => 'Baru'],
+            'in_progress' => ['class' => 'badge-inprogress', 'label' => 'Sedang Berjalan'],
+            'done' => ['class' => 'badge-done', 'label' => 'Selesai'],
+            'on_hold' => ['class' => 'badge-warning', 'label' => 'Ditunda'],
         ],
         'task' => [
-            'todo' => ['class' => 'badge-secondary', 'label' => 'To Do'],
-            'in_progress' => ['class' => 'badge-primary', 'label' => 'In Progress'],
-            'review' => ['class' => 'badge-warning', 'label' => 'In Review'],
-            'done' => ['class' => 'badge-success', 'label' => 'Done'],
+            'todo' => ['class' => 'badge-todo', 'label' => 'To Do'],
+            'in_progress' => ['class' => 'badge-inprogress', 'label' => 'In Progress'],
+            'review' => ['class' => 'badge-review', 'label' => 'In Review'],
+            'done' => ['class' => 'badge-done', 'label' => 'Done'],
         ],
         'priority' => [
             'low' => ['class' => 'badge-secondary', 'label' => 'Low'],

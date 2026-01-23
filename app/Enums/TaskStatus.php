@@ -22,10 +22,10 @@ enum TaskStatus: string
     public function color(): string
     {
         return match ($this) {
-            self::TODO => 'secondary',
-            self::IN_PROGRESS => 'primary',
-            self::REVIEW => 'warning',
-            self::DONE => 'success',
+            self::TODO => 'todo',
+            self::IN_PROGRESS => 'inprogress',
+            self::REVIEW => 'review',
+            self::DONE => 'done',
         };
     }
 
@@ -35,10 +35,10 @@ enum TaskStatus: string
     public function hexColor(): string
     {
         return match ($this) {
-            self::TODO => '#6b7280',
-            self::IN_PROGRESS => '#6366f1',
-            self::REVIEW => '#f59e0b',
-            self::DONE => '#10b981',
+            self::TODO => '#94a3b8',      // Gray (Kanban To Do)
+            self::IN_PROGRESS => '#3b82f6', // Blue (Kanban In Progress)
+            self::REVIEW => '#f97316',     // Orange (Kanban Review)
+            self::DONE => '#10b981',       // Teal Green (Kanban Done)
         };
     }
 
@@ -48,10 +48,10 @@ enum TaskStatus: string
     public function ganttColors(): array
     {
         return match ($this) {
-            self::TODO => ['bar' => '#d1d5db', 'progress' => '#9ca3af'],
-            self::IN_PROGRESS => ['bar' => '#a5b4fc', 'progress' => '#6366f1'],
-            self::REVIEW => ['bar' => '#fcd34d', 'progress' => '#f59e0b'],
-            self::DONE => ['bar' => '#6ee7b7', 'progress' => '#10b981'],
+            self::TODO => ['bar' => '#cbd5e1', 'progress' => '#94a3b8'],         // Gray
+            self::IN_PROGRESS => ['bar' => '#93c5fd', 'progress' => '#3b82f6'], // Blue
+            self::REVIEW => ['bar' => '#fdba74', 'progress' => '#f97316'],      // Orange
+            self::DONE => ['bar' => '#6ee7b7', 'progress' => '#10b981'],        // Teal Green
         };
     }
 

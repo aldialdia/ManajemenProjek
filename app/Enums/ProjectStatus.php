@@ -5,31 +5,40 @@ namespace App\Enums;
 enum ProjectStatus: string
 {
     case NEW = 'new';
-    case ACTIVE = 'active';
+    case IN_PROGRESS = 'in_progress';
+    case DONE = 'done';
     case ON_HOLD = 'on_hold';
-    case COMPLETED = 'completed';
-    case CANCELLED = 'cancelled';
 
     public function label(): string
     {
         return match ($this) {
             self::NEW => 'Baru',
-            self::ACTIVE => 'Sedang Berjalan',
+            self::IN_PROGRESS => 'Sedang Berjalan',
+            self::DONE => 'Selesai',
             self::ON_HOLD => 'Ditunda',
-            self::COMPLETED => 'Selesai',
-            self::CANCELLED => 'Dibatalkan',
         };
     }
 
     public function color(): string
     {
         return match ($this) {
-            self::NEW => 'primary',
-            self::ACTIVE => 'success',
+            self::NEW => 'secondary',
+            self::IN_PROGRESS => 'primary',
+            self::DONE => 'success',
             self::ON_HOLD => 'warning',
-            self::COMPLETED => 'info',
-            self::CANCELLED => 'danger',
+        };
+    }
+
+    /**
+     * Hex color for visual representation
+     */
+    public function hexColor(): string
+    {
+        return match ($this) {
+            self::NEW => '#94a3b8',      // Gray
+            self::IN_PROGRESS => '#3b82f6', // Blue
+            self::DONE => '#10b981',     // Green
+            self::ON_HOLD => '#f97316',  // Orange
         };
     }
 }
-

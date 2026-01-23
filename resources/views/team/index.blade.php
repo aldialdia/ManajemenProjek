@@ -96,11 +96,28 @@
             <div class="card-body">
                 <div class="members-list">
                     @foreach($members as $member)
+                        @php
+                            // Warna konsisten berdasarkan user ID
+                            $colorIndex = $member->id % 4;
+                            $colors = [
+                                ['start' => '#6366f1', 'end' => '#4f46e5'],
+                                ['start' => '#f97316', 'end' => '#ea580c'],
+                                ['start' => '#22c55e', 'end' => '#16a34a'],
+                                ['start' => '#ec4899', 'end' => '#db2777'],
+                            ];
+                            $userColor = $colors[$colorIndex];
+                        @endphp
                         <div class="member-item">
-                            <div class="member-avatar"
-                                style="background: linear-gradient(135deg, {{ ['#6366f1', '#f97316', '#22c55e', '#ec4899'][$loop->index % 4] }} 0%, {{ ['#4f46e5', '#ea580c', '#16a34a', '#db2777'][$loop->index % 4] }} 100%);">
-                                {{ $member->initials }}
-                            </div>
+                            @if($member->avatar)
+                                <div class="member-avatar"
+                                    style="background-image: url('{{ asset('storage/' . $member->avatar) }}'); background-size: cover; background-position: center;">
+                                </div>
+                            @else
+                                <div class="member-avatar"
+                                    style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);">
+                                    {{ $member->initials }}
+                                </div>
+                            @endif
                             <div class="member-info">
                                 <div class="member-name">
                                     {{ $member->name }}
@@ -120,8 +137,8 @@
                                 @endphp
                                 <span class="badge {{ $roleClass }}">{{ ucfirst($member->pivot->role) }}</span>
                             </div>
-                            <button type="button" class="btn-icon-view" 
-                                onclick="showMemberProfile({{ $project->id }}, {{ $member->id }}, {{ $loop->index % 4 }})"
+                            <button type="button" class="btn-icon-view"
+                                onclick="showMemberProfile({{ $project->id }}, {{ $member->id }}, {{ $colorIndex }}, {{ $member->avatar ? 'true' : 'false' }})"
                                 title="Lihat Profil">
                                 <i class="fas fa-search"></i>
                             </button>
@@ -361,6 +378,7 @@
                 opacity: 0;
                 transform: translateY(-20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -584,7 +602,7 @@
             ['#ec4899', '#db2777']
         ];
 
-        function showMemberProfile(projectId, userId, colorIndex) {
+        function showMemberProfile(projectId, userId, colorIndex, hasAvatar) {
             const modal = document.getElementById('profileModal');
             const loading = document.getElementById('profileLoading');
             const content = document.getElementById('profileContent');
@@ -604,9 +622,19 @@
 
                     // Update avatar
                     const avatar = document.getElementById('profileAvatar');
-                    const colors = avatarColors[colorIndex % 4];
-                    avatar.style.background = `linear-gradient(135deg, ${colors[0]} 0%, ${colors[1]} 100%)`;
-                    avatar.textContent = data.initials;
+                    if (data.avatar) {
+                        // User has profile picture
+                        avatar.style.backgroundImage = `url('/storage/${data.avatar}')`;
+                        avatar.style.backgroundSize = 'cover';
+                        avatar.style.backgroundPosition = 'center';
+                        avatar.textContent = '';
+                    } else {
+                        // Use gradient with initials
+                        const colors = avatarColors[colorIndex % 4];
+                        avatar.style.backgroundImage = 'none';
+                        avatar.style.background = `linear-gradient(135deg, ${colors[0]} 0%, ${colors[1]} 100%)`;
+                        avatar.textContent = data.initials;
+                    }
 
                     // Update info
                     document.getElementById('profileName').textContent = data.name;
@@ -646,7 +674,7 @@
         }
 
         // Close modal with Escape key
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 closeProfileModal();
             }

@@ -47,7 +47,24 @@ class ProfileController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'avatar' => ['nullable', 'image', 'mimes:jpeg,png,gif,webp', 'max:2048', 'dimensions:min_width=100,min_height=100,max_width=2000,max_height=2000'],
+        ]);
+
+        $user->update($validated);
+
+        return redirect()
+            ->route('profile.edit')
+            ->with('success', 'Profile updated successfully.');
+    }
+
+    /**
+     * Update the user's avatar.
+     */
+    public function updateAvatar(Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'avatar' => ['required', 'image', 'mimes:jpeg,png,gif,webp', 'max:2048'],
         ]);
 
         // Handle avatar upload
@@ -57,14 +74,13 @@ class ProfileController extends Controller
                 Storage::disk('public')->delete($user->avatar);
             }
 
-            $validated['avatar'] = $request->file('avatar')->store('avatars', 'public');
+            $avatarPath = $request->file('avatar')->store('avatars', 'public');
+            $user->update(['avatar' => $avatarPath]);
         }
 
-        $user->update($validated);
-
         return redirect()
-            ->route('profile.show')
-            ->with('success', 'Profile updated successfully.');
+            ->route('profile.edit')
+            ->with('success', 'Foto profil berhasil diperbarui.');
     }
 
     /**

@@ -59,6 +59,7 @@ Route::middleware(['auth', 'check_status'])->group(function () {
 
     // Projects (index excluded - projects shown in dashboard)
     Route::resource('projects', ProjectController::class)->except(['index']);
+    Route::post('/projects/{project}/check-end-date', [ProjectController::class, 'checkEndDateUpdate'])->name('projects.check-end-date');
     Route::patch('/projects/{project}/update-end-date', [ProjectController::class, 'updateEndDate'])->name('projects.update-end-date');
 
     // Documents (Module 8)
@@ -89,6 +90,7 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
     // Comments (dengan rate limiting untuk mencegah spam)

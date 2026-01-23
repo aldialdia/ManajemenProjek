@@ -160,6 +160,14 @@ class TimeTrackingController extends Controller
             'duration_at_action' => 0,
         ]);
 
+        // Auto-update project status from new to in_progress
+        $project->startIfNew();
+
+        // Auto-update task status from todo to in_progress
+        if ($task->status->value === 'todo') {
+            $task->update(['status' => 'in_progress']);
+        }
+
         return redirect()
             ->route('time-tracking.index', ['project_id' => $project->id])
             ->with('success', 'Timer dimulai untuk: ' . $task->title);
@@ -212,6 +220,9 @@ class TimeTrackingController extends Controller
             'action' => 'started',
             'duration_at_action' => 0,
         ]);
+
+        // Auto-update project status from new to in_progress
+        $project->startIfNew();
 
         // Auto-update task status from todo to in_progress
         if ($task->status->value === 'todo') {

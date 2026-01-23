@@ -15,7 +15,7 @@
 
         // User-specific stats
         $totalProjects = count($userProjectIds);
-        $activeProjects = \App\Models\Project::whereIn('id', $userProjectIds)->where('status', 'active')->count();
+        $activeProjects = \App\Models\Project::whereIn('id', $userProjectIds)->where('status', 'in_progress')->count();
         $totalTasks = \App\Models\Task::where('assigned_to', $user->id)->count();
         $completedTasks = \App\Models\Task::where('assigned_to', $user->id)->where('status', 'done')->count();
         $pendingTasks = \App\Models\Task::where('assigned_to', $user->id)->whereIn('status', ['todo', 'in_progress'])->count();
@@ -33,7 +33,7 @@
             ->where('is_running', false)
             ->whereNotNull('ended_at')
             ->sum('duration_seconds') / 3600;
-        
+
         // Add running timer elapsed time
         $runningEntryThisMonth = \App\Models\TimeEntry::where('user_id', $user->id)
             ->whereMonth('started_at', now()->month)
@@ -94,7 +94,7 @@
 
         // Active projects (user's projects only)
         $activeProjectsList = \App\Models\Project::whereIn('id', $userProjectIds)
-            ->where('status', 'active')
+            ->where('status', 'in_progress')
             ->with(['tasks'])
             ->latest()
             ->take(5)
@@ -365,12 +365,12 @@
                 labels: ['Done', 'In Progress', 'Review', 'To Do'],
                 datasets: [{
                     data: [
-                                {{ $tasksByStatus['done'] }},
-                                {{ $tasksByStatus['in_progress'] }},
-                                {{ $tasksByStatus['review'] }},
+                                            {{ $tasksByStatus['done'] }},
+                                            {{ $tasksByStatus['in_progress'] }},
+                                            {{ $tasksByStatus['review'] }},
                         {{ $tasksByStatus['todo'] }}
                     ],
-                    backgroundColor: ['#22c55e', '#f59e0b', '#8b5cf6', '#3b82f6'],
+                    backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#94a3b8'],
                     borderWidth: 0,
                     hoverOffset: 4
                 }]

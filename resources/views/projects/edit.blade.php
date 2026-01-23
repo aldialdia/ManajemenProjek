@@ -33,10 +33,10 @@
                     <x-forms.input-label label="Status" name="status" type="select" required>
                         @php $currentStatus = old('status', $project->status->value ?? $project->status); @endphp
                         <option value="new" {{ $currentStatus === 'new' ? 'selected' : '' }}>Baru</option>
-                        <option value="active" {{ $currentStatus === 'active' ? 'selected' : '' }}>Sedang Berjalan</option>
+                        <option value="in_progress" {{ $currentStatus === 'in_progress' ? 'selected' : '' }}>Sedang Berjalan
+                        </option>
+                        <option value="done" {{ $currentStatus === 'done' ? 'selected' : '' }}>Selesai</option>
                         <option value="on_hold" {{ $currentStatus === 'on_hold' ? 'selected' : '' }}>Ditunda</option>
-                        <option value="completed" {{ $currentStatus === 'completed' ? 'selected' : '' }}>Selesai</option>
-                        <option value="cancelled" {{ $currentStatus === 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
                     </x-forms.input-label>
 
                     <x-forms.input-label label="Start Date" name="start_date" type="date" :value="old('start_date', $project->start_date?->format('Y-m-d'))" />

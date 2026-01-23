@@ -109,8 +109,22 @@
                             </td>
                             <td>
                                 @if($task->assignee)
+                                    @php
+                                        $colorIndex = $task->assignee->id % 4;
+                                        $colors = [
+                                            ['start' => '#6366f1', 'end' => '#4f46e5'],
+                                            ['start' => '#f97316', 'end' => '#ea580c'],
+                                            ['start' => '#22c55e', 'end' => '#16a34a'],
+                                            ['start' => '#ec4899', 'end' => '#db2777'],
+                                        ];
+                                        $userColor = $colors[$colorIndex];
+                                    @endphp
                                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        <div class="avatar avatar-sm">{{ $task->assignee->initials }}</div>
+                                        @if($task->assignee->avatar)
+                                            <div class="avatar avatar-sm" style="background-image: url('{{ asset('storage/' . $task->assignee->avatar) }}'); background-size: cover; background-position: center;"></div>
+                                        @else
+                                            <div class="avatar avatar-sm" style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);">{{ $task->assignee->initials }}</div>
+                                        @endif
                                         <span>{{ $task->assignee->name }}</span>
                                     </div>
                                 @else
@@ -166,8 +180,22 @@
                                 </td>
                                 <td>
                                     @if($subtask->assignee)
+                                        @php
+                                            $colorIndex = $subtask->assignee->id % 4;
+                                            $colors = [
+                                                ['start' => '#6366f1', 'end' => '#4f46e5'],
+                                                ['start' => '#f97316', 'end' => '#ea580c'],
+                                                ['start' => '#22c55e', 'end' => '#16a34a'],
+                                                ['start' => '#ec4899', 'end' => '#db2777'],
+                                            ];
+                                            $userColor = $colors[$colorIndex];
+                                        @endphp
                                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                            <div class="avatar avatar-sm">{{ $subtask->assignee->initials }}</div>
+                                            @if($subtask->assignee->avatar)
+                                                <div class="avatar avatar-sm" style="background-image: url('{{ asset('storage/' . $subtask->assignee->avatar) }}'); background-size: cover; background-position: center;"></div>
+                                            @else
+                                                <div class="avatar avatar-sm" style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);">{{ $subtask->assignee->initials }}</div>
+                                            @endif
                                             <span>{{ $subtask->assignee->name }}</span>
                                         </div>
                                     @else

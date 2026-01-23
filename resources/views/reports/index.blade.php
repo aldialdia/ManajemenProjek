@@ -36,9 +36,10 @@
                 <span class="stat-label">Total Tugas</span>
                 <span class="stat-value">{{ $totalTasks }}</span>
                 @if($taskChange != 0)
-                <span class="stat-change {{ $taskChange >= 0 ? 'positive' : 'negative' }}">
-                    <i class="fas fa-arrow-{{ $taskChange >= 0 ? 'up' : 'down' }}"></i> {{ $taskChange >= 0 ? '+' : '' }}{{ $taskChange }}% dari bulan lalu
-                </span>
+                    <span class="stat-change {{ $taskChange >= 0 ? 'positive' : 'negative' }}">
+                        <i class="fas fa-arrow-{{ $taskChange >= 0 ? 'up' : 'down' }}"></i>
+                        {{ $taskChange >= 0 ? '+' : '' }}{{ $taskChange }}% dari bulan lalu
+                    </span>
                 @endif
             </div>
         </div>
@@ -51,9 +52,10 @@
                 <span class="stat-label">Tugas Selesai</span>
                 <span class="stat-value">{{ $completedTasks }}</span>
                 @if($taskChange != 0)
-                <span class="stat-change {{ $taskChange >= 0 ? 'positive' : 'negative' }}">
-                    <i class="fas fa-arrow-{{ $taskChange >= 0 ? 'up' : 'down' }}"></i> {{ $taskChange >= 0 ? '+' : '' }}{{ $taskChange }}% dari bulan lalu
-                </span>
+                    <span class="stat-change {{ $taskChange >= 0 ? 'positive' : 'negative' }}">
+                        <i class="fas fa-arrow-{{ $taskChange >= 0 ? 'up' : 'down' }}"></i>
+                        {{ $taskChange >= 0 ? '+' : '' }}{{ $taskChange }}% dari bulan lalu
+                    </span>
                 @endif
             </div>
         </div>
@@ -66,9 +68,10 @@
                 <span class="stat-label">Total Jam Kerja</span>
                 <span class="stat-value">{{ $totalHours }}</span>
                 @if($hoursChange != 0)
-                <span class="stat-change {{ $hoursChange >= 0 ? 'positive' : 'negative' }}">
-                    <i class="fas fa-arrow-{{ $hoursChange >= 0 ? 'up' : 'down' }}"></i> {{ $hoursChange >= 0 ? '+' : '' }}{{ $hoursChange }}% dari bulan lalu
-                </span>
+                    <span class="stat-change {{ $hoursChange >= 0 ? 'positive' : 'negative' }}">
+                        <i class="fas fa-arrow-{{ $hoursChange >= 0 ? 'up' : 'down' }}"></i>
+                        {{ $hoursChange >= 0 ? '+' : '' }}{{ $hoursChange }}% dari bulan lalu
+                    </span>
                 @endif
             </div>
         </div>
@@ -81,9 +84,10 @@
                 <span class="stat-label">Anggota Tim</span>
                 <span class="stat-value">{{ $totalMembers }}</span>
                 @if($memberChange != 0)
-                <span class="stat-change {{ $memberChange >= 0 ? 'positive' : 'negative' }}">
-                    <i class="fas fa-arrow-{{ $memberChange >= 0 ? 'up' : 'down' }}"></i> {{ $memberChange >= 0 ? '+' : '' }}{{ $memberChange }} dari bulan lalu
-                </span>
+                    <span class="stat-change {{ $memberChange >= 0 ? 'positive' : 'negative' }}">
+                        <i class="fas fa-arrow-{{ $memberChange >= 0 ? 'up' : 'down' }}"></i>
+                        {{ $memberChange >= 0 ? '+' : '' }}{{ $memberChange }} dari bulan lalu
+                    </span>
                 @endif
             </div>
         </div>
@@ -162,7 +166,7 @@
                                 <td>{{ $activity['time'] }}</td>
                                 <td>
                                     @php
-                                        $statusClass = match($activity['status']) {
+                                        $statusClass = match ($activity['status']) {
                                             'Done' => 'status-done',
                                             'In Progress' => 'status-in-progress',
                                             'Review' => 'status-review',
@@ -209,21 +213,21 @@
         // Status Tugas Pie Chart with count details
         const statusCtx = document.getElementById('statusTugasChart').getContext('2d');
         const statusData = [
-            {{ $tasksByStatus['done'] ?? 0 }},
-            {{ $tasksByStatus['in_progress'] ?? 0 }},
-            {{ $tasksByStatus['review'] ?? 0 }},
+                    {{ $tasksByStatus['done'] ?? 0 }},
+                    {{ $tasksByStatus['in_progress'] ?? 0 }},
+                    {{ $tasksByStatus['review'] ?? 0 }},
             {{ $tasksByStatus['todo'] ?? 0 }}
         ];
         const statusLabels = ['Done', 'In Progress', 'Review', 'To Do'];
         const statusTotal = statusData.reduce((a, b) => a + b, 0);
-        
+
         new Chart(statusCtx, {
             type: 'doughnut',
             data: {
                 labels: statusLabels.map((label, i) => label + ' (' + statusData[i] + ')'),
                 datasets: [{
                     data: statusData,
-                    backgroundColor: ['#22c55e', '#3b82f6', '#8b5cf6', '#f59e0b'],
+                    backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#94a3b8'],
                     borderWidth: 0,
                     hoverOffset: 8
                 }]
@@ -243,7 +247,7 @@
                     },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 const value = context.raw;
                                 const percentage = statusTotal > 0 ? Math.round((value / statusTotal) * 100) : 0;
                                 return value + ' tugas (' + percentage + '%)';
@@ -263,12 +267,12 @@
                 labels: ['Done', 'In Progress', 'Review', 'To Do'],
                 datasets: [{
                     data: [
-                            {{ $timeDistribution['done'] ?? 0 }},
-                            {{ $timeDistribution['in_progress'] ?? 0 }},
-                            {{ $timeDistribution['review'] ?? 0 }},
+                                    {{ $timeDistribution['done'] ?? 0 }},
+                                    {{ $timeDistribution['in_progress'] ?? 0 }},
+                                    {{ $timeDistribution['review'] ?? 0 }},
                         {{ $timeDistribution['todo'] ?? 0 }}
                     ],
-                    backgroundColor: ['#22c55e', '#3b82f6', '#8b5cf6', '#f59e0b'],
+                    backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#94a3b8'],
                     borderWidth: 0
                 }]
             },
@@ -295,15 +299,15 @@
         const completedCounts = {!! json_encode($tasksByUser->pluck('completed_count')->toArray()) !!};
         const totalCounts = {!! json_encode($tasksByUser->pluck('total_tasks_count')->toArray()) !!};
         const percentages = {!! json_encode($tasksByUser->pluck('completion_percentage')->toArray()) !!};
-        
+
         // Dynamic colors based on percentage
-        const barColors = percentages.map(function(pct) {
+        const barColors = percentages.map(function (pct) {
             if (pct >= 80) return '#22c55e'; // Green - Excellent
             if (pct >= 60) return '#84cc16'; // Lime - Good
             if (pct >= 30) return '#f59e0b'; // Orange - Needs improvement
             return '#ef4444'; // Red - Low
         });
-        
+
         new Chart(teamCtx, {
             type: 'bar',
             data: {
@@ -325,7 +329,7 @@
                     },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 const idx = context.dataIndex;
                                 const completed = completedCounts[idx];
                                 const total = totalCounts[idx];
@@ -341,7 +345,7 @@
                         max: 100,
                         grid: { color: 'rgba(0,0,0,0.05)' },
                         ticks: {
-                            callback: function(value) {
+                            callback: function (value) {
                                 return value + '%';
                             }
                         }
@@ -501,8 +505,8 @@
         }
 
         .status-done {
-            background: #dcfce7;
-            color: #16a34a;
+            background: #d1fae5;
+            color: #059669;
         }
 
         .status-in-progress {
@@ -511,13 +515,13 @@
         }
 
         .status-review {
-            background: #ede9fe;
-            color: #7c3aed;
+            background: #ffedd5;
+            color: #ea580c;
         }
 
         .status-pending {
-            background: #fef3c7;
-            color: #d97706;
+            background: #f1f5f9;
+            color: #64748b;
         }
     </style>
 @endsection

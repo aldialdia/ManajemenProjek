@@ -187,6 +187,35 @@
         </div>
     </div>
 
+    <!-- Project Deadline Update Confirmation Modal -->
+    <div id="project-deadline-confirm-popup"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center;">
+        <div
+            style="background: white; border-radius: 16px; padding: 2rem; max-width: 480px; width: 90%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: popIn 0.3s ease-out;">
+            <div
+                style="width: 80px; height: 80px; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 50%; margin: 0 auto 1.5rem; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-calendar-alt" style="font-size: 2rem; color: #3b82f6;"></i>
+            </div>
+            <h3 style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 0.75rem;">Pindahkan Deadline
+                Project?</h3>
+            <p style="color: #64748b; margin-bottom: 1.5rem; line-height: 1.6;">
+                <strong style="color: #3b82f6;">Perubahan ini akan otomatis memperbarui <span
+                        id="affected-tasks-count">0</span> tugas</strong><br>
+                <span style="font-size: 0.875rem;">yang deadline-nya melampaui deadline project yang baru.</span>
+            </p>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button onclick="cancelProjectDeadlineUpdate()"
+                    style="background: #f1f5f9; color: #64748b; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                    <i class="fas fa-times" style="margin-right: 0.5rem;"></i>Tidak
+                </button>
+                <button onclick="confirmProjectDeadlineUpdate()"
+                    style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                    <i class="fas fa-check" style="margin-right: 0.5rem;"></i>Ya, Lanjutkan
+                </button>
+            </div>
+        </div>
+    </div>
+
     @push('styles')
         <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.css" />
@@ -412,7 +441,7 @@
                     events: [
                         ...@json($calendarTasks),
                         @if($projectEndDate && $project)
-                                                                            {
+                                                                                                    {
                                 id: 'project-deadline-{{ $project->id }}',
                                 title: '📌 Deadline Project',
                                 start: '{{ $projectEndDate }}',
@@ -424,7 +453,7 @@
                                 classNames: ['project-deadline-event']
                             }
                         @endif
-                                                        ],
+                                                                        ],
                     editable: {{ $isManager ? 'true' : 'false' }},
                     eventStartEditable: {{ $isManager ? 'true' : 'false' }},
                     eventDurationEditable: false, // No resize in calendar
@@ -757,23 +786,34 @@
                             return;
                         }
 
-                        // Update project end date
-                        const projectId = info.event.id.replace('project-deadline-', '');
+                        // Save context for confirmation
+                        window.pendingProjectDeadlineUpdate = {
+                            info: info,
+                            newDueDate: newDueDate,
+                            projectId: info.event.id.replace('project-deadline-', '')
+                        };
+
+                        // Check if there are affected tasks
+                        const projectId = window.pendingProjectDeadlineUpdate.projectId;
                         fetch(`/projects/${projectId}/update-end-date`, {
                             method: 'PATCH',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                             },
-                            body: JSON.stringify({ end_date: newDueDate })
+                            body: JSON.stringify({
+                                end_date: newDueDate,
+                                confirmed: false
+                            })
                         })
                             .then(response => response.json())
                             .then(data => {
-                                if (data.success) {
-                                    // Show message if tasks were adjusted
-                                    if (data.adjusted_tasks > 0) {
-                                        alert(`Deadline project berhasil diubah. ${data.adjusted_tasks} tugas disesuaikan otomatis.`);
-                                    }
+                                if (data.needs_confirmation) {
+                                    // Show confirmation modal with affected tasks count
+                                    document.getElementById('affected-tasks-count').textContent = data.affected_tasks_count;
+                                    document.getElementById('project-deadline-confirm-popup').style.display = 'flex';
+                                } else if (data.success) {
+                                    // No affected tasks, update successful
                                     calendar.gotoDate(newDueDate);
                                     setTimeout(() => window.location.reload(), 100);
                                 } else {
@@ -805,8 +845,8 @@
                             return;
                         }
                     @endif
-                                    // Validate: subtask due date cannot exceed parent task due date
-                                                var parentDueDate = info.event.extendedProps?.parent_due_date;
+                                                    // Validate: subtask due date cannot exceed parent task due date
+                                                                var parentDueDate = info.event.extendedProps?.parent_due_date;
                     if (parentDueDate && moment(newDueDate).isAfter(moment(parentDueDate))) {
                         info.revert();
                         showParentDeadlinePopup(parentDueDate);
@@ -924,6 +964,59 @@
 
             function closeParentDeadlinePopup() {
                 document.getElementById('parent-deadline-popup').style.display = 'none';
+            }
+
+            // Project Deadline Update Confirmation Functions
+            function confirmProjectDeadlineUpdate() {
+                if (!window.pendingProjectDeadlineUpdate) return;
+
+                const { info, newDueDate, projectId } = window.pendingProjectDeadlineUpdate;
+
+                // Close confirmation modal
+                document.getElementById('project-deadline-confirm-popup').style.display = 'none';
+
+                // Execute the update with confirmed=true
+                fetch(`/projects/${projectId}/update-end-date`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        end_date: newDueDate,
+                        confirmed: true
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showInfoModal(`Deadline project berhasil diubah.${data.adjusted_tasks > 0 ? ` ${data.adjusted_tasks} tugas disesuaikan otomatis.` : ''}`);
+                            setTimeout(() => window.location.reload(), 1500);
+                        } else {
+                            info.revert();
+                            alert('Gagal memperbarui deadline project.');
+                        }
+                    })
+                    .catch(error => {
+                        info.revert();
+                        alert('Terjadi kesalahan.');
+                    });
+
+                // Clear context
+                window.pendingProjectDeadlineUpdate = null;
+            }
+
+            function cancelProjectDeadlineUpdate() {
+                if (!window.pendingProjectDeadlineUpdate) return;
+
+                // Revert calendar event
+                window.pendingProjectDeadlineUpdate.info.revert();
+
+                // Close confirmation modal
+                document.getElementById('project-deadline-confirm-popup').style.display = 'none';
+
+                // Clear context
+                window.pendingProjectDeadlineUpdate = null;
             }
 
             // Close popup on background click

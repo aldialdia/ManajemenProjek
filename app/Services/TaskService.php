@@ -61,6 +61,16 @@ class TaskService
             $this->notifyTaskCompleted($task);
         }
 
+        // Auto-update project status from 'new' to 'in_progress' when work starts
+        if ($status === TaskStatus::IN_PROGRESS && $task->project) {
+            $task->project->startIfNew();
+        }
+
+        // Check if all tasks are done and update project status accordingly
+        if ($task->project) {
+            $task->project->checkAndUpdateStatusBasedOnTasks();
+        }
+
         return $task->fresh();
     }
 

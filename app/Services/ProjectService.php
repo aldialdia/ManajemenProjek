@@ -16,9 +16,9 @@ class ProjectService
             $users = $data['users'] ?? [];
             unset($data['users']);
 
-            // Set default status to 'active' for new projects
+            // Set default status to 'new' for new projects
             if (!isset($data['status'])) {
-                $data['status'] = 'active';
+                $data['status'] = 'new';
             }
 
             $project = Project::create($data);

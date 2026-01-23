@@ -179,13 +179,52 @@
                     Komentar ({{ $task->comments->count() }})
                 </div>
                 <div class="chat-container">
+                    @php $lastDate = null; @endphp
                     @forelse($task->comments()->with('user')->oldest()->get() as $comment)
-                        @php $isOwn = $comment->user_id === auth()->id(); @endphp
+                        @php 
+                            $isOwn = $comment->user_id === auth()->id();
+                            $commentDate = $comment->created_at->format('Y-m-d');
+                            $showDateSeparator = $lastDate !== $commentDate;
+                            $lastDate = $commentDate;
+                            
+                            // Format tanggal untuk ditampilkan
+                            $today = now()->format('Y-m-d');
+                            $yesterday = now()->subDay()->format('Y-m-d');
+                            
+                            if ($commentDate === $today) {
+                                $displayDate = 'Hari Ini';
+                            } elseif ($commentDate === $yesterday) {
+                                $displayDate = 'Kemarin';
+                            } else {
+                                $displayDate = $comment->created_at->format('d/m/Y');
+                            }
+                            
+                            // Warna konsisten berdasarkan user ID
+                            $colorIndex = $comment->user_id % 4;
+                            $colors = [
+                                ['start' => '#6366f1', 'end' => '#4f46e5'], // Indigo
+                                ['start' => '#f97316', 'end' => '#ea580c'], // Orange
+                                ['start' => '#22c55e', 'end' => '#16a34a'], // Green
+                                ['start' => '#ec4899', 'end' => '#db2777'], // Pink
+                            ];
+                            $userColor = $colors[$colorIndex];
+                        @endphp
+                        
+                        {{-- Date Separator --}}
+                        @if($showDateSeparator)
+                            <div class="chat-date-separator">
+                                <span class="chat-date-badge">{{ $displayDate }}</span>
+                            </div>
+                        @endif
+                        
                         <div class="chat-message {{ $isOwn ? 'own' : 'other' }}">
                             @if(!$isOwn)
-                                <div class="chat-avatar"
-                                    style="background: linear-gradient(135deg, {{ ['#6366f1', '#f97316', '#22c55e', '#ec4899'][($loop->index % 4)] }} 0%, {{ ['#4f46e5', '#ea580c', '#16a34a', '#db2777'][($loop->index % 4)] }} 100%);">
-                                    {{ $comment->user->initials }}
+                                @if($comment->user->avatar)
+                                    <div class="chat-avatar" style="background-image: url('{{ asset('storage/' . $comment->user->avatar) }}'); background-size: cover; background-position: center;">
+                                @else
+                                    <div class="chat-avatar" style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);">
+                                        {{ $comment->user->initials }}
+                                @endif
                                 </div>
                             @endif
                             <div class="chat-bubble {{ $isOwn ? 'own' : 'other' }}">
@@ -259,11 +298,26 @@
                                 </a>
                             </div>
 
+
                             <div class="info-row">
                                 <span class="info-label">Assignee</span>
                                 @if($task->assignee)
                                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        <div class="avatar avatar-sm">{{ $task->assignee->initials }}</div>
+                                        @php
+                                            $colorIndex = $task->assignee->id % 4;
+                                            $colors = [
+                                                ['start' => '#6366f1', 'end' => '#4f46e5'],
+                                                ['start' => '#f97316', 'end' => '#ea580c'],
+                                                ['start' => '#22c55e', 'end' => '#16a34a'],
+                                                ['start' => '#ec4899', 'end' => '#db2777'],
+                                            ];
+                                            $userColor = $colors[$colorIndex];
+                                        @endphp
+                                        @if($task->assignee->avatar)
+                                            <div class="avatar avatar-sm" style="background-image: url('{{ asset('storage/' . $task->assignee->avatar) }}'); background-size: cover; background-position: center;"></div>
+                                        @else
+                                            <div class="avatar avatar-sm" style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);">{{ $task->assignee->initials }}</div>
+                                        @endif
                                         <span>{{ $task->assignee->name }}</span>
                                     </div>
                                 @else
@@ -294,6 +348,7 @@
                                 <span class="info-label">Updated</span>
                                 <span>{{ $task->updated_at->diffForHumans() }}</span>
                             </div>
+                        </div>
                     </div>
 
                     @php
@@ -776,6 +831,25 @@
                 .chat-bubble.own .mention-text {
                     color: #fde047;
                     font-weight: 700;
+                }
+
+                /* Chat Date Separator - WhatsApp Style */
+                .chat-date-separator {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    margin: 0.75rem 0;
+                    width: 100%;
+                }
+
+                .chat-date-badge {
+                    background: rgba(225, 229, 234, 0.92);
+                    color: #54656f;
+                    font-size: 0.7rem;
+                    font-weight: 500;
+                    padding: 0.35rem 0.75rem;
+                    border-radius: 8px;
+                    box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
                 }
 
                 /* Attachments */

@@ -480,6 +480,9 @@ class TaskController extends Controller
 
         $task->update(['status' => 'done']);
 
+        // Check if all tasks are done and update project status
+        $task->project->checkAndUpdateStatusBasedOnTasks();
+
         return redirect()
             ->route('tasks.show', $task)
             ->with('success', 'Task berhasil di-approve.');

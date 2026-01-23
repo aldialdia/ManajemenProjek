@@ -101,6 +101,39 @@ class ProjectController extends Controller
     }
 
     /**
+     * Check if updating project end date will affect tasks.
+     * Returns count of tasks that will be adjusted.
+     */
+    public function checkEndDateUpdate(\Illuminate\Http\Request $request, Project $project): \Illuminate\Http\JsonResponse
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        // Check if user is manager/admin
+        if (!$user->isManagerInProject($project)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'end_date' => 'required|date',
+        ]);
+
+        $newEndDate = $validated['end_date'];
+
+        // Find tasks with deadlines exceeding the new project end date
+        $affectedTasksCount = $project->tasks()
+            ->whereNotNull('due_date')
+            ->where('due_date', '>', $newEndDate)
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'has_affected_tasks' => $affectedTasksCount > 0,
+            'affected_tasks_count' => $affectedTasksCount
+        ]);
+    }
+
+    /**
      * Update project end date via AJAX (Calendar Drag & Drop).
      * Only managers/admins can do this.
      */
@@ -116,23 +149,33 @@ class ProjectController extends Controller
 
         $validated = $request->validate([
             'end_date' => 'required|date',
+            'confirmed' => 'sometimes|boolean', // Untuk konfirmasi dari user
         ]);
 
         $newEndDate = $validated['end_date'];
-        
+
         // Find tasks with deadlines exceeding the new project end date
         $affectedTasks = $project->tasks()
             ->whereNotNull('due_date')
             ->where('due_date', '>', $newEndDate)
             ->get();
 
+        // Jika ada affected tasks dan belum dikonfirmasi, return butuh konfirmasi
+        if ($affectedTasks->count() > 0 && !($validated['confirmed'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'needs_confirmation' => true,
+                'affected_tasks_count' => $affectedTasks->count()
+            ]);
+        }
+
         // Update task deadlines and notify assigned users
         foreach ($affectedTasks as $task) {
             $oldDeadline = $task->due_date->format('Y-m-d');
-            
+
             // Update task deadline to match project end date
             $task->update(['due_date' => $newEndDate]);
-            
+
             // Notify assigned user if exists
             if ($task->assignee) {
                 $task->assignee->notify(new \App\Notifications\TaskDeadlineAdjusted(
