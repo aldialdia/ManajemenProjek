@@ -122,12 +122,18 @@
             <h1 class="welcome-title">Selamat Datang Kembali, {{ auth()->user()->name ?? 'Guest' }}!</h1>
             <p class="welcome-subtitle">Berikut adalah ringkasan aktivitas proyek Anda hari ini.</p>
         </div>
-        @if($canCreateProject)
-            <a href="{{ route('projects.create') }}" class="btn btn-welcome">
-                <i class="fas fa-plus"></i>
-                Tambah Proyek Baru
+        <div class="welcome-actions">
+            @if($canCreateProject)
+                <a href="{{ route('projects.create') }}" class="btn btn-welcome">
+                    <i class="fas fa-plus"></i>
+                    Tambah Proyek Baru
+                </a>
+            @endif
+            <a href="{{ route('projects.kanban') }}" class="btn btn-kanban-small">
+                <i class="fas fa-columns"></i>
+                Kanban Proyek
             </a>
-        @endif
+        </div>
     </div>
 
     <!-- Stats Cards -->
@@ -217,165 +223,59 @@
             </div>
         </div>
     </div>
-
-    <!-- Bottom Row -->
-    <div class="grid grid-cols-2">
-        <!-- Active Projects -->
+    <!-- Projects & Deadlines Row (Side by Side) -->
+    <div class="grid grid-cols-2" style="margin-bottom: 1.5rem;">
+        <!-- Active Projects (Compact) -->
         <div class="card">
-            <div class="card-header">
-                <div>
-                    <span>Proyek Aktif</span>
-                    <p class="text-muted text-sm" style="margin: 0;">Progress terkini</p>
-                </div>
+            <div class="card-header" style="padding: 0.75rem 1rem;">
+                <span style="font-size: 0.9rem;"><i class="fas fa-rocket text-primary"></i> Proyek Aktif</span>
             </div>
-            <div class="card-body" style="padding: 0;">
+            <div class="card-body" style="padding: 0; max-height: 280px; overflow-y: auto;">
                 @forelse($activeProjectsList as $project)
-                    <div class="project-row">
+                    <div class="project-row-compact">
                         <div class="project-row-info">
-                            <a href="{{ route('projects.show', $project) }}" class="project-row-title">{{ $project->name }}</a>
+                            <a href="{{ route('projects.show', $project) }}" class="project-row-title">{{ Str::limit($project->name, 25) }}</a>
                             <span class="project-row-date">
-                                <i class="fas fa-calendar"></i> {{ $project->end_date?->format('Y-m-d') ?? 'No deadline' }}
+                                {{ $project->end_date?->format('d M') ?? '-' }}
                             </span>
                         </div>
                         <div class="project-row-progress">
-                            <span class="badge badge-primary">Tinggi</span>
-                            <div class="mini-progress">
+                            <div class="mini-progress" style="width: 50px;">
                                 <div class="mini-progress-fill" style="width: {{ $project->progress }}%;"></div>
                             </div>
                             <span class="progress-text">{{ $project->progress }}%</span>
                         </div>
                     </div>
                 @empty
-                    <div style="padding: 2rem; text-align: center; color: #64748b;">
-                        <p>Belum ada proyek aktif</p>
+                    <div style="padding: 1.5rem; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+                        <i class="fas fa-folder-open"></i> Belum ada proyek aktif
                     </div>
                 @endforelse
             </div>
         </div>
 
-        <!-- Upcoming Deadlines -->
+        <!-- Upcoming Deadlines (Compact) -->
         <div class="card">
-            <div class="card-header">
-                <div>
-                    <span><i class="fas fa-exclamation-circle text-warning"></i> Deadline Terdekat</span>
-                    <p class="text-muted text-sm" style="margin: 0;">Perhatian khusus diperlukan</p>
-                </div>
+            <div class="card-header" style="padding: 0.75rem 1rem;">
+                <span style="font-size: 0.9rem;"><i class="fas fa-exclamation-triangle text-warning"></i> Deadline Terdekat</span>
             </div>
-            <div class="card-body" style="padding: 0;">
+            <div class="card-body" style="padding: 0; max-height: 280px; overflow-y: auto;">
                 @forelse($upcomingDeadlines as $task)
-                    <div class="deadline-row">
-                        <div
-                            class="deadline-priority {{ $task->priority->value === 'high' ? 'priority-high' : ($task->priority->value === 'medium' ? 'priority-medium' : 'priority-low') }}">
-                            <i class="fas fa-flag"></i>
+                    <div class="deadline-row-compact">
+                        <div class="deadline-priority-dot {{ $task->priority->value === 'high' ? 'priority-high' : ($task->priority->value === 'medium' ? 'priority-medium' : 'priority-low') }}"></div>
+                        <div class="deadline-info" style="flex: 1; min-width: 0;">
+                            <a href="{{ route('tasks.show', $task) }}" class="deadline-title">{{ Str::limit($task->title, 30) }}</a>
                         </div>
-                        <div class="deadline-info">
-                            <a href="{{ route('tasks.show', $task) }}" class="deadline-title">{{ $task->title }}</a>
-                            <span class="deadline-project">{{ $task->project?->name ?? 'No project' }}</span>
-                        </div>
-                        <div class="deadline-meta">
-                            <span class="deadline-date">
-                                <i class="fas fa-calendar"></i> {{ $task->due_date->format('Y-m-d') }}
-                            </span>
-                            <span class="deadline-remaining">
-                                @php
-                                    $daysLeft = now()->startOfDay()->diffInDays($task->due_date->startOfDay());
-                                @endphp
-                                <i class="fas fa-clock"></i> {{ $daysLeft }} hari lagi
-                            </span>
-                        </div>
+                        <span class="deadline-remaining-badge {{ $task->due_date->isToday() ? 'urgent' : '' }}">
+                            @php $daysLeft = now()->startOfDay()->diffInDays($task->due_date->startOfDay()); @endphp
+                            @if($task->due_date->isToday()) Hari ini @elseif($daysLeft == 1) Besok @else {{ $daysLeft }}h @endif
+                        </span>
                     </div>
                 @empty
-                    <div style="padding: 2rem; text-align: center; color: #64748b;">
-                        <p>Tidak ada deadline mendekati</p>
+                    <div style="padding: 1.5rem; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+                        <i class="fas fa-check-circle" style="color: #10b981;"></i> Tidak ada deadline 🎉
                     </div>
                 @endforelse
-        </div>
-    </div>
-
-    <!-- Project Kanban Board -->
-    <div class="card" style="margin-bottom: 1.5rem;">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <span><i class="fas fa-columns"></i> Kanban Proyek</span>
-                <p class="text-muted text-sm" style="margin: 0;">Seret proyek untuk mengubah status</p>
-            </div>
-        </div>
-        <div class="card-body" style="padding: 1rem; overflow-x: auto;">
-            @php
-                $projectStatuses = [
-                    'new' => ['label' => 'Baru', 'color' => '#94a3b8', 'icon' => 'fa-plus-circle'],
-                    'in_progress' => ['label' => 'Berjalan', 'color' => '#3b82f6', 'icon' => 'fa-spinner'],
-                    'on_hold' => ['label' => 'Ditunda', 'color' => '#f97316', 'icon' => 'fa-pause-circle'],
-                    'done' => ['label' => 'Selesai', 'color' => '#10b981', 'icon' => 'fa-check-circle'],
-                ];
-                
-                $allUserProjects = \App\Models\Project::whereIn('id', $userProjectIds)
-                    ->with(['tasks', 'latestStatusLog.changedBy'])
-                    ->get()
-                    ->groupBy(fn($p) => $p->status->value);
-            @endphp
-
-            <div class="kanban-board">
-                @foreach($projectStatuses as $statusKey => $statusConfig)
-                    <div class="kanban-column" data-status="{{ $statusKey }}">
-                        <div class="kanban-column-header" style="border-left: 3px solid {{ $statusConfig['color'] }};">
-                            <div class="kanban-column-title">
-                                <i class="fas {{ $statusConfig['icon'] }}" style="color: {{ $statusConfig['color'] }};"></i>
-                                <span>{{ $statusConfig['label'] }}</span>
-                            </div>
-                            <span class="kanban-column-count">{{ ($allUserProjects[$statusKey] ?? collect())->count() }}</span>
-                        </div>
-                        <div class="kanban-column-body" data-status="{{ $statusKey }}">
-                            @foreach($allUserProjects[$statusKey] ?? [] as $project)
-                                @php
-                                    $canMoveProject = auth()->user()->isManagerInProject($project) || auth()->user()->isAdmin();
-                                    $statusLog = $project->latestStatusLog;
-                                @endphp
-                                <div class="kanban-card project-card {{ $canMoveProject ? 'draggable' : '' }}" 
-                                     data-project-id="{{ $project->id }}"
-                                     data-project-name="{{ $project->name }}"
-                                     {{ $canMoveProject ? 'draggable=true' : '' }}>
-                                    <div class="kanban-card-header">
-                                        <a href="{{ route('projects.show', $project) }}" class="kanban-card-title">
-                                            {{ $project->name }}
-                                        </a>
-                                        @if(!$canMoveProject)
-                                            <i class="fas fa-lock kanban-card-lock" title="Hanya manager/admin yang bisa memindahkan"></i>
-                                        @endif
-                                    </div>
-                                    <div class="kanban-card-progress">
-                                        <div class="progress-bar-mini">
-                                            <div class="progress-fill" style="width: {{ $project->progress }}%;"></div>
-                                        </div>
-                                        <span class="progress-text">{{ $project->progress }}%</span>
-                                    </div>
-                                    <div class="kanban-card-meta">
-                                        <span><i class="fas fa-tasks"></i> {{ $project->tasks->count() }} tugas</span>
-                                        @if($project->end_date)
-                                            <span><i class="fas fa-calendar"></i> {{ $project->end_date->format('d M') }}</span>
-                                        @endif
-                                    </div>
-                                    @if($statusLog)
-                                        <div class="kanban-card-status-date">
-                                            <i class="fas fa-clock"></i>
-                                            {{ $statusLog->created_at->format('d M Y, H:i') }}
-                                            @if($statusLog->changedBy)
-                                                <span class="status-changed-by">oleh {{ $statusLog->changedBy->name }}</span>
-                                            @endif
-                                        </div>
-                                    @endif
-                                </div>
-                            @endforeach
-
-                            @if(($allUserProjects[$statusKey] ?? collect())->isEmpty())
-                                <div class="kanban-empty">
-                                    <i class="fas fa-inbox"></i>
-                                    <span>Tidak ada proyek</span>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                @endforeach
             </div>
         </div>
     </div>
@@ -532,6 +432,32 @@
         .btn-welcome:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .welcome-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .btn-kanban-small {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-kanban-small:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
         }
 
         .stats-row {
@@ -806,30 +732,42 @@
         }
 
         .kanban-column-header {
-            padding: 0.875rem 1rem;
-            background: white;
-            border-radius: 12px 12px 0 0;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-radius: 16px 16px 0 0;
+            font-weight: 600;
+            color: white;
         }
 
-        .kanban-column-title {
+        .kanban-column-header.new {
+            background: linear-gradient(135deg, #94a3b8, #64748b);
+        }
+
+        .kanban-column-header.in_progress {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .kanban-column-header.on_hold {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .kanban-column-header.done {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .column-title {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: #1e293b;
         }
 
-        .kanban-column-count {
-            background: #e2e8f0;
-            color: #64748b;
-            padding: 0.125rem 0.5rem;
-            border-radius: 10px;
-            font-size: 0.75rem;
-            font-weight: 600;
+        .column-count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
         }
 
         .kanban-column-body {
@@ -965,10 +903,172 @@
             font-size: 1.5rem;
             margin-bottom: 0.5rem;
         }
+
+        /* Compact Project Row Styles */
+        .project-row-compact {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.2s;
+        }
+
+        .project-row-compact:last-child {
+            border-bottom: none;
+        }
+
+        .project-row-compact:hover {
+            background: #f8fafc;
+        }
+
+        .project-row-compact .project-row-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #1e293b;
+            text-decoration: none;
+        }
+
+        .project-row-compact .project-row-title:hover {
+            color: #6366f1;
+        }
+
+        .project-row-compact .project-row-date {
+            font-size: 0.7rem;
+            color: #94a3b8;
+        }
+
+        /* Compact Deadline Row Styles */
+        .deadline-row-compact {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.2s;
+        }
+
+        .deadline-row-compact:last-child {
+            border-bottom: none;
+        }
+
+        .deadline-row-compact:hover {
+            background: #f8fafc;
+        }
+
+        .deadline-priority-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .deadline-priority-dot.priority-high {
+            background: #ef4444;
+        }
+
+        .deadline-priority-dot.priority-medium {
+            background: #f59e0b;
+        }
+
+        .deadline-priority-dot.priority-low {
+            background: #10b981;
+        }
+
+        .deadline-row-compact .deadline-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #1e293b;
+            text-decoration: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .deadline-row-compact .deadline-title:hover {
+            color: #6366f1;
+        }
+
+        .deadline-remaining-badge {
+            font-size: 0.7rem;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .deadline-remaining-badge.urgent {
+            background: #fef2f2;
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        /* Kanban Link Card Styles */
+        .kanban-link-card {
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .kanban-link-card:hover {
+            border-color: #6366f1;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+        }
+
+        .kanban-link-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .kanban-link-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+        }
+
+        .kanban-link-title {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 1rem;
+        }
+
+        .kanban-link-subtitle {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin: 0;
+        }
+
+        .kanban-status-badges {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .kanban-mini-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
     </style>
 
-    <script>
-        // Project Kanban Drag and Drop
+    <script>        // Project Kanban Drag and Drop
         document.addEventListener('DOMContentLoaded', function() {
             const cards = document.querySelectorAll('.kanban-card.draggable');
             const columnBodies = document.querySelectorAll('.kanban-column-body');
@@ -1068,7 +1168,7 @@
             function updateColumnCounts() {
                 document.querySelectorAll('.kanban-column').forEach(column => {
                     const count = column.querySelectorAll('.kanban-card').length;
-                    column.querySelector('.kanban-column-count').textContent = count;
+                    column.querySelector('.column-count').textContent = count;
                     
                     // Show/hide empty state
                     const emptyState = column.querySelector('.kanban-empty');

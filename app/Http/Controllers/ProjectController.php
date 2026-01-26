@@ -22,6 +22,28 @@ class ProjectController extends Controller
     ) {
     }
 
+    /**
+     * Display project kanban board.
+     */
+    public function kanban(): View
+    {
+        $user = Auth::user();
+        $userProjectIds = $user->projects()->pluck('projects.id')->toArray();
+        
+        $projectStatuses = [
+            'new' => ['label' => 'Baru', 'color' => '#94a3b8', 'icon' => 'fa-plus-circle'],
+            'in_progress' => ['label' => 'Berjalan', 'color' => '#3b82f6', 'icon' => 'fa-spinner'],
+            'on_hold' => ['label' => 'Ditunda', 'color' => '#f97316', 'icon' => 'fa-pause-circle'],
+            'done' => ['label' => 'Selesai', 'color' => '#10b981', 'icon' => 'fa-check-circle'],
+        ];
+        
+        $projects = Project::whereIn('id', $userProjectIds)
+            ->with(['tasks', 'latestStatusLog.changedBy'])
+            ->get()
+            ->groupBy(fn($p) => $p->status->value);
+
+        return view('projects.kanban', compact('projectStatuses', 'projects'));
+    }
 
     public function create(): View
     {
@@ -212,6 +234,7 @@ class ProjectController extends Controller
 
         $validated = $request->validate([
             'status' => 'required|in:new,in_progress,on_hold,done',
+            'confirmed' => 'sometimes|boolean',
         ]);
 
         $oldStatus = $project->status->value;
@@ -220,6 +243,23 @@ class ProjectController extends Controller
         // Don't update if same status
         if ($oldStatus === $newStatus) {
             return response()->json(['success' => true, 'changed' => false]);
+        }
+
+        // Check for incomplete tasks when moving to 'done'
+        if ($newStatus === 'done') {
+            $incompleteTasks = $project->tasks()
+                ->whereNotIn('status', ['done', 'approved'])
+                ->count();
+
+            // If there are incomplete tasks and not confirmed, ask for confirmation
+            if ($incompleteTasks > 0 && !($validated['confirmed'] ?? false)) {
+                return response()->json([
+                    'success' => false,
+                    'needs_confirmation' => true,
+                    'incomplete_tasks' => $incompleteTasks,
+                    'message' => "Proyek ini masih memiliki {$incompleteTasks} tugas yang belum selesai. Yakin ingin menandai sebagai selesai?"
+                ]);
+            }
         }
 
         // Update status (this will trigger the boot() method to log the change)

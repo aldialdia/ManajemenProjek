@@ -21,8 +21,13 @@ class Project extends Model
         // Log status changes
         static::updating(function ($project) {
             if ($project->isDirty('status')) {
+                $originalStatus = $project->getOriginal('status');
+                $fromStatusValue = $originalStatus instanceof ProjectStatus 
+                    ? $originalStatus->value 
+                    : $originalStatus;
+                
                 $project->logStatusChange(
-                    $project->getOriginal('status'),
+                    $fromStatusValue,
                     $project->status
                 );
             }
