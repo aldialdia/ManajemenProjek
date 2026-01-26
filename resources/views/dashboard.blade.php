@@ -289,6 +289,93 @@
                         <p>Tidak ada deadline mendekati</p>
                     </div>
                 @endforelse
+        </div>
+    </div>
+
+    <!-- Project Kanban Board -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span><i class="fas fa-columns"></i> Kanban Proyek</span>
+                <p class="text-muted text-sm" style="margin: 0;">Seret proyek untuk mengubah status</p>
+            </div>
+        </div>
+        <div class="card-body" style="padding: 1rem; overflow-x: auto;">
+            @php
+                $projectStatuses = [
+                    'new' => ['label' => 'Baru', 'color' => '#94a3b8', 'icon' => 'fa-plus-circle'],
+                    'in_progress' => ['label' => 'Berjalan', 'color' => '#3b82f6', 'icon' => 'fa-spinner'],
+                    'on_hold' => ['label' => 'Ditunda', 'color' => '#f97316', 'icon' => 'fa-pause-circle'],
+                    'done' => ['label' => 'Selesai', 'color' => '#10b981', 'icon' => 'fa-check-circle'],
+                ];
+                
+                $allUserProjects = \App\Models\Project::whereIn('id', $userProjectIds)
+                    ->with(['tasks', 'latestStatusLog.changedBy'])
+                    ->get()
+                    ->groupBy(fn($p) => $p->status->value);
+            @endphp
+
+            <div class="kanban-board">
+                @foreach($projectStatuses as $statusKey => $statusConfig)
+                    <div class="kanban-column" data-status="{{ $statusKey }}">
+                        <div class="kanban-column-header" style="border-left: 3px solid {{ $statusConfig['color'] }};">
+                            <div class="kanban-column-title">
+                                <i class="fas {{ $statusConfig['icon'] }}" style="color: {{ $statusConfig['color'] }};"></i>
+                                <span>{{ $statusConfig['label'] }}</span>
+                            </div>
+                            <span class="kanban-column-count">{{ ($allUserProjects[$statusKey] ?? collect())->count() }}</span>
+                        </div>
+                        <div class="kanban-column-body" data-status="{{ $statusKey }}">
+                            @foreach($allUserProjects[$statusKey] ?? [] as $project)
+                                @php
+                                    $canMoveProject = auth()->user()->isManagerInProject($project) || auth()->user()->isAdmin();
+                                    $statusLog = $project->latestStatusLog;
+                                @endphp
+                                <div class="kanban-card project-card {{ $canMoveProject ? 'draggable' : '' }}" 
+                                     data-project-id="{{ $project->id }}"
+                                     data-project-name="{{ $project->name }}"
+                                     {{ $canMoveProject ? 'draggable=true' : '' }}>
+                                    <div class="kanban-card-header">
+                                        <a href="{{ route('projects.show', $project) }}" class="kanban-card-title">
+                                            {{ $project->name }}
+                                        </a>
+                                        @if(!$canMoveProject)
+                                            <i class="fas fa-lock kanban-card-lock" title="Hanya manager/admin yang bisa memindahkan"></i>
+                                        @endif
+                                    </div>
+                                    <div class="kanban-card-progress">
+                                        <div class="progress-bar-mini">
+                                            <div class="progress-fill" style="width: {{ $project->progress }}%;"></div>
+                                        </div>
+                                        <span class="progress-text">{{ $project->progress }}%</span>
+                                    </div>
+                                    <div class="kanban-card-meta">
+                                        <span><i class="fas fa-tasks"></i> {{ $project->tasks->count() }} tugas</span>
+                                        @if($project->end_date)
+                                            <span><i class="fas fa-calendar"></i> {{ $project->end_date->format('d M') }}</span>
+                                        @endif
+                                    </div>
+                                    @if($statusLog)
+                                        <div class="kanban-card-status-date">
+                                            <i class="fas fa-clock"></i>
+                                            {{ $statusLog->created_at->format('d M Y, H:i') }}
+                                            @if($statusLog->changedBy)
+                                                <span class="status-changed-by">oleh {{ $statusLog->changedBy->name }}</span>
+                                            @endif
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
+
+                            @if(($allUserProjects[$statusKey] ?? collect())->isEmpty())
+                                <div class="kanban-empty">
+                                    <i class="fas fa-inbox"></i>
+                                    <span>Tidak ada proyek</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
             </div>
         </div>
     </div>
@@ -698,6 +785,369 @@
 
         .btn-outline:hover {
             background: #f1f5f9;
+        }
+
+        /* Kanban Board Styles */
+        .kanban-board {
+            display: flex;
+            gap: 1rem;
+            min-height: 400px;
+            padding-bottom: 1rem;
+        }
+
+        .kanban-column {
+            flex: 1;
+            min-width: 240px;
+            max-width: 280px;
+            background: #f8fafc;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .kanban-column-header {
+            padding: 0.875rem 1rem;
+            background: white;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .kanban-column-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #1e293b;
+        }
+
+        .kanban-column-count {
+            background: #e2e8f0;
+            color: #64748b;
+            padding: 0.125rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .kanban-column-body {
+            flex: 1;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-height: 100px;
+            transition: background 0.2s;
+        }
+
+        .kanban-column-body.drag-over {
+            background: rgba(99, 102, 241, 0.1);
+            border: 2px dashed #6366f1;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .kanban-card {
+            background: white;
+            border-radius: 10px;
+            padding: 0.875rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+        }
+
+        .kanban-card.draggable {
+            cursor: grab;
+        }
+
+        .kanban-card.draggable:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .kanban-card.dragging {
+            opacity: 0.5;
+            transform: rotate(3deg);
+            cursor: grabbing;
+        }
+
+        .kanban-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .kanban-card-title {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1e293b;
+            text-decoration: none;
+            line-height: 1.3;
+        }
+
+        .kanban-card-title:hover {
+            color: #6366f1;
+        }
+
+        .kanban-card-lock {
+            color: #94a3b8;
+            font-size: 0.7rem;
+        }
+
+        .kanban-card-progress {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bar-mini {
+            flex: 1;
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar-mini .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            font-size: 0.7rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .kanban-card-meta {
+            display: flex;
+            gap: 0.75rem;
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+
+        .kanban-card-meta i {
+            margin-right: 0.25rem;
+        }
+
+        .kanban-card-status-date {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #f1f5f9;
+            font-size: 0.65rem;
+            color: #94a3b8;
+        }
+
+        .kanban-card-status-date i {
+            margin-right: 0.25rem;
+        }
+
+        .status-changed-by {
+            font-style: italic;
+        }
+
+        .kanban-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
+
+        .kanban-empty i {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+
+    <script>
+        // Project Kanban Drag and Drop
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.kanban-card.draggable');
+            const columnBodies = document.querySelectorAll('.kanban-column-body');
+
+            cards.forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+            });
+
+            columnBodies.forEach(column => {
+                column.addEventListener('dragover', handleDragOver);
+                column.addEventListener('dragleave', handleDragLeave);
+                column.addEventListener('drop', handleDrop);
+            });
+
+            let draggedCard = null;
+
+            function handleDragStart(e) {
+                draggedCard = this;
+                this.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', this.dataset.projectId);
+            }
+
+            function handleDragEnd(e) {
+                this.classList.remove('dragging');
+                columnBodies.forEach(col => col.classList.remove('drag-over'));
+                draggedCard = null;
+            }
+
+            function handleDragOver(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                this.classList.add('drag-over');
+            }
+
+            function handleDragLeave(e) {
+                this.classList.remove('drag-over');
+            }
+
+            function handleDrop(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+
+                if (!draggedCard) return;
+
+                const projectId = draggedCard.dataset.projectId;
+                const projectName = draggedCard.dataset.projectName;
+                const newStatus = this.dataset.status;
+                const oldStatus = draggedCard.closest('.kanban-column').dataset.status;
+
+                if (newStatus === oldStatus) return;
+
+                // Optimistic UI update
+                this.appendChild(draggedCard);
+                updateColumnCounts();
+
+                // Send AJAX request
+                fetch(`/projects/${projectId}/update-status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.changed) {
+                        // Update the status date display
+                        let statusDateEl = draggedCard.querySelector('.kanban-card-status-date');
+                        if (!statusDateEl) {
+                            statusDateEl = document.createElement('div');
+                            statusDateEl.className = 'kanban-card-status-date';
+                            draggedCard.appendChild(statusDateEl);
+                        }
+                        statusDateEl.innerHTML = `<i class="fas fa-clock"></i> ${data.changed_at} <span class="status-changed-by">oleh ${data.changed_by}</span>`;
+                        
+                        showToast(`Proyek "${projectName}" dipindahkan ke ${getStatusLabel(newStatus)}`, 'success');
+                    } else if (!data.success) {
+                        // Revert on error
+                        document.querySelector(`.kanban-column[data-status="${oldStatus}"] .kanban-column-body`).appendChild(draggedCard);
+                        updateColumnCounts();
+                        showToast(data.message || 'Gagal memindahkan proyek', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Revert on error
+                    document.querySelector(`.kanban-column[data-status="${oldStatus}"] .kanban-column-body`).appendChild(draggedCard);
+                    updateColumnCounts();
+                    showToast('Terjadi kesalahan', 'error');
+                });
+            }
+
+            function updateColumnCounts() {
+                document.querySelectorAll('.kanban-column').forEach(column => {
+                    const count = column.querySelectorAll('.kanban-card').length;
+                    column.querySelector('.kanban-column-count').textContent = count;
+                    
+                    // Show/hide empty state
+                    const emptyState = column.querySelector('.kanban-empty');
+                    if (emptyState) {
+                        emptyState.style.display = count === 0 ? 'flex' : 'none';
+                    }
+                });
+            }
+
+            function getStatusLabel(status) {
+                const labels = {
+                    'new': 'Baru',
+                    'in_progress': 'Berjalan',
+                    'on_hold': 'Ditunda',
+                    'done': 'Selesai'
+                };
+                return labels[status] || status;
+            }
+
+            function showToast(message, type = 'info') {
+                // Create toast element
+                const toast = document.createElement('div');
+                toast.className = `toast-notification toast-${type}`;
+                toast.innerHTML = `
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                    <span>${message}</span>
+                `;
+                document.body.appendChild(toast);
+
+                // Animate in
+                setTimeout(() => toast.classList.add('show'), 10);
+
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+        });
+    </script>
+
+    <style>
+        /* Toast Notification */
+        .toast-notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            z-index: 9999;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast-notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-success {
+            border-left: 4px solid #10b981;
+        }
+
+        .toast-success i {
+            color: #10b981;
+        }
+
+        .toast-error {
+            border-left: 4px solid #ef4444;
+        }
+
+        .toast-error i {
+            color: #ef4444;
         }
     </style>
 @endsection

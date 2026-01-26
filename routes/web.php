@@ -61,6 +61,7 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::resource('projects', ProjectController::class)->except(['index']);
     Route::post('/projects/{project}/check-end-date', [ProjectController::class, 'checkEndDateUpdate'])->name('projects.check-end-date');
     Route::patch('/projects/{project}/update-end-date', [ProjectController::class, 'updateEndDate'])->name('projects.update-end-date');
+    Route::patch('/projects/{project}/update-status', [ProjectController::class, 'updateStatus'])->name('projects.update-status');
 
     // Documents (Module 8)
     Route::get('/projects/{project}/documents', [DocumentController::class, 'index'])->name('projects.documents.index');

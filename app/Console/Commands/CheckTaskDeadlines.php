@@ -18,7 +18,7 @@ class CheckTaskDeadlines extends Command
      *
      * @var string
      */
-    protected $description = 'Check for tasks due tomorrow (H-1) and send email + in-app notifications';
+    protected $description = 'Check for tasks and projects due tomorrow (H-1) and send notifications';
 
     /**
      * Execute the console command.
@@ -26,28 +26,32 @@ class CheckTaskDeadlines extends Command
     public function handle()
     {
         $upcomingDeadline = now()->addDay();
-        
+
         // === TASK DEADLINE NOTIFICATIONS ===
         $tasks = \App\Models\Task::where('status', '!=', \App\Enums\TaskStatus::DONE)
             ->whereNotNull('due_date')
             ->where('due_date', '<=', $upcomingDeadline)
             ->where('due_date', '>', now())
-            ->whereHas('assignees') // Only tasks with at least one assignee
+            ->whereHas('assignees') // Tasks with at least one assignee
             ->with(['assignees', 'project'])
             ->get();
 
         $taskCount = 0;
         foreach ($tasks as $task) {
-            $cacheKey = 'task_deadline_notified_' . $task->id;
-            if (!cache()->has($cacheKey)) {
-                $task->assignee->notify(new \App\Notifications\TaskDeadlineWarning($task));
-                cache()->put($cacheKey, true, now()->addDay());
-                $taskCount++;
+            // Notify all assignees for this task
+            foreach ($task->assignees as $assignee) {
+                $cacheKey = 'task_deadline_notified_' . $task->id . '_' . $assignee->id;
+                if (!cache()->has($cacheKey)) {
+                    $assignee->notify(new \App\Notifications\TaskDeadlineWarning($task));
+                    cache()->put($cacheKey, true, now()->addDay());
+                    $taskCount++;
+                }
             }
         }
 
         // === PROJECT DEADLINE NOTIFICATIONS ===
-        $projects = \App\Models\Project::whereNotNull('end_date')
+        $projects = \App\Models\Project::where('status', '!=', \App\Enums\ProjectStatus::DONE)
+            ->whereNotNull('end_date')
             ->where('end_date', '<=', $upcomingDeadline)
             ->where('end_date', '>', now())
             ->with('users')
@@ -67,7 +71,7 @@ class CheckTaskDeadlines extends Command
         }
 
         // === TIME TRACKING OVERDUE NOTIFICATIONS ===
-        // Find timers running for more than 2 minutes (FOR TESTING - change back to 24 hours in production)
+        // Find timers running for more than 24 hours
         $overdueTimers = \App\Models\TimeEntry::where('is_running', true)
             ->where('started_at', '<', now()->subHours(24))
             ->with(['user', 'task'])
@@ -78,11 +82,11 @@ class CheckTaskDeadlines extends Command
             $cacheKey = 'timer_overdue_notified_' . $timeEntry->id;
             if (!cache()->has($cacheKey) && $timeEntry->user) {
                 $timeEntry->user->notify(new \App\Notifications\TimeTrackingOverdue($timeEntry));
-                cache()->put($cacheKey, true, now()->addMinutes(2)); // Remind again after 2 minutes (FOR TESTING)
+                cache()->put($cacheKey, true, now()->addHours(6)); // Remind again after 6 hours
                 $timerCount++;
             }
         }
 
-        $this->info("Notifications sent for {$taskCount} tasks, {$projectCount} projects, and {$timerCount} overdue timers.");
+        $this->info("Notifications sent for {$taskCount} task assignees, {$projectCount} projects, and {$timerCount} overdue timers.");
     }
 }

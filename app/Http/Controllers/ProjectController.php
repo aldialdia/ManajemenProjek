@@ -195,4 +195,46 @@ class ProjectController extends Controller
             'adjusted_tasks' => $affectedTasks->count()
         ]);
     }
+
+    /**
+     * Update project status via AJAX (Kanban Drag & Drop).
+     * Only managers/admins can do this.
+     */
+    public function updateStatus(\Illuminate\Http\Request $request, Project $project): \Illuminate\Http\JsonResponse
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        // Check if user is manager/admin in project OR system admin
+        if (!$user->isManagerInProject($project) && !$user->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'status' => 'required|in:new,in_progress,on_hold,done',
+        ]);
+
+        $oldStatus = $project->status->value;
+        $newStatus = $validated['status'];
+
+        // Don't update if same status
+        if ($oldStatus === $newStatus) {
+            return response()->json(['success' => true, 'changed' => false]);
+        }
+
+        // Update status (this will trigger the boot() method to log the change)
+        $project->update(['status' => $newStatus]);
+
+        // Get the latest log for response
+        $latestLog = $project->statusLogs()->first();
+
+        return response()->json([
+            'success' => true,
+            'changed' => true,
+            'from_status' => $oldStatus,
+            'to_status' => $newStatus,
+            'changed_at' => $latestLog?->created_at?->format('d M Y, H:i'),
+            'changed_by' => $user->name,
+        ]);
+    }
 }

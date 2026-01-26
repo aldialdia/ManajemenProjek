@@ -14,6 +14,26 @@ class Project extends Model
 {
     use HasFactory;
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Log status changes
+        static::updating(function ($project) {
+            if ($project->isDirty('status')) {
+                $project->logStatusChange(
+                    $project->getOriginal('status'),
+                    $project->status
+                );
+            }
+        });
+
+        // Log initial status on create
+        static::created(function ($project) {
+            $project->logStatusChange(null, $project->status);
+        });
+    }
+
     protected $fillable = [
         'name',
         'description',
@@ -83,6 +103,46 @@ class Project extends Model
     public function comments(): MorphMany
     {
         return $this->morphMany(Comment::class, 'commentable');
+    }
+
+    /**
+     * Get all status change logs for this project.
+     */
+    public function statusLogs(): HasMany
+    {
+        return $this->hasMany(ProjectStatusLog::class)->orderByDesc('created_at');
+    }
+
+    /**
+     * Get the latest status change log.
+     */
+    public function latestStatusLog()
+    {
+        return $this->hasOne(ProjectStatusLog::class)->latestOfMany();
+    }
+
+    /**
+     * Log a status change.
+     */
+    public function logStatusChange(?string $fromStatus, $toStatus, ?string $notes = null): void
+    {
+        $toStatusValue = $toStatus instanceof ProjectStatus ? $toStatus->value : $toStatus;
+
+        $this->statusLogs()->create([
+            'from_status' => $fromStatus,
+            'to_status' => $toStatusValue,
+            'changed_by' => auth()->id(),
+            'notes' => $notes,
+        ]);
+    }
+
+    /**
+     * Get the date when project entered current status.
+     */
+    public function getCurrentStatusDateAttribute(): ?\Carbon\Carbon
+    {
+        $log = $this->statusLogs()->where('to_status', $this->status)->first();
+        return $log?->created_at;
     }
 
     /**
