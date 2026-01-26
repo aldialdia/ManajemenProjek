@@ -66,6 +66,23 @@ class CheckTaskDeadlines extends Command
             }
         }
 
-        $this->info("Notifications sent for {$taskCount} tasks and {$projectCount} projects.");
+        // === TIME TRACKING OVERDUE NOTIFICATIONS ===
+        // Find timers running for more than 2 minutes (FOR TESTING - change back to 24 hours in production)
+        $overdueTimers = \App\Models\TimeEntry::where('is_running', true)
+            ->where('started_at', '<', now()->subHours(24))
+            ->with(['user', 'task'])
+            ->get();
+
+        $timerCount = 0;
+        foreach ($overdueTimers as $timeEntry) {
+            $cacheKey = 'timer_overdue_notified_' . $timeEntry->id;
+            if (!cache()->has($cacheKey) && $timeEntry->user) {
+                $timeEntry->user->notify(new \App\Notifications\TimeTrackingOverdue($timeEntry));
+                cache()->put($cacheKey, true, now()->addMinutes(2)); // Remind again after 2 minutes (FOR TESTING)
+                $timerCount++;
+            }
+        }
+
+        $this->info("Notifications sent for {$taskCount} tasks, {$projectCount} projects, and {$timerCount} overdue timers.");
     }
 }
