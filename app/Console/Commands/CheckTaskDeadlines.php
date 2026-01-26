@@ -27,6 +27,7 @@ class CheckTaskDeadlines extends Command
     {
         $upcomingDeadline = now()->addDay();
         
+        // === TASK DEADLINE NOTIFICATIONS ===
         $tasks = \App\Models\Task::where('status', '!=', \App\Enums\TaskStatus::DONE)
             ->whereNotNull('due_date')
             ->where('due_date', '<=', $upcomingDeadline)
@@ -35,23 +36,36 @@ class CheckTaskDeadlines extends Command
             ->with('assignee')
             ->get();
 
-        $count = 0;
+        $taskCount = 0;
         foreach ($tasks as $task) {
-            // Check if we already notified recently to avoid spam (optional, but good practice)
-            // For now, simpler implementation: just send it. Scheduler runs daily?
-            // If scheduler runs hourly, we might spam.
-            // Better logic: check if due_date is between 1 day ago and 1 day future, but practically "due date is tomorrow".
-            // Implementation: We assume this command runs ONCE per day, or we need a flag 'notification_sent'.
-            // Given constraints, I will assume it runs once daily or I'll add a cache check.
-            
             $cacheKey = 'task_deadline_notified_' . $task->id;
             if (!cache()->has($cacheKey)) {
                 $task->assignee->notify(new \App\Notifications\TaskDeadlineWarning($task));
                 cache()->put($cacheKey, true, now()->addDay());
-                $count++;
+                $taskCount++;
             }
         }
 
-        $this->info("Notifications sent for {$count} tasks.");
+        // === PROJECT DEADLINE NOTIFICATIONS ===
+        $projects = \App\Models\Project::whereNotNull('end_date')
+            ->where('end_date', '<=', $upcomingDeadline)
+            ->where('end_date', '>', now())
+            ->with('users')
+            ->get();
+
+        $projectCount = 0;
+        foreach ($projects as $project) {
+            $cacheKey = 'project_deadline_notified_' . $project->id;
+            if (!cache()->has($cacheKey)) {
+                // Notify all project members
+                foreach ($project->users as $user) {
+                    $user->notify(new \App\Notifications\ProjectDeadlineWarning($project));
+                }
+                cache()->put($cacheKey, true, now()->addDay());
+                $projectCount++;
+            }
+        }
+
+        $this->info("Notifications sent for {$taskCount} tasks and {$projectCount} projects.");
     }
 }
