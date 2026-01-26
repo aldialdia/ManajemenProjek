@@ -1,3 +1,3 @@
 @echo off
-cd /d "d:\Kuliah\ProjectKP\ManagerProject\ManajemenProjek"
+cd /d "c:\Users\nn\OneDrive - Universitas Andalas\Dokumen\Semester 5\KP\ManajemenProjek"
 php artisan schedule:run >> storage\logs\scheduler.log 2>&1
