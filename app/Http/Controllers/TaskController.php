@@ -236,6 +236,8 @@ class TaskController extends Controller
 
         $newStartDate = $validated['start_date'] ?? null;
         $newDueDate = $validated['due_date'];
+        $oldDueDate = $task->due_date?->format('Y-m-d');
+        $wasCapped = false;
 
         // If this is a subtask, cap due_date at parent task's due_date
         if ($task->parent_task_id && $task->parentTask && $task->parentTask->due_date) {
@@ -243,10 +245,39 @@ class TaskController extends Controller
             if (\Carbon\Carbon::parse($newDueDate)->gt($parentDueDate)) {
                 $validated['due_date'] = $parentDueDate->format('Y-m-d');
                 $newDueDate = $validated['due_date'];
+                $wasCapped = true;
             }
         }
 
         $task->update($validated);
+
+        // Notify assignee if due_date was changed/capped
+        if ($task->assignee && $oldDueDate && $oldDueDate !== $newDueDate) {
+            $reason = $wasCapped ? 'melebihi deadline tugas utama' : 'perubahan jadwal';
+            $task->assignee->notify(new \App\Notifications\TaskDeadlineAdjusted(
+                $task,
+                $oldDueDate,
+                $newDueDate,
+                $reason
+            ));
+        }
+
+        // Early Warning: If new due_date is tomorrow (H-1), send warning notification
+        if ($task->assignee && $task->status !== \App\Enums\TaskStatus::DONE) {
+            $dueDateCarbon = \Carbon\Carbon::parse($newDueDate);
+            $tomorrow = now()->addDay()->startOfDay();
+            $today = now()->startOfDay();
+            
+            // Check if due_date is between today and tomorrow (H-1)
+            if ($dueDateCarbon->gte($today) && $dueDateCarbon->lte($tomorrow)) {
+                $cacheKey = 'task_deadline_notified_' . $task->id;
+                if (!cache()->has($cacheKey)) {
+                    $task->refresh(); // Refresh to get updated due_date as Carbon
+                    $task->assignee->notify(new \App\Notifications\TaskDeadlineWarning($task));
+                    cache()->put($cacheKey, true, now()->addDay());
+                }
+            }
+        }
 
         // If this is a parent task, adjust subtasks as needed
         if ($task->subtasks()->count() > 0) {

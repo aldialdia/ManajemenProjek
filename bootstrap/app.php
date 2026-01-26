@@ -11,6 +11,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Add deadline check to web middleware group
+        $middleware->web(append: [
+            \App\Http\Middleware\CheckDeadlines::class,
+        ]);
+        
         $middleware->alias([
             'check_status' => App\Http\Middleware\CheckStatus::class,
         ]);
