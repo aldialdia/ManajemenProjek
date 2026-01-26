@@ -50,7 +50,8 @@ class StoreTaskRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'project_id' => ['required', 'exists:projects,id'],
-            'assigned_to' => ['required', 'exists:users,id'],
+            'assignees' => ['required', 'array', 'min:1'],
+            'assignees.*' => ['exists:users,id'],
             'parent_task_id' => ['nullable', 'exists:tasks,id'],
             'priority' => ['required', Rule::enum(TaskPriority::class)],
             'status' => ['required', Rule::enum(TaskStatus::class)],
@@ -65,7 +66,8 @@ class StoreTaskRequest extends FormRequest
     {
         return [
             'project_id' => 'project',
-            'assigned_to' => 'assignee',
+            'assignees' => 'assignee',
+            'assignees.*' => 'assignee',
             'due_date' => 'due date',
         ];
     }

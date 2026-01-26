@@ -52,18 +52,24 @@
                     <!-- Right Column -->
                     <div>
                         <div class="form-group">
-                            <label for="assigned_to" class="form-label">Assign To <span class="text-danger">*</span></label>
-                            <select id="assigned_to" name="assigned_to" class="form-control" required>
-                                <option value="">-- Pilih anggota --</option>
+                            <label class="form-label">Assign To <span class="text-danger">*</span></label>
+                            <div class="assignee-selector">
                                 @foreach($users ?? [] as $user)
-                                    <option value="{{ $user->id }}" {{ old('assigned_to') == $user->id ? 'selected' : '' }}>
-                                        {{ $user->name }}
-                                    </option>
+                                    <label class="assignee-option">
+                                        <input type="checkbox" name="assignees[]" value="{{ $user->id }}" 
+                                            {{ in_array($user->id, old('assignees', [])) ? 'checked' : '' }}>
+                                        <span class="assignee-info">
+                                            <span class="assignee-avatar">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
+                                            <span class="assignee-name">{{ $user->name }}</span>
+                                        </span>
+                                        <span class="checkmark"><i class="fas fa-check"></i></span>
+                                    </label>
                                 @endforeach
-                            </select>
-                            @error('assigned_to')
+                            </div>
+                            @error('assignees')
                                 <span class="error-message">{{ $message }}</span>
                             @enderror
+                            <small class="text-muted"><i class="fas fa-info-circle"></i> Pilih satu atau lebih anggota tim</small>
                         </div>
 
                         <div class="grid grid-cols-2" style="gap: 1rem;">
@@ -161,6 +167,115 @@
         .project-display span {
             font-weight: 600;
             color: #1e293b;
+        }
+
+        /* Multi-select Assignee Styles */
+        .assignee-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+        }
+
+        .assignee-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.625rem 0.875rem;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 0;
+        }
+
+        .assignee-option:hover {
+            border-color: #6366f1;
+            background: #f5f3ff;
+        }
+
+        .assignee-option input[type="checkbox"] {
+            display: none;
+        }
+
+        .assignee-option input[type="checkbox"]:checked + .assignee-info + .checkmark {
+            background: #6366f1;
+            border-color: #6366f1;
+            color: white;
+        }
+
+        .assignee-option input[type="checkbox"]:checked ~ .assignee-info .assignee-avatar {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+        }
+
+        .assignee-option:has(input:checked) {
+            border-color: #6366f1;
+            background: #f5f3ff;
+        }
+
+        .assignee-info {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            flex: 1;
+        }
+
+        .assignee-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #64748b;
+            transition: all 0.2s ease;
+        }
+
+        .assignee-name {
+            font-weight: 500;
+            color: #334155;
+            font-size: 0.9rem;
+        }
+
+        .checkmark {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: transparent;
+            transition: all 0.2s ease;
+        }
+
+        .assignee-selector::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .assignee-selector::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        .assignee-selector::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .assignee-selector::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
         }
     </style>
 

@@ -108,24 +108,31 @@
                                 <x-status-badge :status="$task->priority" type="priority" />
                             </td>
                             <td>
-                                @if($task->assignee)
-                                    @php
-                                        $colorIndex = $task->assignee->id % 4;
-                                        $colors = [
-                                            ['start' => '#6366f1', 'end' => '#4f46e5'],
-                                            ['start' => '#f97316', 'end' => '#ea580c'],
-                                            ['start' => '#22c55e', 'end' => '#16a34a'],
-                                            ['start' => '#ec4899', 'end' => '#db2777'],
-                                        ];
-                                        $userColor = $colors[$colorIndex];
-                                    @endphp
-                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        @if($task->assignee->avatar)
-                                            <div class="avatar avatar-sm" style="background-image: url('{{ asset('storage/' . $task->assignee->avatar) }}'); background-size: cover; background-position: center;"></div>
-                                        @else
-                                            <div class="avatar avatar-sm" style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);">{{ $task->assignee->initials }}</div>
+                                @if($task->assignees->count() > 0)
+                                    <div class="assignees-stack">
+                                        @foreach($task->assignees->take(3) as $assignee)
+                                            @php
+                                                $colorIndex = $assignee->id % 4;
+                                                $colors = [
+                                                    ['start' => '#6366f1', 'end' => '#4f46e5'],
+                                                    ['start' => '#f97316', 'end' => '#ea580c'],
+                                                    ['start' => '#22c55e', 'end' => '#16a34a'],
+                                                    ['start' => '#ec4899', 'end' => '#db2777'],
+                                                ];
+                                                $userColor = $colors[$colorIndex];
+                                            @endphp
+                                            @if($assignee->avatar)
+                                                <div class="avatar avatar-sm stacked" style="background-image: url('{{ asset('storage/' . $assignee->avatar) }}'); background-size: cover; background-position: center;" title="{{ $assignee->name }}"></div>
+                                            @else
+                                                <div class="avatar avatar-sm stacked" style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);" title="{{ $assignee->name }}">{{ $assignee->initials }}</div>
+                                            @endif
+                                        @endforeach
+                                        @if($task->assignees->count() > 3)
+                                            <div class="avatar avatar-sm stacked more" title="{{ $task->assignees->count() - 3 }} more">+{{ $task->assignees->count() - 3 }}</div>
                                         @endif
-                                        <span>{{ $task->assignee->name }}</span>
+                                        @if($task->assignees->count() == 1)
+                                            <span class="assignee-name">{{ $task->assignees->first()->name }}</span>
+                                        @endif
                                     </div>
                                 @else
                                     <span class="text-muted">Unassigned</span>
@@ -179,24 +186,31 @@
                                     <x-status-badge :status="$subtask->priority" type="priority" />
                                 </td>
                                 <td>
-                                    @if($subtask->assignee)
-                                        @php
-                                            $colorIndex = $subtask->assignee->id % 4;
-                                            $colors = [
-                                                ['start' => '#6366f1', 'end' => '#4f46e5'],
-                                                ['start' => '#f97316', 'end' => '#ea580c'],
-                                                ['start' => '#22c55e', 'end' => '#16a34a'],
-                                                ['start' => '#ec4899', 'end' => '#db2777'],
-                                            ];
-                                            $userColor = $colors[$colorIndex];
-                                        @endphp
-                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                            @if($subtask->assignee->avatar)
-                                                <div class="avatar avatar-sm" style="background-image: url('{{ asset('storage/' . $subtask->assignee->avatar) }}'); background-size: cover; background-position: center;"></div>
-                                            @else
-                                                <div class="avatar avatar-sm" style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);">{{ $subtask->assignee->initials }}</div>
+                                    @if($subtask->assignees->count() > 0)
+                                        <div class="assignees-stack">
+                                            @foreach($subtask->assignees->take(3) as $assignee)
+                                                @php
+                                                    $colorIndex = $assignee->id % 4;
+                                                    $colors = [
+                                                        ['start' => '#6366f1', 'end' => '#4f46e5'],
+                                                        ['start' => '#f97316', 'end' => '#ea580c'],
+                                                        ['start' => '#22c55e', 'end' => '#16a34a'],
+                                                        ['start' => '#ec4899', 'end' => '#db2777'],
+                                                    ];
+                                                    $userColor = $colors[$colorIndex];
+                                                @endphp
+                                                @if($assignee->avatar)
+                                                    <div class="avatar avatar-sm stacked" style="background-image: url('{{ asset('storage/' . $assignee->avatar) }}'); background-size: cover; background-position: center;" title="{{ $assignee->name }}"></div>
+                                                @else
+                                                    <div class="avatar avatar-sm stacked" style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);" title="{{ $assignee->name }}">{{ $assignee->initials }}</div>
+                                                @endif
+                                            @endforeach
+                                            @if($subtask->assignees->count() > 3)
+                                                <div class="avatar avatar-sm stacked more" title="{{ $subtask->assignees->count() - 3 }} more">+{{ $subtask->assignees->count() - 3 }}</div>
                                             @endif
-                                            <span>{{ $subtask->assignee->name }}</span>
+                                            @if($subtask->assignees->count() == 1)
+                                                <span class="assignee-name">{{ $subtask->assignees->first()->name }}</span>
+                                            @endif
                                         </div>
                                     @else
                                         <span class="text-muted">Unassigned</span>
@@ -283,6 +297,35 @@
             font-size: 0.7rem;
             border-radius: 10px;
             font-weight: 500;
+        }
+
+        .assignees-stack {
+            display: flex;
+            align-items: center;
+        }
+
+        .assignees-stack .avatar.stacked {
+            margin-left: -8px;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+
+        .assignees-stack .avatar.stacked:first-child {
+            margin-left: 0;
+        }
+
+        .assignees-stack .avatar.more {
+            background: #e2e8f0;
+            color: #475569;
+            font-size: 0.6rem;
+            font-weight: 600;
+        }
+
+        .assignees-stack .assignee-name {
+            margin-left: 0.5rem;
+            font-size: 0.85rem;
+            color: #334155;
         }
 
         .subtask-row {
