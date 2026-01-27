@@ -155,6 +155,7 @@
                                             'In Progress' => 'status-in-progress',
                                             'Review' => 'status-review',
                                             'To Do' => 'status-pending',
+                                            'On Hold' => 'status-onhold',
                                             default => 'status-pending'
                                         };
                                     @endphp
@@ -200,9 +201,10 @@
                     {{ $tasksByStatus['done'] ?? 0 }},
                     {{ $tasksByStatus['in_progress'] ?? 0 }},
                     {{ $tasksByStatus['review'] ?? 0 }},
-            {{ $tasksByStatus['todo'] ?? 0 }}
+            {{ $tasksByStatus['todo'] ?? 0 }},
+            {{ $tasksByStatus['on_hold'] ?? 0 }}
         ];
-        const statusLabels = ['Done', 'In Progress', 'Review', 'To Do'];
+        const statusLabels = ['Done', 'In Progress', 'Review', 'To Do', 'On Hold'];
         const statusTotal = statusData.reduce((a, b) => a + b, 0);
 
         new Chart(statusCtx, {
@@ -211,7 +213,7 @@
                 labels: statusLabels.map((label, i) => label + ' (' + statusData[i] + ')'),
                 datasets: [{
                     data: statusData,
-                    backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#94a3b8'],
+                    backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#94a3b8', '#fbbf24'],
                     borderWidth: 0,
                     hoverOffset: 8
                 }]
@@ -248,15 +250,16 @@
         new Chart(waktuCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Done', 'In Progress', 'Review', 'To Do'],
+                labels: ['Done', 'In Progress', 'Review', 'To Do', 'On Hold'],
                 datasets: [{
                     data: [
                                     {{ $timeDistribution['done'] ?? 0 }},
                                     {{ $timeDistribution['in_progress'] ?? 0 }},
                                     {{ $timeDistribution['review'] ?? 0 }},
-                        {{ $timeDistribution['todo'] ?? 0 }}
+                        {{ $timeDistribution['todo'] ?? 0 }},
+                        {{ $timeDistribution['on_hold'] ?? 0 }}
                     ],
-                    backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#94a3b8'],
+                    backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#94a3b8', '#fbbf24'],
                     borderWidth: 0
                 }]
             },
@@ -506,6 +509,11 @@
         .status-pending {
             background: #f1f5f9;
             color: #64748b;
+        }
+
+        .status-onhold {
+            background: #fef3c7;
+            color: #d97706;
         }
 
         .btn-export {

@@ -130,12 +130,43 @@ class ReportController extends Controller
         // Member change (static, no change for now)
         $memberChange = 0;
 
-        // ===== TASKS BY STATUS (for Status Tugas chart) =====
+        // ===== TASKS BY STATUS (for Status Tugas chart) - filtered by period =====
         $tasksByStatus = [
-            'done' => Task::where('project_id', $project->id)->where('status', 'done')->count(),
-            'in_progress' => Task::where('project_id', $project->id)->where('status', 'in_progress')->count(),
-            'review' => Task::where('project_id', $project->id)->where('status', 'review')->count(),
-            'todo' => Task::where('project_id', $project->id)->where('status', 'todo')->count(),
+            'done' => Task::where('project_id', $project->id)
+                ->where('status', 'done')
+                ->where(function($q) use ($startDate, $endDate) {
+                    $q->whereBetween('created_at', [$startDate, $endDate])
+                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                })
+                ->count(),
+            'in_progress' => Task::where('project_id', $project->id)
+                ->where('status', 'in_progress')
+                ->where(function($q) use ($startDate, $endDate) {
+                    $q->whereBetween('created_at', [$startDate, $endDate])
+                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                })
+                ->count(),
+            'review' => Task::where('project_id', $project->id)
+                ->where('status', 'review')
+                ->where(function($q) use ($startDate, $endDate) {
+                    $q->whereBetween('created_at', [$startDate, $endDate])
+                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                })
+                ->count(),
+            'todo' => Task::where('project_id', $project->id)
+                ->where('status', 'todo')
+                ->where(function($q) use ($startDate, $endDate) {
+                    $q->whereBetween('created_at', [$startDate, $endDate])
+                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                })
+                ->count(),
+            'on_hold' => Task::where('project_id', $project->id)
+                ->where('status', 'on_hold')
+                ->where(function($q) use ($startDate, $endDate) {
+                    $q->whereBetween('created_at', [$startDate, $endDate])
+                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                })
+                ->count(),
         ];
 
         // ===== TIME DISTRIBUTION BY TASK STATUS =====
@@ -158,6 +189,7 @@ class ReportController extends Controller
             'in_progress' => round(($timeByStatus['in_progress'] ?? 0) / $totalTimeSeconds * 100),
             'review' => round(($timeByStatus['review'] ?? 0) / $totalTimeSeconds * 100),
             'todo' => round(($timeByStatus['todo'] ?? 0) / $totalTimeSeconds * 100),
+            'on_hold' => round(($timeByStatus['on_hold'] ?? 0) / $totalTimeSeconds * 100),
         ];
 
         // Tasks by user in THIS PROJECT with work hours
@@ -206,6 +238,7 @@ class ReportController extends Controller
                     'in_progress' => 'In Progress',
                     'review' => 'Review',
                     'todo' => 'To Do',
+                    'on_hold' => 'On Hold',
                     default => 'Unknown'
                 };
                 return [
@@ -310,12 +343,43 @@ class ReportController extends Controller
             ? round((($hoursThisPeriod - $hoursLastPeriod) / $hoursLastPeriod) * 100) 
             : ($hoursThisPeriod > 0 ? 100 : 0);
 
-        // Tasks by status
+        // Tasks by status - filtered by period
         $tasksByStatus = [
-            'done' => Task::where('project_id', $project->id)->where('status', 'done')->count(),
-            'in_progress' => Task::where('project_id', $project->id)->where('status', 'in_progress')->count(),
-            'review' => Task::where('project_id', $project->id)->where('status', 'review')->count(),
-            'todo' => Task::where('project_id', $project->id)->where('status', 'todo')->count(),
+            'done' => Task::where('project_id', $project->id)
+                ->where('status', 'done')
+                ->where(function($q) use ($startDate, $endDate) {
+                    $q->whereBetween('created_at', [$startDate, $endDate])
+                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                })
+                ->count(),
+            'in_progress' => Task::where('project_id', $project->id)
+                ->where('status', 'in_progress')
+                ->where(function($q) use ($startDate, $endDate) {
+                    $q->whereBetween('created_at', [$startDate, $endDate])
+                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                })
+                ->count(),
+            'review' => Task::where('project_id', $project->id)
+                ->where('status', 'review')
+                ->where(function($q) use ($startDate, $endDate) {
+                    $q->whereBetween('created_at', [$startDate, $endDate])
+                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                })
+                ->count(),
+            'todo' => Task::where('project_id', $project->id)
+                ->where('status', 'todo')
+                ->where(function($q) use ($startDate, $endDate) {
+                    $q->whereBetween('created_at', [$startDate, $endDate])
+                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                })
+                ->count(),
+            'on_hold' => Task::where('project_id', $project->id)
+                ->where('status', 'on_hold')
+                ->where(function($q) use ($startDate, $endDate) {
+                    $q->whereBetween('created_at', [$startDate, $endDate])
+                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                })
+                ->count(),
         ];
 
         // Tasks by user with work hours
@@ -363,6 +427,7 @@ class ReportController extends Controller
                     'in_progress' => 'In Progress',
                     'review' => 'Review',
                     'todo' => 'To Do',
+                    'on_hold' => 'On Hold',
                     default => 'Unknown'
                 };
                 return [
