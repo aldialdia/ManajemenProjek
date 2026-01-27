@@ -31,7 +31,7 @@ class DashboardController extends Controller
             ->get();
 
         $myTasks = auth()->check()
-            ? Task::where('assigned_to', auth()->id())
+            ? Task::whereHas('assignees', fn($q) => $q->where('user_id', auth()->id()))
                 ->whereNot('status', 'done')
                 ->with('project')
                 ->orderBy('due_date')
@@ -43,7 +43,7 @@ class DashboardController extends Controller
             ->whereNot('status', 'done')
             ->where('due_date', '>=', now())
             ->where('due_date', '<=', now()->addDays(7))
-            ->with(['project', 'assignee'])
+            ->with(['project', 'assignees'])
             ->orderBy('due_date')
             ->take(5)
             ->get();

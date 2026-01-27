@@ -81,7 +81,7 @@ class ProjectController extends Controller
     {
         $this->authorize('view', $project);
 
-        $project->load(['client', 'users', 'tasks.assignee', 'attachments', 'comments.user']);
+        $project->load(['client', 'users', 'tasks.assignees', 'attachments', 'comments.user']);
 
         $tasksByStatus = $project->tasks->groupBy('status');
 
@@ -198,9 +198,9 @@ class ProjectController extends Controller
             // Update task deadline to match project end date
             $task->update(['due_date' => $newEndDate]);
 
-            // Notify assigned user if exists
-            if ($task->assignee) {
-                $task->assignee->notify(new \App\Notifications\TaskDeadlineAdjusted(
+            // Notify all assigned users if exists
+            foreach ($task->assignees as $assignee) {
+                $assignee->notify(new \App\Notifications\TaskDeadlineAdjusted(
                     $task,
                     $oldDeadline,
                     $newEndDate,

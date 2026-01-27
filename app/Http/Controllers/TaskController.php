@@ -30,7 +30,7 @@ class TaskController extends Controller
         $project = null;
 
         // Only get parent tasks (not subtasks), subtasks will be loaded via relation
-        $query = Task::with(['assignee', 'subtasks.assignee'])
+        $query = Task::with(['assignees', 'subtasks.assignees'])
             ->whereNull('parent_task_id'); // Only parent tasks
 
         // If project_id is provided, filter by that project
@@ -79,7 +79,7 @@ class TaskController extends Controller
         $showSubtasks = $request->boolean('show_subtasks', false);
 
         // Build query for tasks
-        $query = Task::with(['project', 'assignee', 'subtasks.assignee', 'parent']);
+        $query = Task::with(['project', 'assignees', 'subtasks.assignees', 'parent']);
 
         // Only show parent tasks unless show_subtasks is enabled
         if (!$showSubtasks) {
@@ -107,7 +107,7 @@ class TaskController extends Controller
         // Add permission info for each task (for frontend validation)
         $tasks->each(function ($task) use ($user) {
             $isManager = $user->isManagerInProject($task->project);
-            $isAssignee = $task->assigned_to === $user->id;
+            $isAssignee = $task->isAssignedTo($user);
             $projectOnHold = $task->project->isOnHold();
 
             // If project is on_hold, only manager can change status
@@ -133,7 +133,7 @@ class TaskController extends Controller
         $user = auth()->user();
         $project = null;
 
-        $query = Task::with(['project', 'assignee', 'parent'])
+        $query = Task::with(['project', 'assignees', 'parent'])
             ->whereNotNull('due_date');
 
         if ($request->filled('project_id')) {
@@ -267,7 +267,7 @@ class TaskController extends Controller
             $dueDateCarbon = \Carbon\Carbon::parse($newDueDate);
             $tomorrow = now()->addDay()->startOfDay();
             $today = now()->startOfDay();
-            
+
             // Check if due_date is between today and tomorrow (H-1)
             if ($dueDateCarbon->gte($today) && $dueDateCarbon->lte($tomorrow)) {
                 $cacheKey = 'task_deadline_notified_' . $task->id;
@@ -388,7 +388,7 @@ class TaskController extends Controller
     {
         $this->authorize('view', $task);
 
-        $task->load(['project', 'assignee', 'creator', 'parent', 'subtasks.assignee', 'comments.user', 'attachments']);
+        $task->load(['project', 'assignees', 'creator', 'parent', 'subtasks.assignees', 'comments.user', 'attachments']);
 
         return view('tasks.show', compact('task'));
     }

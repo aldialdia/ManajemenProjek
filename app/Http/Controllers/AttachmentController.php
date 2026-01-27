@@ -105,7 +105,7 @@ class AttachmentController extends Controller
             }
         } else {
             // Normal case: Manager or Assignee can upload
-            $canUpload = $user->isManagerInProject($project) || $task->assigned_to === $user->id;
+            $canUpload = $user->isManagerInProject($project) || $task->isAssignedTo($user);
             if (!$canUpload) {
                 abort(403, 'Hanya Manager, Admin, atau yang ditugaskan yang dapat mengupload file.');
             }
@@ -207,7 +207,7 @@ class AttachmentController extends Controller
             $project = $task->project;
 
             // Task assignee can delete attachments on their task
-            if ($task->assigned_to === $user->id) {
+            if ($task->isAssignedTo($user)) {
                 $canDelete = true;
             }
         } elseif ($attachment->attachable_type === 'App\\Models\\Project') {

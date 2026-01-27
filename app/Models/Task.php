@@ -31,7 +31,6 @@ class Task extends Model
         'title',
         'description',
         'project_id',
-        'assigned_to',
         'created_by',
         'parent_task_id',
         'priority',
@@ -59,21 +58,30 @@ class Task extends Model
     }
 
     /**
-     * Get the user assigned to this task (legacy - primary assignee).
-     */
-    public function assignee(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'assigned_to');
-    }
-
-    /**
-     * Get all users assigned to this task (multiple assignees).
+     * Get all users assigned to this task.
      */
     public function assignees(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'task_user')
             ->withPivot('assigned_at')
             ->withTimestamps();
+    }
+
+    /**
+     * Get the first assignee (for backward compatibility in views).
+     */
+    public function getAssigneeAttribute(): ?User
+    {
+        return $this->assignees()->first();
+    }
+
+    /**
+     * Check if a user is assigned to this task.
+     */
+    public function isAssignedTo(User|int $user): bool
+    {
+        $userId = $user instanceof User ? $user->id : $user;
+        return $this->assignees()->where('user_id', $userId)->exists();
     }
 
     /**

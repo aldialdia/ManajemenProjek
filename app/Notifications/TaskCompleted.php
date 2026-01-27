@@ -36,7 +36,6 @@ class TaskCompleted extends Notification implements ShouldQueue
             ->line('Sebuah tugas telah diselesaikan.')
             ->line('**Tugas:** ' . $this->task->title)
             ->line('**Proyek:** ' . $this->task->project->name)
-            ->line('**Diselesaikan oleh:** ' . ($this->task->assignee?->name ?? 'Tidak ditugaskan'))
             ->action('Lihat Tugas', url('/tasks/' . $this->task->id))
             ->line('Terima kasih!');
     }
@@ -52,8 +51,6 @@ class TaskCompleted extends Notification implements ShouldQueue
             'task_title' => $this->task->title,
             'project_id' => $this->task->project_id,
             'project_name' => $this->task->project->name,
-            'completed_by_id' => $this->task->assigned_to,
-            'completed_by_name' => $this->task->assignee?->name ?? 'Tidak diketahui',
             'message' => 'Tugas "' . $this->task->title . '" telah diselesaikan',
         ];
     }

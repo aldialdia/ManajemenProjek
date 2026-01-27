@@ -16,9 +16,9 @@
         // User-specific stats
         $totalProjects = count($userProjectIds);
         $activeProjects = \App\Models\Project::whereIn('id', $userProjectIds)->where('status', 'in_progress')->count();
-        $totalTasks = \App\Models\Task::where('assigned_to', $user->id)->count();
-        $completedTasks = \App\Models\Task::where('assigned_to', $user->id)->where('status', 'done')->count();
-        $pendingTasks = \App\Models\Task::where('assigned_to', $user->id)->whereIn('status', ['todo', 'in_progress'])->count();
+        $totalTasks = \App\Models\Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))->count();
+        $completedTasks = \App\Models\Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))->where('status', 'done')->count();
+        $pendingTasks = \App\Models\Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))->whereIn('status', ['todo', 'in_progress'])->count();
 
         // Team members in user's projects
         $totalTeamMembers = \App\Models\User::whereHas('projects', function ($q) use ($userProjectIds) {
@@ -58,10 +58,10 @@
             ->whereMonth('created_at', now()->month)->count();
         $projectChange = $projectsLastMonth > 0 ? round((($projectsThisMonth - $projectsLastMonth) / $projectsLastMonth) * 100) : ($projectsThisMonth > 0 ? 100 : 0);
 
-        $tasksCompletedLastMonth = \App\Models\Task::where('assigned_to', $user->id)
+        $tasksCompletedLastMonth = \App\Models\Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))
             ->where('status', 'done')
             ->whereMonth('updated_at', now()->subMonth()->month)->count();
-        $tasksCompletedThisMonth = \App\Models\Task::where('assigned_to', $user->id)
+        $tasksCompletedThisMonth = \App\Models\Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))
             ->where('status', 'done')
             ->whereMonth('updated_at', now()->month)->count();
         $taskChange = $tasksCompletedLastMonth > 0 ? round((($tasksCompletedThisMonth - $tasksCompletedLastMonth) / $tasksCompletedLastMonth) * 100) : ($tasksCompletedThisMonth > 0 ? 100 : 0);
@@ -70,10 +70,10 @@
 
         // Tasks by status for pie chart (user's tasks only)
         $tasksByStatus = [
-            'todo' => \App\Models\Task::where('assigned_to', $user->id)->where('status', 'todo')->count(),
-            'in_progress' => \App\Models\Task::where('assigned_to', $user->id)->where('status', 'in_progress')->count(),
-            'review' => \App\Models\Task::where('assigned_to', $user->id)->where('status', 'review')->count(),
-            'done' => \App\Models\Task::where('assigned_to', $user->id)->where('status', 'done')->count(),
+            'todo' => \App\Models\Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))->where('status', 'todo')->count(),
+            'in_progress' => \App\Models\Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))->where('status', 'in_progress')->count(),
+            'review' => \App\Models\Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))->where('status', 'review')->count(),
+            'done' => \App\Models\Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))->where('status', 'done')->count(),
         ];
 
         // Weekly productivity (last 7 days) - User's data
@@ -86,7 +86,7 @@
             $weeklyData[] = [
                 'day' => $date->locale('id')->isoFormat('ddd'),
                 'hours' => round($hoursOnDay, 1),
-                'completed' => \App\Models\Task::where('assigned_to', $user->id)
+                'completed' => \App\Models\Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))
                     ->where('status', 'done')
                     ->whereDate('updated_at', $date->toDateString())->count(),
             ];
@@ -101,7 +101,7 @@
             ->get();
 
         // Upcoming deadlines (user's tasks only) - within 7 days
-        $upcomingDeadlines = \App\Models\Task::where('assigned_to', $user->id)
+        $upcomingDeadlines = \App\Models\Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))
             ->whereNotNull('due_date')
             ->where('due_date', '>=', now())
             ->where('due_date', '<=', now()->addDays(7))
@@ -234,7 +234,8 @@
                 @forelse($activeProjectsList as $project)
                     <div class="project-row-compact">
                         <div class="project-row-info">
-                            <a href="{{ route('projects.show', $project) }}" class="project-row-title">{{ Str::limit($project->name, 25) }}</a>
+                            <a href="{{ route('projects.show', $project) }}"
+                                class="project-row-title">{{ Str::limit($project->name, 25) }}</a>
                             <span class="project-row-date">
                                 {{ $project->end_date?->format('d M') ?? '-' }}
                             </span>
@@ -257,14 +258,18 @@
         <!-- Upcoming Deadlines (Compact) -->
         <div class="card">
             <div class="card-header" style="padding: 0.75rem 1rem;">
-                <span style="font-size: 0.9rem;"><i class="fas fa-exclamation-triangle text-warning"></i> Deadline Terdekat</span>
+                <span style="font-size: 0.9rem;"><i class="fas fa-exclamation-triangle text-warning"></i> Deadline
+                    Terdekat</span>
             </div>
             <div class="card-body" style="padding: 0; max-height: 280px; overflow-y: auto;">
                 @forelse($upcomingDeadlines as $task)
                     <div class="deadline-row-compact">
-                        <div class="deadline-priority-dot {{ $task->priority->value === 'high' ? 'priority-high' : ($task->priority->value === 'medium' ? 'priority-medium' : 'priority-low') }}"></div>
+                        <div
+                            class="deadline-priority-dot {{ $task->priority->value === 'high' ? 'priority-high' : ($task->priority->value === 'medium' ? 'priority-medium' : 'priority-low') }}">
+                        </div>
                         <div class="deadline-info" style="flex: 1; min-width: 0;">
-                            <a href="{{ route('tasks.show', $task) }}" class="deadline-title">{{ Str::limit($task->title, 30) }}</a>
+                            <a href="{{ route('tasks.show', $task) }}"
+                                class="deadline-title">{{ Str::limit($task->title, 30) }}</a>
                         </div>
                         <span class="deadline-remaining-badge {{ $task->due_date->isToday() ? 'urgent' : '' }}">
                             @php $daysLeft = now()->startOfDay()->diffInDays($task->due_date->startOfDay()); @endphp
@@ -352,9 +357,9 @@
                 labels: ['Done', 'In Progress', 'Review', 'To Do'],
                 datasets: [{
                     data: [
-                                            {{ $tasksByStatus['done'] }},
-                                            {{ $tasksByStatus['in_progress'] }},
-                                            {{ $tasksByStatus['review'] }},
+                                                {{ $tasksByStatus['done'] }},
+                                                {{ $tasksByStatus['in_progress'] }},
+                                                {{ $tasksByStatus['review'] }},
                         {{ $tasksByStatus['todo'] }}
                     ],
                     backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#94a3b8'],
@@ -1069,7 +1074,7 @@
     </style>
 
     <script>        // Project Kanban Drag and Drop
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const cards = document.querySelectorAll('.kanban-card.draggable');
             const columnBodies = document.querySelectorAll('.kanban-column-body');
 
@@ -1136,40 +1141,40 @@
                     },
                     body: JSON.stringify({ status: newStatus })
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.changed) {
-                        // Update the status date display
-                        let statusDateEl = draggedCard.querySelector('.kanban-card-status-date');
-                        if (!statusDateEl) {
-                            statusDateEl = document.createElement('div');
-                            statusDateEl.className = 'kanban-card-status-date';
-                            draggedCard.appendChild(statusDateEl);
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.changed) {
+                            // Update the status date display
+                            let statusDateEl = draggedCard.querySelector('.kanban-card-status-date');
+                            if (!statusDateEl) {
+                                statusDateEl = document.createElement('div');
+                                statusDateEl.className = 'kanban-card-status-date';
+                                draggedCard.appendChild(statusDateEl);
+                            }
+                            statusDateEl.innerHTML = `<i class="fas fa-clock"></i> ${data.changed_at} <span class="status-changed-by">oleh ${data.changed_by}</span>`;
+
+                            showToast(`Proyek "${projectName}" dipindahkan ke ${getStatusLabel(newStatus)}`, 'success');
+                        } else if (!data.success) {
+                            // Revert on error
+                            document.querySelector(`.kanban-column[data-status="${oldStatus}"] .kanban-column-body`).appendChild(draggedCard);
+                            updateColumnCounts();
+                            showToast(data.message || 'Gagal memindahkan proyek', 'error');
                         }
-                        statusDateEl.innerHTML = `<i class="fas fa-clock"></i> ${data.changed_at} <span class="status-changed-by">oleh ${data.changed_by}</span>`;
-                        
-                        showToast(`Proyek "${projectName}" dipindahkan ke ${getStatusLabel(newStatus)}`, 'success');
-                    } else if (!data.success) {
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
                         // Revert on error
                         document.querySelector(`.kanban-column[data-status="${oldStatus}"] .kanban-column-body`).appendChild(draggedCard);
                         updateColumnCounts();
-                        showToast(data.message || 'Gagal memindahkan proyek', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    // Revert on error
-                    document.querySelector(`.kanban-column[data-status="${oldStatus}"] .kanban-column-body`).appendChild(draggedCard);
-                    updateColumnCounts();
-                    showToast('Terjadi kesalahan', 'error');
-                });
+                        showToast('Terjadi kesalahan', 'error');
+                    });
             }
 
             function updateColumnCounts() {
                 document.querySelectorAll('.kanban-column').forEach(column => {
                     const count = column.querySelectorAll('.kanban-card').length;
                     column.querySelector('.column-count').textContent = count;
-                    
+
                     // Show/hide empty state
                     const emptyState = column.querySelector('.kanban-empty');
                     if (emptyState) {
@@ -1193,9 +1198,9 @@
                 const toast = document.createElement('div');
                 toast.className = `toast-notification toast-${type}`;
                 toast.innerHTML = `
-                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
-                    <span>${message}</span>
-                `;
+                        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                        <span>${message}</span>
+                    `;
                 document.body.appendChild(toast);
 
                 // Animate in

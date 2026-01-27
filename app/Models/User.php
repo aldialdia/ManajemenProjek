@@ -66,19 +66,23 @@ class User extends Authenticatable
     }
 
     /**
-     * Get all tasks assigned to this user.
+     * Get all tasks assigned to this user (via pivot table).
      */
-    public function tasks(): HasMany
+    public function tasks(): BelongsToMany
     {
-        return $this->hasMany(Task::class, 'assigned_to');
+        return $this->belongsToMany(Task::class, 'task_user')
+            ->withPivot('assigned_at')
+            ->withTimestamps();
     }
 
     /**
      * Alias for tasks - all tasks assigned to this user.
      */
-    public function assignedTasks(): HasMany
+    public function assignedTasks(): BelongsToMany
     {
-        return $this->hasMany(Task::class, 'assigned_to');
+        return $this->belongsToMany(Task::class, 'task_user')
+            ->withPivot('assigned_at')
+            ->withTimestamps();
     }
 
     /**

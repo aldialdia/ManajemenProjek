@@ -20,11 +20,6 @@ class TaskService
         $assignees = $data['assignees'] ?? [];
         unset($data['assignees']);
 
-        // Set primary assignee (first one) for backward compatibility
-        if (!empty($assignees)) {
-            $data['assigned_to'] = $assignees[0];
-        }
-
         $task = Task::create($data);
 
         // Sync multiple assignees
@@ -52,11 +47,6 @@ class TaskService
         // Extract assignees before updating task
         $assignees = $data['assignees'] ?? null;
         unset($data['assignees']);
-
-        // Set primary assignee (first one) for backward compatibility
-        if ($assignees !== null && !empty($assignees)) {
-            $data['assigned_to'] = $assignees[0];
-        }
 
         $task->update($data);
 
@@ -174,7 +164,7 @@ class TaskService
     public function getKanbanBoard(int $projectId): array
     {
         $tasks = Task::where('project_id', $projectId)
-            ->with('assignee')
+            ->with('assignees')
             ->orderBy('priority', 'desc')
             ->get();
 
@@ -194,10 +184,10 @@ class TaskService
         $query = Task::whereNotNull('due_date')
             ->where('due_date', '<', now())
             ->whereNot('status', TaskStatus::DONE)
-            ->with(['project', 'assignee']);
+            ->with(['project', 'assignees']);
 
         if ($userId) {
-            $query->where('assigned_to', $userId);
+            $query->whereHas('assignees', fn($q) => $q->where('user_id', $userId));
         }
 
         return $query->orderBy('due_date')->get();

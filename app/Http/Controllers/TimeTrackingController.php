@@ -37,7 +37,7 @@ class TimeTrackingController extends Controller
 
         // Get available tasks - only tasks assigned to current user (not done/approved)
         $availableTasks = Task::where('project_id', $project->id)
-            ->where('assigned_to', $user->id)
+            ->whereHas('assignees', fn($q) => $q->where('user_id', $user->id))
             ->whereNotIn('status', ['done', 'done_approved'])
             ->orderBy('title')
             ->get();
@@ -131,7 +131,7 @@ class TimeTrackingController extends Controller
         }
 
         // Check if user is assignee of this task
-        if ($task->assigned_to !== $user->id) {
+        if (!$task->isAssignedTo($user)) {
             abort(403, 'Anda hanya dapat melacak waktu untuk task yang ditugaskan kepada Anda.');
         }
 
@@ -194,7 +194,7 @@ class TimeTrackingController extends Controller
         }
 
         // Check if user is assignee of this task
-        if ($task->assigned_to !== $user->id) {
+        if (!$task->isAssignedTo($user)) {
             abort(403, 'Anda hanya dapat melacak waktu untuk task yang ditugaskan kepada Anda.');
         }
 
@@ -318,7 +318,7 @@ class TimeTrackingController extends Controller
         $project = $task->project;
 
         // Check if user is assignee of this task
-        if ($task->assigned_to !== $user->id) {
+        if (!$task->isAssignedTo($user)) {
             abort(403, 'Anda hanya dapat menyelesaikan task yang ditugaskan kepada Anda.');
         }
 
@@ -404,7 +404,7 @@ class TimeTrackingController extends Controller
         }
 
         // Check if user is assignee of this task
-        if ($task->assigned_to !== $user->id) {
+        if (!$task->isAssignedTo($user)) {
             abort(403, 'Anda hanya dapat melacak waktu untuk task yang ditugaskan kepada Anda.');
         }
 

@@ -221,7 +221,7 @@ class ReportController extends Controller
 
         // Recent activities - tasks from THIS PROJECT only
         $recentActivities = Task::where('project_id', $project->id)
-            ->with(['assignee'])
+            ->with(['assignees'])
             ->whereBetween('updated_at', [$startDate, $endDate])
             ->latest('updated_at')
             ->take(10)
@@ -404,7 +404,7 @@ class ReportController extends Controller
 
         // Recent activities - get ALL activities without limit
         $recentActivities = Task::where('project_id', $project->id)
-            ->with(['assignee'])
+            ->with(['assignees'])
             ->whereBetween('updated_at', [$startDate, $endDate])
             ->latest('updated_at')
             ->get()
