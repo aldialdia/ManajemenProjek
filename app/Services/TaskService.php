@@ -47,6 +47,7 @@ class TaskService
     public function update(Task $task, array $data): Task
     {
         $oldAssigneeIds = $task->assignees()->pluck('users.id')->toArray();
+        $oldStatus = $task->status;
 
         // Extract assignees before updating task
         $assignees = $data['assignees'] ?? null;
@@ -68,6 +69,11 @@ class TaskService
             if (!empty($newAssignees)) {
                 $this->notifyTaskAssigned($task, $newAssignees);
             }
+        }
+
+        // Update project status if task status changed
+        if (isset($data['status']) && $oldStatus->value !== $data['status']) {
+            $task->project->checkAndUpdateStatusBasedOnTasks();
         }
 
         return $task->fresh();

@@ -29,14 +29,14 @@ class ProjectController extends Controller
     {
         $user = Auth::user();
         $userProjectIds = $user->projects()->pluck('projects.id')->toArray();
-        
+
         $projectStatuses = [
             'new' => ['label' => 'Baru', 'color' => '#94a3b8', 'icon' => 'fa-plus-circle'],
             'in_progress' => ['label' => 'Berjalan', 'color' => '#3b82f6', 'icon' => 'fa-spinner'],
             'on_hold' => ['label' => 'Ditunda', 'color' => '#f59e0b', 'icon' => 'fa-pause-circle'],
             'done' => ['label' => 'Selesai', 'color' => '#10b981', 'icon' => 'fa-check-circle'],
         ];
-        
+
         $projects = Project::whereIn('id', $userProjectIds)
             ->with(['tasks', 'latestStatusLog.changedBy'])
             ->get()
@@ -249,11 +249,10 @@ class ProjectController extends Controller
         $totalTasks = $project->tasks()->count();
         $doneTasks = $project->tasks()->where('status', 'done')->count();
         $todoTasks = $project->tasks()->where('status', 'todo')->count();
-        $onHoldTasks = $project->tasks()->where('status', 'on_hold')->count();
         $incompleteTasks = $totalTasks - $doneTasks;
 
         // ============ ON_HOLD LOGIC ============
-        // Moving TO on_hold - put all incomplete tasks on hold
+        // Note: Task status is NOT changed when project is put on hold
         if ($newStatus === 'on_hold') {
             // Cannot change from done to on_hold if all tasks are complete
             if ($oldStatus === 'done' && $totalTasks > 0 && $doneTasks === $totalTasks) {
@@ -263,15 +262,11 @@ class ProjectController extends Controller
                 ]);
             }
 
-            // Update all non-done tasks to on_hold
-            $project->tasks()
-                ->whereNotIn('status', ['done', 'on_hold'])
-                ->update(['status' => 'on_hold']);
-            
+            // Only update project status, tasks remain unchanged
             $project->update(['status' => $newStatus]);
-            
+
             $latestLog = $project->statusLogs()->first();
-            
+
             return response()->json([
                 'success' => true,
                 'changed' => true,
@@ -279,28 +274,16 @@ class ProjectController extends Controller
                 'to_status' => $newStatus,
                 'changed_at' => $latestLog?->created_at?->format('d M Y, H:i'),
                 'changed_by' => $user->name,
-                'tasks_affected' => $incompleteTasks - $onHoldTasks,
             ]);
         }
 
         // Moving FROM on_hold
         if ($oldStatus === 'on_hold') {
-            if ($newStatus === 'done') {
-                // Moving from on_hold to done - make all tasks done
-                $project->tasks()
-                    ->where('status', '!=', 'done')
-                    ->update(['status' => 'done']);
-            } else {
-                // Moving from on_hold to other status - restore tasks to todo
-                $project->tasks()
-                    ->where('status', 'on_hold')
-                    ->update(['status' => 'todo']);
-            }
-            
+            // Only update project status, tasks remain unchanged
             $project->update(['status' => $newStatus]);
-            
+
             $latestLog = $project->statusLogs()->first();
-            
+
             return response()->json([
                 'success' => true,
                 'changed' => true,
@@ -308,7 +291,6 @@ class ProjectController extends Controller
                 'to_status' => $newStatus,
                 'changed_at' => $latestLog?->created_at?->format('d M Y, H:i'),
                 'changed_by' => $user->name,
-                'tasks_updated' => $newStatus === 'done' ? $incompleteTasks : $onHoldTasks,
             ]);
         }
 
@@ -368,5 +350,41 @@ class ProjectController extends Controller
             'changed_at' => $latestLog?->created_at?->format('d M Y, H:i'),
             'changed_by' => $user->name,
         ]);
+    }
+
+    /**
+     * Toggle project between on_hold and previous status.
+     * Only managers/admins can do this.
+     * Note: Task status is NOT changed when project is put on hold.
+     */
+    public function toggleHold(\Illuminate\Http\Request $request, Project $project): RedirectResponse
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        // Check if user is manager/admin in project OR system admin
+        if (!$user->isManagerInProject($project) && !$user->isAdmin()) {
+            abort(403, 'Hanya manager atau admin yang dapat menunda/melanjutkan project.');
+        }
+
+        $currentStatus = $project->status->value;
+
+        if ($currentStatus === 'on_hold') {
+            // Resume project from hold - set to in_progress
+            // Task status remains unchanged
+            $project->update(['status' => 'in_progress']);
+
+            return redirect()
+                ->route('projects.show', $project)
+                ->with('success', 'Project dilanjutkan. Status berubah menjadi Sedang Berjalan.');
+        } else {
+            // Put project on hold
+            // Task status remains unchanged (tasks keep their current status)
+            $project->update(['status' => 'on_hold']);
+
+            return redirect()
+                ->route('projects.show', $project)
+                ->with('success', 'Project ditunda. Tugas tetap mempertahankan status masing-masing.');
+        }
     }
 }

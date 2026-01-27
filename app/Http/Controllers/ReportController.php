@@ -18,7 +18,7 @@ class ReportController extends Controller
     private function getDateRange(string $period): array
     {
         $endDate = Carbon::now()->endOfDay();
-        
+
         switch ($period) {
             case 'today':
                 $startDate = Carbon::today()->startOfDay();
@@ -38,7 +38,7 @@ class ReportController extends Controller
             default:
                 $startDate = Carbon::now()->subDays(30)->startOfDay();
         }
-        
+
         return [$startDate, $endDate];
     }
 
@@ -54,41 +54,41 @@ class ReportController extends Controller
         [$startDate, $endDate] = $this->getDateRange($period);
 
         // ===== PROJECT-SPECIFIC STATS =====
-        
+
         // All tasks in THIS PROJECT within period
         $totalTasks = Task::where('project_id', $project->id)
-            ->where(function($q) use ($startDate, $endDate) {
+            ->where(function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('created_at', [$startDate, $endDate])
-                  ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                    ->orWhereBetween('updated_at', [$startDate, $endDate]);
             })
             ->count();
-            
+
         $completedTasks = Task::where('project_id', $project->id)
             ->where('status', 'done')
             ->whereBetween('updated_at', [$startDate, $endDate])
             ->count();
-        
+
         // Total hours from all team members in THIS PROJECT within period
         // Include completed entries
-        $completedHours = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+        $completedHours = \App\Models\TimeEntry::whereHas('task', function ($q) use ($project) {
             $q->where('project_id', $project->id);
         })
-        ->whereBetween('started_at', [$startDate, $endDate])
-        ->where('is_running', false)
-        ->whereNotNull('ended_at')
-        ->sum('duration_seconds') / 3600;
-        
+            ->whereBetween('started_at', [$startDate, $endDate])
+            ->where('is_running', false)
+            ->whereNotNull('ended_at')
+            ->sum('duration_seconds') / 3600;
+
         // Add running timer elapsed time for this project
-        $runningEntries = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+        $runningEntries = \App\Models\TimeEntry::whereHas('task', function ($q) use ($project) {
             $q->where('project_id', $project->id);
         })
-        ->whereBetween('started_at', [$startDate, $endDate])
-        ->where('is_running', true)
-        ->get();
+            ->whereBetween('started_at', [$startDate, $endDate])
+            ->where('is_running', true)
+            ->get();
         $runningSeconds = $runningEntries->sum(fn($entry) => $entry->current_elapsed_seconds);
-        
+
         $totalHours = round($completedHours + ($runningSeconds / 3600), 1);
-        
+
         // Team members in THIS PROJECT
         $totalMembers = $project->users()->count();
 
@@ -106,65 +106,59 @@ class ReportController extends Controller
             ->where('status', 'done')
             ->whereBetween('updated_at', [$prevStartDate, $prevEndDate])
             ->count();
-        $taskChange = $tasksLastPeriod > 0 
-            ? round((($tasksThisPeriod - $tasksLastPeriod) / $tasksLastPeriod) * 100) 
+        $taskChange = $tasksLastPeriod > 0
+            ? round((($tasksThisPeriod - $tasksLastPeriod) / $tasksLastPeriod) * 100)
             : ($tasksThisPeriod > 0 ? 100 : 0);
 
         // Hours change (only completed entries for fair comparison)
-        $hoursThisPeriod = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+        $hoursThisPeriod = \App\Models\TimeEntry::whereHas('task', function ($q) use ($project) {
             $q->where('project_id', $project->id);
         })->whereBetween('started_at', [$startDate, $endDate])
-          ->where('is_running', false)
-          ->whereNotNull('ended_at')
-          ->sum('duration_seconds') / 3600;
-        $hoursLastPeriod = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+            ->where('is_running', false)
+            ->whereNotNull('ended_at')
+            ->sum('duration_seconds') / 3600;
+        $hoursLastPeriod = \App\Models\TimeEntry::whereHas('task', function ($q) use ($project) {
             $q->where('project_id', $project->id);
         })->whereBetween('started_at', [$prevStartDate, $prevEndDate])
-          ->where('is_running', false)
-          ->whereNotNull('ended_at')
-          ->sum('duration_seconds') / 3600;
-        $hoursChange = $hoursLastPeriod > 0 
-            ? round((($hoursThisPeriod - $hoursLastPeriod) / $hoursLastPeriod) * 100) 
+            ->where('is_running', false)
+            ->whereNotNull('ended_at')
+            ->sum('duration_seconds') / 3600;
+        $hoursChange = $hoursLastPeriod > 0
+            ? round((($hoursThisPeriod - $hoursLastPeriod) / $hoursLastPeriod) * 100)
             : ($hoursThisPeriod > 0 ? 100 : 0);
 
         // Member change (static, no change for now)
         $memberChange = 0;
 
         // ===== TASKS BY STATUS (for Status Tugas chart) - filtered by period =====
+        // Note: on_hold status removed - only for projects, not tasks
         $tasksByStatus = [
             'done' => Task::where('project_id', $project->id)
                 ->where('status', 'done')
-                ->where(function($q) use ($startDate, $endDate) {
+                ->where(function ($q) use ($startDate, $endDate) {
                     $q->whereBetween('created_at', [$startDate, $endDate])
-                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                        ->orWhereBetween('updated_at', [$startDate, $endDate]);
                 })
                 ->count(),
             'in_progress' => Task::where('project_id', $project->id)
                 ->where('status', 'in_progress')
-                ->where(function($q) use ($startDate, $endDate) {
+                ->where(function ($q) use ($startDate, $endDate) {
                     $q->whereBetween('created_at', [$startDate, $endDate])
-                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                        ->orWhereBetween('updated_at', [$startDate, $endDate]);
                 })
                 ->count(),
             'review' => Task::where('project_id', $project->id)
                 ->where('status', 'review')
-                ->where(function($q) use ($startDate, $endDate) {
+                ->where(function ($q) use ($startDate, $endDate) {
                     $q->whereBetween('created_at', [$startDate, $endDate])
-                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                        ->orWhereBetween('updated_at', [$startDate, $endDate]);
                 })
                 ->count(),
             'todo' => Task::where('project_id', $project->id)
                 ->where('status', 'todo')
-                ->where(function($q) use ($startDate, $endDate) {
+                ->where(function ($q) use ($startDate, $endDate) {
                     $q->whereBetween('created_at', [$startDate, $endDate])
-                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
-                })
-                ->count(),
-            'on_hold' => Task::where('project_id', $project->id)
-                ->where('status', 'on_hold')
-                ->where(function($q) use ($startDate, $endDate) {
-                    $q->whereBetween('created_at', [$startDate, $endDate])
-                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                        ->orWhereBetween('updated_at', [$startDate, $endDate]);
                 })
                 ->count(),
         ];
@@ -184,36 +178,36 @@ class ReportController extends Controller
 
         $totalTimeSeconds = array_sum($timeByStatus) ?: 1;
 
+        // Note: on_hold status removed - only for projects, not tasks
         $timeDistribution = [
             'done' => round(($timeByStatus['done'] ?? 0) / $totalTimeSeconds * 100),
             'in_progress' => round(($timeByStatus['in_progress'] ?? 0) / $totalTimeSeconds * 100),
             'review' => round(($timeByStatus['review'] ?? 0) / $totalTimeSeconds * 100),
             'todo' => round(($timeByStatus['todo'] ?? 0) / $totalTimeSeconds * 100),
-            'on_hold' => round(($timeByStatus['on_hold'] ?? 0) / $totalTimeSeconds * 100),
         ];
 
         // Tasks by user in THIS PROJECT with work hours
         $tasksByUser = $project->users()->withCount([
             'assignedTasks as completed_count' => function ($q) use ($project, $startDate, $endDate) {
                 $q->where('status', 'done')
-                  ->where('project_id', $project->id)
-                  ->whereBetween('updated_at', [$startDate, $endDate]);
+                    ->where('project_id', $project->id)
+                    ->whereBetween('updated_at', [$startDate, $endDate]);
             },
             'assignedTasks as total_tasks_count' => function ($q) use ($project, $startDate, $endDate) {
                 $q->where('project_id', $project->id)
-                  ->where(function($subQ) use ($startDate, $endDate) {
-                      $subQ->whereBetween('created_at', [$startDate, $endDate])
-                           ->orWhereBetween('updated_at', [$startDate, $endDate]);
-                  });
+                    ->where(function ($subQ) use ($startDate, $endDate) {
+                        $subQ->whereBetween('created_at', [$startDate, $endDate])
+                            ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                    });
             }
         ])->get()->map(function ($user) use ($project, $startDate, $endDate) {
-            $user->completion_percentage = $user->total_tasks_count > 0 
-                ? round(($user->completed_count / $user->total_tasks_count) * 100) 
+            $user->completion_percentage = $user->total_tasks_count > 0
+                ? round(($user->completed_count / $user->total_tasks_count) * 100)
                 : 0;
-            
+
             // Calculate work hours for this user in this project
             $userHours = \App\Models\TimeEntry::where('user_id', $user->id)
-                ->whereHas('task', function($q) use ($project) {
+                ->whereHas('task', function ($q) use ($project) {
                     $q->where('project_id', $project->id);
                 })
                 ->whereBetween('started_at', [$startDate, $endDate])
@@ -221,7 +215,7 @@ class ReportController extends Controller
                 ->whereNotNull('ended_at')
                 ->sum('duration_seconds') / 3600;
             $user->work_hours = round($userHours, 1);
-            
+
             return $user;
         });
 
@@ -233,12 +227,11 @@ class ReportController extends Controller
             ->take(10)
             ->get()
             ->map(function ($task) {
-                $statusLabel = match($task->status->value) {
+                $statusLabel = match ($task->status->value) {
                     'done' => 'Done',
                     'in_progress' => 'In Progress',
                     'review' => 'Review',
                     'todo' => 'To Do',
-                    'on_hold' => 'On Hold',
                     default => 'Unknown'
                 };
                 return [
@@ -279,35 +272,35 @@ class ReportController extends Controller
 
         // Reuse the same data collection logic as index method
         $totalTasks = Task::where('project_id', $project->id)
-            ->where(function($q) use ($startDate, $endDate) {
+            ->where(function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('created_at', [$startDate, $endDate])
-                  ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                    ->orWhereBetween('updated_at', [$startDate, $endDate]);
             })
             ->count();
-            
+
         $completedTasks = Task::where('project_id', $project->id)
             ->where('status', 'done')
             ->whereBetween('updated_at', [$startDate, $endDate])
             ->count();
-        
-        $completedHours = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+
+        $completedHours = \App\Models\TimeEntry::whereHas('task', function ($q) use ($project) {
             $q->where('project_id', $project->id);
         })
-        ->whereBetween('started_at', [$startDate, $endDate])
-        ->where('is_running', false)
-        ->whereNotNull('ended_at')
-        ->sum('duration_seconds') / 3600;
-        
-        $runningEntries = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+            ->whereBetween('started_at', [$startDate, $endDate])
+            ->where('is_running', false)
+            ->whereNotNull('ended_at')
+            ->sum('duration_seconds') / 3600;
+
+        $runningEntries = \App\Models\TimeEntry::whereHas('task', function ($q) use ($project) {
             $q->where('project_id', $project->id);
         })
-        ->whereBetween('started_at', [$startDate, $endDate])
-        ->where('is_running', true)
-        ->get();
+            ->whereBetween('started_at', [$startDate, $endDate])
+            ->where('is_running', true)
+            ->get();
         $runningSeconds = $runningEntries->sum(fn($entry) => $entry->current_elapsed_seconds);
-        
+
         $totalHours = round($completedHours + ($runningSeconds / 3600), 1);
-        
+
         $totalMembers = $project->users()->count();
 
         // Percentage changes
@@ -323,61 +316,55 @@ class ReportController extends Controller
             ->where('status', 'done')
             ->whereBetween('updated_at', [$prevStartDate, $prevEndDate])
             ->count();
-        $taskChange = $tasksLastPeriod > 0 
-            ? round((($tasksThisPeriod - $tasksLastPeriod) / $tasksLastPeriod) * 100) 
+        $taskChange = $tasksLastPeriod > 0
+            ? round((($tasksThisPeriod - $tasksLastPeriod) / $tasksLastPeriod) * 100)
             : ($tasksThisPeriod > 0 ? 100 : 0);
 
-        $hoursThisPeriod = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+        $hoursThisPeriod = \App\Models\TimeEntry::whereHas('task', function ($q) use ($project) {
             $q->where('project_id', $project->id);
         })->whereBetween('started_at', [$startDate, $endDate])
-          ->where('is_running', false)
-          ->whereNotNull('ended_at')
-          ->sum('duration_seconds') / 3600;
-        $hoursLastPeriod = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+            ->where('is_running', false)
+            ->whereNotNull('ended_at')
+            ->sum('duration_seconds') / 3600;
+        $hoursLastPeriod = \App\Models\TimeEntry::whereHas('task', function ($q) use ($project) {
             $q->where('project_id', $project->id);
         })->whereBetween('started_at', [$prevStartDate, $prevEndDate])
-          ->where('is_running', false)
-          ->whereNotNull('ended_at')
-          ->sum('duration_seconds') / 3600;
-        $hoursChange = $hoursLastPeriod > 0 
-            ? round((($hoursThisPeriod - $hoursLastPeriod) / $hoursLastPeriod) * 100) 
+            ->where('is_running', false)
+            ->whereNotNull('ended_at')
+            ->sum('duration_seconds') / 3600;
+        $hoursChange = $hoursLastPeriod > 0
+            ? round((($hoursThisPeriod - $hoursLastPeriod) / $hoursLastPeriod) * 100)
             : ($hoursThisPeriod > 0 ? 100 : 0);
 
         // Tasks by status - filtered by period
+        // Note: on_hold status removed - only for projects, not tasks
         $tasksByStatus = [
             'done' => Task::where('project_id', $project->id)
                 ->where('status', 'done')
-                ->where(function($q) use ($startDate, $endDate) {
+                ->where(function ($q) use ($startDate, $endDate) {
                     $q->whereBetween('created_at', [$startDate, $endDate])
-                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                        ->orWhereBetween('updated_at', [$startDate, $endDate]);
                 })
                 ->count(),
             'in_progress' => Task::where('project_id', $project->id)
                 ->where('status', 'in_progress')
-                ->where(function($q) use ($startDate, $endDate) {
+                ->where(function ($q) use ($startDate, $endDate) {
                     $q->whereBetween('created_at', [$startDate, $endDate])
-                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                        ->orWhereBetween('updated_at', [$startDate, $endDate]);
                 })
                 ->count(),
             'review' => Task::where('project_id', $project->id)
                 ->where('status', 'review')
-                ->where(function($q) use ($startDate, $endDate) {
+                ->where(function ($q) use ($startDate, $endDate) {
                     $q->whereBetween('created_at', [$startDate, $endDate])
-                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                        ->orWhereBetween('updated_at', [$startDate, $endDate]);
                 })
                 ->count(),
             'todo' => Task::where('project_id', $project->id)
                 ->where('status', 'todo')
-                ->where(function($q) use ($startDate, $endDate) {
+                ->where(function ($q) use ($startDate, $endDate) {
                     $q->whereBetween('created_at', [$startDate, $endDate])
-                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
-                })
-                ->count(),
-            'on_hold' => Task::where('project_id', $project->id)
-                ->where('status', 'on_hold')
-                ->where(function($q) use ($startDate, $endDate) {
-                    $q->whereBetween('created_at', [$startDate, $endDate])
-                      ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                        ->orWhereBetween('updated_at', [$startDate, $endDate]);
                 })
                 ->count(),
         ];
@@ -386,24 +373,24 @@ class ReportController extends Controller
         $tasksByUser = $project->users()->withCount([
             'assignedTasks as completed_count' => function ($q) use ($project, $startDate, $endDate) {
                 $q->where('status', 'done')
-                  ->where('project_id', $project->id)
-                  ->whereBetween('updated_at', [$startDate, $endDate]);
+                    ->where('project_id', $project->id)
+                    ->whereBetween('updated_at', [$startDate, $endDate]);
             },
             'assignedTasks as total_tasks_count' => function ($q) use ($project, $startDate, $endDate) {
                 $q->where('project_id', $project->id)
-                  ->where(function($subQ) use ($startDate, $endDate) {
-                      $subQ->whereBetween('created_at', [$startDate, $endDate])
-                           ->orWhereBetween('updated_at', [$startDate, $endDate]);
-                  });
+                    ->where(function ($subQ) use ($startDate, $endDate) {
+                        $subQ->whereBetween('created_at', [$startDate, $endDate])
+                            ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                    });
             }
         ])->get()->map(function ($user) use ($project, $startDate, $endDate) {
-            $user->completion_percentage = $user->total_tasks_count > 0 
-                ? round(($user->completed_count / $user->total_tasks_count) * 100) 
+            $user->completion_percentage = $user->total_tasks_count > 0
+                ? round(($user->completed_count / $user->total_tasks_count) * 100)
                 : 0;
-            
+
             // Calculate work hours for this user
             $userHours = \App\Models\TimeEntry::where('user_id', $user->id)
-                ->whereHas('task', function($q) use ($project) {
+                ->whereHas('task', function ($q) use ($project) {
                     $q->where('project_id', $project->id);
                 })
                 ->whereBetween('started_at', [$startDate, $endDate])
@@ -411,7 +398,7 @@ class ReportController extends Controller
                 ->whereNotNull('ended_at')
                 ->sum('duration_seconds') / 3600;
             $user->work_hours = round($userHours, 1);
-            
+
             return $user;
         });
 
@@ -422,12 +409,11 @@ class ReportController extends Controller
             ->latest('updated_at')
             ->get()
             ->map(function ($task) {
-                $statusLabel = match($task->status->value) {
+                $statusLabel = match ($task->status->value) {
                     'done' => 'Done',
                     'in_progress' => 'In Progress',
                     'review' => 'Review',
                     'todo' => 'To Do',
-                    'on_hold' => 'On Hold',
                     default => 'Unknown'
                 };
                 return [

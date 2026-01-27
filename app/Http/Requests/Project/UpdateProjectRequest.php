@@ -26,7 +26,8 @@ class UpdateProjectRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'status' => ['required', Rule::enum(ProjectStatus::class)],
+            'goals' => ['nullable', 'string'],
+            'status' => ['nullable', Rule::enum(ProjectStatus::class)],
             'client_id' => ['nullable', 'exists:clients,id'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],

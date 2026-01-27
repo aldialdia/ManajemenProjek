@@ -166,6 +166,8 @@ class TimeTrackingController extends Controller
         // Auto-update task status from todo to in_progress
         if ($task->status->value === 'todo') {
             $task->update(['status' => 'in_progress']);
+            // Update project status based on task changes
+            $project->checkAndUpdateStatusBasedOnTasks();
         }
 
         return redirect()
@@ -227,6 +229,8 @@ class TimeTrackingController extends Controller
         // Auto-update task status from todo to in_progress
         if ($task->status->value === 'todo') {
             $task->update(['status' => 'in_progress']);
+            // Update project status based on task changes
+            $project->checkAndUpdateStatusBasedOnTasks();
         }
 
         return redirect()
@@ -330,6 +334,9 @@ class TimeTrackingController extends Controller
 
         // Update task status to review (pending approval)
         $task->update(['status' => 'review']);
+
+        // Update project status based on task changes
+        $project->checkAndUpdateStatusBasedOnTasks();
 
         return redirect()
             ->back()

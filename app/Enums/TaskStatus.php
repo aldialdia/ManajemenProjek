@@ -8,7 +8,6 @@ enum TaskStatus: string
     case IN_PROGRESS = 'in_progress';
     case REVIEW = 'review';  // Pending approval (after assignee marks as done)
     case DONE = 'done';      // Final state (after manager/admin approves)
-    case ON_HOLD = 'on_hold'; // Task is on hold (when project is on hold)
 
     public function label(): string
     {
@@ -17,7 +16,6 @@ enum TaskStatus: string
             self::IN_PROGRESS => 'In Progress',
             self::REVIEW => 'In Review',
             self::DONE => 'Done',
-            self::ON_HOLD => 'Ditunda',
         };
     }
 
@@ -28,7 +26,6 @@ enum TaskStatus: string
             self::IN_PROGRESS => 'inprogress',
             self::REVIEW => 'review',
             self::DONE => 'done',
-            self::ON_HOLD => 'onhold',
         };
     }
 
@@ -42,7 +39,6 @@ enum TaskStatus: string
             self::IN_PROGRESS => '#3b82f6', // Blue (Kanban In Progress)
             self::REVIEW => '#f97316',     // Orange (Kanban Review)
             self::DONE => '#10b981',       // Teal Green (Kanban Done)
-            self::ON_HOLD => '#f59e0b',    // Amber (Ditunda)
         };
     }
 
@@ -56,7 +52,6 @@ enum TaskStatus: string
             self::IN_PROGRESS => ['bar' => '#93c5fd', 'progress' => '#3b82f6'], // Blue
             self::REVIEW => ['bar' => '#fdba74', 'progress' => '#f97316'],      // Orange
             self::DONE => ['bar' => '#6ee7b7', 'progress' => '#10b981'],        // Teal Green
-            self::ON_HOLD => ['bar' => '#fcd34d', 'progress' => '#f59e0b'],     // Amber
         };
     }
 

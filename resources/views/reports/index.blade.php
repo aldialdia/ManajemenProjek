@@ -25,9 +25,8 @@
                     <option value="year" {{ ($period ?? '30') == 'year' ? 'selected' : '' }}>Tahun Ini</option>
                 </select>
             </div>
-            <a href="{{ route('projects.reports.export', ['project' => $project, 'period' => $period ?? '30']) }}" 
-               class="btn btn-export"
-               title="Export ke Excel">
+            <a href="{{ route('projects.reports.export', ['project' => $project, 'period' => $period ?? '30']) }}"
+                class="btn btn-export" title="Export ke Excel">
                 <i class="fas fa-file-excel"></i>
                 Export Excel
             </a>
@@ -155,7 +154,6 @@
                                             'In Progress' => 'status-in-progress',
                                             'Review' => 'status-review',
                                             'To Do' => 'status-pending',
-                                            'On Hold' => 'status-onhold',
                                             default => 'status-pending'
                                         };
                                     @endphp
@@ -198,13 +196,12 @@
         // Status Tugas Pie Chart with count details
         const statusCtx = document.getElementById('statusTugasChart').getContext('2d');
         const statusData = [
-                    {{ $tasksByStatus['done'] ?? 0 }},
-                    {{ $tasksByStatus['in_progress'] ?? 0 }},
-                    {{ $tasksByStatus['review'] ?? 0 }},
-            {{ $tasksByStatus['todo'] ?? 0 }},
-            {{ $tasksByStatus['on_hold'] ?? 0 }}
+                        {{ $tasksByStatus['done'] ?? 0 }},
+                        {{ $tasksByStatus['in_progress'] ?? 0 }},
+                        {{ $tasksByStatus['review'] ?? 0 }},
+            {{ $tasksByStatus['todo'] ?? 0 }}
         ];
-        const statusLabels = ['Done', 'In Progress', 'Review', 'To Do', 'On Hold'];
+        const statusLabels = ['Done', 'In Progress', 'Review', 'To Do'];
         const statusTotal = statusData.reduce((a, b) => a + b, 0);
 
         new Chart(statusCtx, {
@@ -213,7 +210,7 @@
                 labels: statusLabels.map((label, i) => label + ' (' + statusData[i] + ')'),
                 datasets: [{
                     data: statusData,
-                    backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#94a3b8', '#fbbf24'],
+                    backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#94a3b8'],
                     borderWidth: 0,
                     hoverOffset: 8
                 }]
@@ -250,16 +247,15 @@
         new Chart(waktuCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Done', 'In Progress', 'Review', 'To Do', 'On Hold'],
+                labels: ['Done', 'In Progress', 'Review', 'To Do'],
                 datasets: [{
                     data: [
-                                    {{ $timeDistribution['done'] ?? 0 }},
-                                    {{ $timeDistribution['in_progress'] ?? 0 }},
-                                    {{ $timeDistribution['review'] ?? 0 }},
-                        {{ $timeDistribution['todo'] ?? 0 }},
-                        {{ $timeDistribution['on_hold'] ?? 0 }}
+                                        {{ $timeDistribution['done'] ?? 0 }},
+                                        {{ $timeDistribution['in_progress'] ?? 0 }},
+                                        {{ $timeDistribution['review'] ?? 0 }},
+                        {{ $timeDistribution['todo'] ?? 0 }}
                     ],
-                    backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#94a3b8', '#fbbf24'],
+                    backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#94a3b8'],
                     borderWidth: 0
                 }]
             },
@@ -509,11 +505,6 @@
         .status-pending {
             background: #f1f5f9;
             color: #64748b;
-        }
-
-        .status-onhold {
-            background: #fef3c7;
-            color: #d97706;
         }
 
         .btn-export {

@@ -22,10 +22,10 @@ class Project extends Model
         static::updating(function ($project) {
             if ($project->isDirty('status')) {
                 $originalStatus = $project->getOriginal('status');
-                $fromStatusValue = $originalStatus instanceof ProjectStatus 
-                    ? $originalStatus->value 
+                $fromStatusValue = $originalStatus instanceof ProjectStatus
+                    ? $originalStatus->value
                     : $originalStatus;
-                
+
                 $project->logStatusChange(
                     $fromStatusValue,
                     $project->status
@@ -214,12 +214,18 @@ class Project extends Model
     /**
      * Check task statuses and update project status accordingly.
      * Logic:
-     * - DONE: All tasks are done
-     * - IN_PROGRESS: Has any task that is not 'todo' (in_progress, review, or done but not all done)
+     * - DONE: All tasks are done (progress 100%)
+     * - IN_PROGRESS: Has any task that is in_progress or review
      * - NEW: No tasks or all tasks are 'todo'
+     * - ON_HOLD: Not auto-updated, only changed manually via button
      */
     public function checkAndUpdateStatusBasedOnTasks(): void
     {
+        // Don't auto-update if project is on hold - only manual toggle can change this
+        if ($this->status === ProjectStatus::ON_HOLD) {
+            return;
+        }
+
         $totalTasks = $this->tasks()->count();
 
         // If no tasks, keep as NEW
@@ -232,19 +238,24 @@ class Project extends Model
 
         $doneTasks = $this->tasks()->where('status', 'done')->count();
         $todoTasks = $this->tasks()->where('status', 'todo')->count();
+        $inProgressTasks = $this->tasks()->whereIn('status', ['in_progress', 'review'])->count();
 
         $newStatus = null;
 
-        // All tasks done -> Project DONE
+        // All tasks done (progress 100%) -> Project DONE
         if ($doneTasks === $totalTasks) {
             $newStatus = ProjectStatus::DONE;
+        }
+        // Has any task in progress or review -> IN_PROGRESS
+        elseif ($inProgressTasks > 0) {
+            $newStatus = ProjectStatus::IN_PROGRESS;
         }
         // All tasks are todo -> Project NEW
         elseif ($todoTasks === $totalTasks) {
             $newStatus = ProjectStatus::NEW;
         }
-        // Any other combination (has in_progress, review, or partial done) -> IN_PROGRESS
-        else {
+        // Has some done but not all, and no in_progress -> IN_PROGRESS
+        elseif ($doneTasks > 0 && $doneTasks < $totalTasks) {
             $newStatus = ProjectStatus::IN_PROGRESS;
         }
 

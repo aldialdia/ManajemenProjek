@@ -60,6 +60,20 @@
                             {{ $project->start_date?->format('d M Y') ?? 'TBD' }} -
                             {{ $project->end_date?->format('d M Y') ?? 'TBD' }}
                         </span>
+                        
+                        {{-- Button Tunda/Lanjutkan Project - Di paling kanan --}}
+                        @if(auth()->user()->isManagerInProject($project) || auth()->user()->isAdmin())
+                            <div class="badge-toggle-container">
+                                <form action="{{ route('projects.toggle-hold', $project) }}" method="POST"
+                                    onsubmit="return confirmSubmit(this, '{{ $project->isOnHold() ? 'Lanjutkan project ini?' : 'Tunda project ini? Project akan berstatus on hold.' }}')">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn-toggle-hold {{ $project->isOnHold() ? 'btn-resume' : 'btn-hold' }}">
+                                        {{ $project->isOnHold() ? 'Lanjutkan Project' : 'Tunda Project' }}
+                                    </button>
+                                </form>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -461,6 +475,42 @@
                 background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
             }
 
+            /* Button Toggle Hold - Text Button */
+            .btn-toggle-hold {
+                display: inline-flex;
+                align-items: center;
+                padding: 0.5rem 1rem;
+                border: none;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+                color: white;
+            }
+
+            .btn-hold {
+                background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+                box-shadow: 0 2px 6px rgba(249, 115, 22, 0.3);
+            }
+
+            .btn-hold:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 10px rgba(249, 115, 22, 0.4);
+                background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+            }
+
+            .btn-resume {
+                background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+                box-shadow: 0 2px 6px rgba(34, 197, 94, 0.3);
+            }
+
+            .btn-resume:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 10px rgba(34, 197, 94, 0.4);
+                background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            }
+
             .info-card-desc {
                 color: #64748b;
                 font-size: 0.875rem;
@@ -483,7 +533,12 @@
                 display: flex;
                 gap: 0.75rem;
                 flex-wrap: wrap;
+                align-items: center;
                 margin-top: 1rem;
+            }
+
+            .badge-toggle-container {
+                margin-left: auto;
             }
 
             .badge-status {
