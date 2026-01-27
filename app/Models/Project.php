@@ -192,12 +192,10 @@ class Project extends Model
 
     /**
      * Check if project is on hold (ditunda).
-     * Note: ON_HOLD status was replaced with REVIEW in kanban.
-     * This method returns false for backward compatibility.
      */
     public function isOnHold(): bool
     {
-        return false;
+        return $this->status === ProjectStatus::ON_HOLD;
     }
 
     /**

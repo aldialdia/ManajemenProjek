@@ -147,6 +147,10 @@
             background: linear-gradient(135deg, #10b981, #059669);
         }
 
+        .kanban-column-header.on_hold {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
         .column-title {
             display: flex;
             align-items: center;
@@ -440,7 +444,7 @@
             });
 
             function updateCounts() {
-                const statuses = ['new', 'in_progress', 'done'];
+                const statuses = ['new', 'in_progress', 'on_hold', 'done'];
                 statuses.forEach(status => {
                     const count = document.querySelectorAll(`#column-${status} .kanban-card`).length;
                     document.getElementById(`count-${status}`).textContent = count;
@@ -451,6 +455,7 @@
                 const labels = {
                     'new': 'Baru',
                     'in_progress': 'Berjalan',
+                    'on_hold': 'Ditunda',
                     'done': 'Selesai'
                 };
                 return labels[status] || status;

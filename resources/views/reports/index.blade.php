@@ -15,14 +15,22 @@
             <h1 class="page-title">Laporan & Analitik</h1>
             <p class="page-subtitle">Laporan kinerja {{ $project ? $project->name : 'Anda' }}</p>
         </div>
-        <div class="filter-dropdown">
-            <select class="form-control" id="periodFilter" style="width: 180px;" onchange="filterByPeriod()">
-                <option value="30" {{ ($period ?? '30') == '30' ? 'selected' : '' }}>30 Hari Terakhir</option>
-                <option value="7" {{ ($period ?? '30') == '7' ? 'selected' : '' }}>7 Hari Terakhir</option>
-                <option value="today" {{ ($period ?? '30') == 'today' ? 'selected' : '' }}>Hari Ini</option>
-                <option value="month" {{ ($period ?? '30') == 'month' ? 'selected' : '' }}>Bulan Ini</option>
-                <option value="year" {{ ($period ?? '30') == 'year' ? 'selected' : '' }}>Tahun Ini</option>
-            </select>
+        <div class="header-actions" style="display: flex; gap: 0.75rem; align-items: center;">
+            <div class="filter-dropdown">
+                <select class="form-control" id="periodFilter" style="width: 180px;" onchange="filterByPeriod()">
+                    <option value="30" {{ ($period ?? '30') == '30' ? 'selected' : '' }}>30 Hari Terakhir</option>
+                    <option value="7" {{ ($period ?? '30') == '7' ? 'selected' : '' }}>7 Hari Terakhir</option>
+                    <option value="today" {{ ($period ?? '30') == 'today' ? 'selected' : '' }}>Hari Ini</option>
+                    <option value="month" {{ ($period ?? '30') == 'month' ? 'selected' : '' }}>Bulan Ini</option>
+                    <option value="year" {{ ($period ?? '30') == 'year' ? 'selected' : '' }}>Tahun Ini</option>
+                </select>
+            </div>
+            <a href="{{ route('projects.reports.export', ['project' => $project, 'period' => $period ?? '30']) }}" 
+               class="btn btn-export"
+               title="Export ke Excel">
+                <i class="fas fa-file-excel"></i>
+                Export Excel
+            </a>
         </div>
     </div>
 
@@ -35,12 +43,6 @@
             <div class="stat-content">
                 <span class="stat-label">Total Tugas</span>
                 <span class="stat-value">{{ $totalTasks }}</span>
-                @if($taskChange != 0)
-                    <span class="stat-change {{ $taskChange >= 0 ? 'positive' : 'negative' }}">
-                        <i class="fas fa-arrow-{{ $taskChange >= 0 ? 'up' : 'down' }}"></i>
-                        {{ $taskChange >= 0 ? '+' : '' }}{{ $taskChange }}% dari bulan lalu
-                    </span>
-                @endif
             </div>
         </div>
 
@@ -51,12 +53,6 @@
             <div class="stat-content">
                 <span class="stat-label">Tugas Selesai</span>
                 <span class="stat-value">{{ $completedTasks }}</span>
-                @if($taskChange != 0)
-                    <span class="stat-change {{ $taskChange >= 0 ? 'positive' : 'negative' }}">
-                        <i class="fas fa-arrow-{{ $taskChange >= 0 ? 'up' : 'down' }}"></i>
-                        {{ $taskChange >= 0 ? '+' : '' }}{{ $taskChange }}% dari bulan lalu
-                    </span>
-                @endif
             </div>
         </div>
 
@@ -67,12 +63,6 @@
             <div class="stat-content">
                 <span class="stat-label">Total Jam Kerja</span>
                 <span class="stat-value">{{ $totalHours }}</span>
-                @if($hoursChange != 0)
-                    <span class="stat-change {{ $hoursChange >= 0 ? 'positive' : 'negative' }}">
-                        <i class="fas fa-arrow-{{ $hoursChange >= 0 ? 'up' : 'down' }}"></i>
-                        {{ $hoursChange >= 0 ? '+' : '' }}{{ $hoursChange }}% dari bulan lalu
-                    </span>
-                @endif
             </div>
         </div>
 
@@ -83,12 +73,6 @@
             <div class="stat-content">
                 <span class="stat-label">Anggota Tim</span>
                 <span class="stat-value">{{ $totalMembers }}</span>
-                @if($memberChange != 0)
-                    <span class="stat-change {{ $memberChange >= 0 ? 'positive' : 'negative' }}">
-                        <i class="fas fa-arrow-{{ $memberChange >= 0 ? 'up' : 'down' }}"></i>
-                        {{ $memberChange >= 0 ? '+' : '' }}{{ $memberChange }} dari bulan lalu
-                    </span>
-                @endif
             </div>
         </div>
     </div>
@@ -522,6 +506,34 @@
         .status-pending {
             background: #f1f5f9;
             color: #64748b;
+        }
+
+        .btn-export {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            text-decoration: none;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.25);
+        }
+
+        .btn-export:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
+        }
+
+        .btn-export:active {
+            transform: translateY(0);
+        }
+
+        .btn-export i {
+            font-size: 1rem;
         }
     </style>
 @endsection

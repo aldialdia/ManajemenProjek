@@ -87,6 +87,7 @@ Route::middleware(['auth', 'check_status'])->group(function () {
 
     // Reports (per project)
     Route::get('/projects/{project}/reports', [ReportController::class, 'index'])->name('projects.reports.index');
+    Route::get('/projects/{project}/reports/export', [ReportController::class, 'export'])->name('projects.reports.export');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');

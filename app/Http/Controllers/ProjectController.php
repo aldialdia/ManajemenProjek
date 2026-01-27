@@ -33,6 +33,7 @@ class ProjectController extends Controller
         $projectStatuses = [
             'new' => ['label' => 'Baru', 'color' => '#94a3b8', 'icon' => 'fa-plus-circle'],
             'in_progress' => ['label' => 'Berjalan', 'color' => '#3b82f6', 'icon' => 'fa-spinner'],
+            'on_hold' => ['label' => 'Ditunda', 'color' => '#f59e0b', 'icon' => 'fa-pause-circle'],
             'done' => ['label' => 'Selesai', 'color' => '#10b981', 'icon' => 'fa-check-circle'],
         ];
         
@@ -219,8 +220,8 @@ class ProjectController extends Controller
     /**
      * Update project status via AJAX (Kanban Drag & Drop).
      * Only managers/admins can do this.
-     * Note: Status is automatically controlled by task statuses and cannot be manually overridden.
-     * The project status always follows the state of its tasks.
+     * When project is put ON_HOLD, all incomplete tasks are also put on hold.
+     * When project is restored from ON_HOLD, tasks return to their previous state.
      */
     public function updateStatus(\Illuminate\Http\Request $request, Project $project): \Illuminate\Http\JsonResponse
     {
@@ -233,7 +234,7 @@ class ProjectController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'required|in:new,in_progress,done',
+            'status' => 'required|in:new,in_progress,on_hold,done',
         ]);
 
         $oldStatus = $project->status->value;
@@ -244,24 +245,74 @@ class ProjectController extends Controller
             return response()->json(['success' => true, 'changed' => false]);
         }
 
-        // Get task statistics
+        // Get task statistics (exclude on_hold tasks for normal counting)
         $totalTasks = $project->tasks()->count();
         $doneTasks = $project->tasks()->where('status', 'done')->count();
         $todoTasks = $project->tasks()->where('status', 'todo')->count();
+        $onHoldTasks = $project->tasks()->where('status', 'on_hold')->count();
         $incompleteTasks = $totalTasks - $doneTasks;
 
-        // Determine what status the project SHOULD be based on tasks
-        $expectedStatus = 'new';
-        if ($totalTasks > 0) {
-            if ($doneTasks === $totalTasks) {
-                $expectedStatus = 'done';
-            } elseif ($todoTasks === $totalTasks) {
-                $expectedStatus = 'new';
-            } else {
-                $expectedStatus = 'in_progress';
+        // ============ ON_HOLD LOGIC ============
+        // Moving TO on_hold - put all incomplete tasks on hold
+        if ($newStatus === 'on_hold') {
+            // Cannot change from done to on_hold if all tasks are complete
+            if ($oldStatus === 'done' && $totalTasks > 0 && $doneTasks === $totalTasks) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Tidak dapat memindahkan dari Selesai ke Ditunda. Semua tugas sudah selesai. Ubah status tugas terlebih dahulu untuk mengubah status proyek."
+                ]);
             }
+
+            // Update all non-done tasks to on_hold
+            $project->tasks()
+                ->whereNotIn('status', ['done', 'on_hold'])
+                ->update(['status' => 'on_hold']);
+            
+            $project->update(['status' => $newStatus]);
+            
+            $latestLog = $project->statusLogs()->first();
+            
+            return response()->json([
+                'success' => true,
+                'changed' => true,
+                'from_status' => $oldStatus,
+                'to_status' => $newStatus,
+                'changed_at' => $latestLog?->created_at?->format('d M Y, H:i'),
+                'changed_by' => $user->name,
+                'tasks_affected' => $incompleteTasks - $onHoldTasks,
+            ]);
         }
 
+        // Moving FROM on_hold
+        if ($oldStatus === 'on_hold') {
+            if ($newStatus === 'done') {
+                // Moving from on_hold to done - make all tasks done
+                $project->tasks()
+                    ->where('status', '!=', 'done')
+                    ->update(['status' => 'done']);
+            } else {
+                // Moving from on_hold to other status - restore tasks to todo
+                $project->tasks()
+                    ->where('status', 'on_hold')
+                    ->update(['status' => 'todo']);
+            }
+            
+            $project->update(['status' => $newStatus]);
+            
+            $latestLog = $project->statusLogs()->first();
+            
+            return response()->json([
+                'success' => true,
+                'changed' => true,
+                'from_status' => $oldStatus,
+                'to_status' => $newStatus,
+                'changed_at' => $latestLog?->created_at?->format('d M Y, H:i'),
+                'changed_by' => $user->name,
+                'tasks_updated' => $newStatus === 'done' ? $incompleteTasks : $onHoldTasks,
+            ]);
+        }
+
+        // ============ NORMAL STATUS LOGIC ============
         // Cannot move to 'done' if there are incomplete tasks
         if ($newStatus === 'done' && $incompleteTasks > 0) {
             return response()->json([
@@ -270,11 +321,19 @@ class ProjectController extends Controller
             ]);
         }
 
-        // Cannot move FROM 'done' if all tasks are still complete
-        if ($oldStatus === 'done' && $doneTasks === $totalTasks && $totalTasks > 0) {
+        // Cannot move FROM 'done' to 'in_progress' if all tasks are complete
+        if ($oldStatus === 'done' && $newStatus === 'in_progress' && $totalTasks > 0 && $doneTasks === $totalTasks) {
             return response()->json([
                 'success' => false,
-                'message' => "Tidak dapat memindahkan dari Selesai. Semua tugas sudah selesai. Tambahkan tugas baru terlebih dahulu untuk mengubah status proyek."
+                'message' => "Tidak dapat memindahkan dari Selesai ke Sedang Berjalan. Semua tugas sudah selesai. Ubah status tugas terlebih dahulu untuk mengubah status proyek."
+            ]);
+        }
+
+        // Cannot move FROM 'done' to 'on_hold' if all tasks are complete
+        if ($oldStatus === 'done' && $newStatus === 'on_hold' && $totalTasks > 0 && $doneTasks === $totalTasks) {
+            return response()->json([
+                'success' => false,
+                'message' => "Tidak dapat memindahkan dari Selesai ke Ditunda. Semua tugas sudah selesai. Ubah status tugas terlebih dahulu untuk mengubah status proyek."
             ]);
         }
 
@@ -288,7 +347,6 @@ class ProjectController extends Controller
         }
 
         // Cannot move from 'new' to 'in_progress' if all tasks are still todo
-        // (this is prevented automatically, but we enforce it to be consistent)
         if ($newStatus === 'in_progress' && $totalTasks > 0 && $todoTasks === $totalTasks) {
             return response()->json([
                 'success' => false,

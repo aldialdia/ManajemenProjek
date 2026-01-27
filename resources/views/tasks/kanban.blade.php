@@ -523,9 +523,9 @@
             document.addEventListener('DOMContentLoaded', function () {
                 renderTasks();
 
-                // Show warning popup for members when project is on hold
-                @if($project && $project->isOnHold() && !auth()->user()->isManagerInProject($project))
-                    showProjectOnHoldModal('Project "{{ $project->name }}" sedang ditunda. Anda tidak dapat memindahkan task.');
+                // Show warning popup when project is on hold
+                @if($project && $project->isOnHold())
+                    showProjectOnHoldModal('Project "{{ $project->name }}" sedang ditunda. Tugas-tugas tidak dapat dikerjakan saat ini.');
                 @endif
                                             });
         </script>

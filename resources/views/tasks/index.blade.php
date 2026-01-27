@@ -372,4 +372,14 @@
             color: #ef4444;
         }
     </style>
+
+    @if($project && $project->isOnHold())
+        @push('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                showProjectOnHoldModal('Project "{{ $project->name }}" sedang ditunda. Tugas-tugas tidak dapat dikerjakan saat ini.');
+            });
+        </script>
+        @endpush
+    @endif
 @endsection

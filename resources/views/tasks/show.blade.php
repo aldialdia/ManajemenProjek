@@ -116,20 +116,27 @@
                     @endforelse
                 </div>
 
-                <!-- Upload Form - Hanya Manager, Admin, atau Assignee (tidak berlaku jika project ditunda untuk member) -->
+                <!-- Upload Form - Tidak tersedia jika project ditunda -->
                 @auth
                     @php
                         $isManager = auth()->user()->isManagerInProject($task->project);
                         $isAssignee = $task->assignees->contains('id', auth()->id());
                         $projectOnHold = $task->project->isOnHold();
 
-                        // If project on hold, only manager can upload
+                        // If project on hold, no one can upload
                         // Otherwise, manager or assignee can upload
                         $canUploadAttachment = $projectOnHold
-                            ? $isManager
+                            ? false
                             : ($isManager || $isAssignee);
                     @endphp
-                    @if($canUploadAttachment && $task->status->value !== 'done')
+                    @if($projectOnHold)
+                        <div class="attachment-form-wrapper">
+                            <div class="project-onhold-notice">
+                                <i class="fas fa-pause-circle"></i>
+                                <span>Project sedang ditunda. Upload file tidak tersedia.</span>
+                            </div>
+                        </div>
+                    @elseif($canUploadAttachment && $task->status->value !== 'done')
                         <div class="attachment-form-wrapper">
                             <form action="{{ route('tasks.attachments.store', $task) }}" method="POST" enctype="multipart/form-data"
                                 class="attachment-form">
@@ -155,18 +162,11 @@
                                     CSS, JSON, PY — Max 10MB</span>
                             </div>
                         </div>
-                    @elseif($canUploadAttachment && $task->status->value === 'done')
+                    @elseif(($isManager || $isAssignee) && $task->status->value === 'done')
                         <div class="attachment-form-wrapper">
                             <div class="task-completed-notice">
                                 <i class="fas fa-check-circle"></i>
                                 <span>Tugas sudah selesai. Upload file tidak tersedia.</span>
-                            </div>
-                        </div>
-                    @elseif($projectOnHold && !$isManager && $isAssignee)
-                        <div class="attachment-form-wrapper">
-                            <div class="project-onhold-notice">
-                                <i class="fas fa-pause-circle"></i>
-                                <span>Project sedang ditunda. Upload file tidak tersedia.</span>
                             </div>
                         </div>
                     @endif
@@ -261,9 +261,8 @@
                 <!-- Add Comment Form with @mention -->
                 @auth
                     @php
-                        $canComment = $task->project->isOnHold()
-                            ? auth()->user()->isManagerInProject($task->project)
-                            : true;
+                        // If project on hold, no one can comment
+                        $canComment = !$task->project->isOnHold();
                     @endphp
                                 @if($canComment)
                                     <div class="chat-input-area">
@@ -358,7 +357,8 @@
                     @php
                         $isAssigneeForTimer = $task->assignees->contains('id', auth()->id());
                         $statusValue = $task->status->value;
-                        $canTrackTime = $isAssigneeForTimer && !in_array($statusValue, ['done', 'review']);
+                        $projectOnHoldForTimer = $task->project->isOnHold();
+                        $canTrackTime = $isAssigneeForTimer && !in_array($statusValue, ['done', 'review']) && !$projectOnHoldForTimer;
                         
                         // Get active time entry for this task (only for assignee)
                         $activeTimeEntry = null;
@@ -444,7 +444,10 @@
                                         @endif
                                     @else
                                         <div class="timer-disabled-msg" style="text-align: center; color: #94a3b8; font-size: 0.85rem;">
-                                            @if(in_array($statusValue, ['done', 'review']))
+                                            @if($projectOnHoldForTimer)
+                                                <i class="fas fa-pause-circle" style="color: #f59e0b;"></i>
+                                                Project sedang ditunda
+                                            @elseif(in_array($statusValue, ['done', 'review']))
                                                 <i class="fas fa-check-circle" style="color: #22c55e;"></i>
                                                 Task sudah selesai
                                             @endif
@@ -513,6 +516,20 @@
 
                     <!-- Quick Actions -->
                     @canany(['updateStatus', 'update', 'delete', 'approve'], $task)
+                        @php
+                            $projectOnHoldForActions = $task->project->isOnHold();
+                        @endphp
+                        @if($projectOnHoldForActions)
+                            <div class="card">
+                                <div class="card-header">Actions</div>
+                                <div class="card-body">
+                                    <div class="project-onhold-notice" style="text-align: center;">
+                                        <i class="fas fa-pause-circle"></i>
+                                        <span>Project sedang ditunda. Actions tidak tersedia.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        @else
                         <div class="card">
                             <div class="card-header">Actions</div>
                             <div class="card-body">
@@ -614,6 +631,7 @@
                                 </div>
                             </div>
                         </div>
+                        @endif
                     @endcanany
                 </div>
             </div>

@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use App\Exports\ProjectReportExport;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
@@ -158,7 +160,7 @@ class ReportController extends Controller
             'todo' => round(($timeByStatus['todo'] ?? 0) / $totalTimeSeconds * 100),
         ];
 
-        // Tasks by user in THIS PROJECT
+        // Tasks by user in THIS PROJECT with work hours
         $tasksByUser = $project->users()->withCount([
             'assignedTasks as completed_count' => function ($q) use ($project, $startDate, $endDate) {
                 $q->where('status', 'done')
@@ -172,10 +174,22 @@ class ReportController extends Controller
                            ->orWhereBetween('updated_at', [$startDate, $endDate]);
                   });
             }
-        ])->get()->map(function ($user) {
+        ])->get()->map(function ($user) use ($project, $startDate, $endDate) {
             $user->completion_percentage = $user->total_tasks_count > 0 
                 ? round(($user->completed_count / $user->total_tasks_count) * 100) 
                 : 0;
+            
+            // Calculate work hours for this user in this project
+            $userHours = \App\Models\TimeEntry::where('user_id', $user->id)
+                ->whereHas('task', function($q) use ($project) {
+                    $q->where('project_id', $project->id);
+                })
+                ->whereBetween('started_at', [$startDate, $endDate])
+                ->where('is_running', false)
+                ->whereNotNull('ended_at')
+                ->sum('duration_seconds') / 3600;
+            $user->work_hours = round($userHours, 1);
+            
             return $user;
         });
 
@@ -218,5 +232,163 @@ class ReportController extends Controller
             'tasksByUser',
             'recentActivities'
         ));
+    }
+
+    /**
+     * Export project report to Excel
+     */
+    public function export(Request $request, Project $project)
+    {
+        $period = $request->get('period', '30');
+
+        // Get date range for filtering
+        [$startDate, $endDate] = $this->getDateRange($period);
+
+        // Reuse the same data collection logic as index method
+        $totalTasks = Task::where('project_id', $project->id)
+            ->where(function($q) use ($startDate, $endDate) {
+                $q->whereBetween('created_at', [$startDate, $endDate])
+                  ->orWhereBetween('updated_at', [$startDate, $endDate]);
+            })
+            ->count();
+            
+        $completedTasks = Task::where('project_id', $project->id)
+            ->where('status', 'done')
+            ->whereBetween('updated_at', [$startDate, $endDate])
+            ->count();
+        
+        $completedHours = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+            $q->where('project_id', $project->id);
+        })
+        ->whereBetween('started_at', [$startDate, $endDate])
+        ->where('is_running', false)
+        ->whereNotNull('ended_at')
+        ->sum('duration_seconds') / 3600;
+        
+        $runningEntries = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+            $q->where('project_id', $project->id);
+        })
+        ->whereBetween('started_at', [$startDate, $endDate])
+        ->where('is_running', true)
+        ->get();
+        $runningSeconds = $runningEntries->sum(fn($entry) => $entry->current_elapsed_seconds);
+        
+        $totalHours = round($completedHours + ($runningSeconds / 3600), 1);
+        
+        $totalMembers = $project->users()->count();
+
+        // Percentage changes
+        $periodDays = $startDate->diffInDays($endDate);
+        $prevEndDate = $startDate->copy()->subDay();
+        $prevStartDate = $prevEndDate->copy()->subDays($periodDays);
+
+        $tasksThisPeriod = Task::where('project_id', $project->id)
+            ->where('status', 'done')
+            ->whereBetween('updated_at', [$startDate, $endDate])
+            ->count();
+        $tasksLastPeriod = Task::where('project_id', $project->id)
+            ->where('status', 'done')
+            ->whereBetween('updated_at', [$prevStartDate, $prevEndDate])
+            ->count();
+        $taskChange = $tasksLastPeriod > 0 
+            ? round((($tasksThisPeriod - $tasksLastPeriod) / $tasksLastPeriod) * 100) 
+            : ($tasksThisPeriod > 0 ? 100 : 0);
+
+        $hoursThisPeriod = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+            $q->where('project_id', $project->id);
+        })->whereBetween('started_at', [$startDate, $endDate])
+          ->where('is_running', false)
+          ->whereNotNull('ended_at')
+          ->sum('duration_seconds') / 3600;
+        $hoursLastPeriod = \App\Models\TimeEntry::whereHas('task', function($q) use ($project) {
+            $q->where('project_id', $project->id);
+        })->whereBetween('started_at', [$prevStartDate, $prevEndDate])
+          ->where('is_running', false)
+          ->whereNotNull('ended_at')
+          ->sum('duration_seconds') / 3600;
+        $hoursChange = $hoursLastPeriod > 0 
+            ? round((($hoursThisPeriod - $hoursLastPeriod) / $hoursLastPeriod) * 100) 
+            : ($hoursThisPeriod > 0 ? 100 : 0);
+
+        // Tasks by status
+        $tasksByStatus = [
+            'done' => Task::where('project_id', $project->id)->where('status', 'done')->count(),
+            'in_progress' => Task::where('project_id', $project->id)->where('status', 'in_progress')->count(),
+            'review' => Task::where('project_id', $project->id)->where('status', 'review')->count(),
+            'todo' => Task::where('project_id', $project->id)->where('status', 'todo')->count(),
+        ];
+
+        // Tasks by user with work hours
+        $tasksByUser = $project->users()->withCount([
+            'assignedTasks as completed_count' => function ($q) use ($project, $startDate, $endDate) {
+                $q->where('status', 'done')
+                  ->where('project_id', $project->id)
+                  ->whereBetween('updated_at', [$startDate, $endDate]);
+            },
+            'assignedTasks as total_tasks_count' => function ($q) use ($project, $startDate, $endDate) {
+                $q->where('project_id', $project->id)
+                  ->where(function($subQ) use ($startDate, $endDate) {
+                      $subQ->whereBetween('created_at', [$startDate, $endDate])
+                           ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                  });
+            }
+        ])->get()->map(function ($user) use ($project, $startDate, $endDate) {
+            $user->completion_percentage = $user->total_tasks_count > 0 
+                ? round(($user->completed_count / $user->total_tasks_count) * 100) 
+                : 0;
+            
+            // Calculate work hours for this user
+            $userHours = \App\Models\TimeEntry::where('user_id', $user->id)
+                ->whereHas('task', function($q) use ($project) {
+                    $q->where('project_id', $project->id);
+                })
+                ->whereBetween('started_at', [$startDate, $endDate])
+                ->where('is_running', false)
+                ->whereNotNull('ended_at')
+                ->sum('duration_seconds') / 3600;
+            $user->work_hours = round($userHours, 1);
+            
+            return $user;
+        });
+
+        // Recent activities - get ALL activities without limit
+        $recentActivities = Task::where('project_id', $project->id)
+            ->with(['assignee'])
+            ->whereBetween('updated_at', [$startDate, $endDate])
+            ->latest('updated_at')
+            ->get()
+            ->map(function ($task) {
+                $statusLabel = match($task->status->value) {
+                    'done' => 'Done',
+                    'in_progress' => 'In Progress',
+                    'review' => 'Review',
+                    'todo' => 'To Do',
+                    default => 'Unknown'
+                };
+                return [
+                    'activity' => $task->title,
+                    'user' => $task->assignee?->name ?? 'Unassigned',
+                    'date' => $task->updated_at->format('d M Y'),
+                    'time' => $task->updated_at->diffForHumans(),
+                    'status' => $statusLabel,
+                ];
+            });
+
+        // Prepare data for export
+        $data = [
+            'totalTasks' => $totalTasks,
+            'completedTasks' => $completedTasks,
+            'totalHours' => $totalHours,
+            'totalMembers' => $totalMembers,
+            'taskChange' => $taskChange,
+            'hoursChange' => $hoursChange,
+            'tasksByStatus' => $tasksByStatus,
+            'tasksByUser' => $tasksByUser,
+            'recentActivities' => $recentActivities,
+        ];
+
+        $filename = 'Laporan_' . str_replace(' ', '_', $project->name) . '_' . now()->format('Y-m-d') . '.xlsx';
+
+        return Excel::download(new ProjectReportExport($project, $data, $period), $filename);
     }
 }
