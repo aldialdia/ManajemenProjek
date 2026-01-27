@@ -37,15 +37,15 @@
                             $statusClass = match ($statusValue) {
                                 'new' => 'badge-new',
                                 'in_progress' => 'badge-inprogress',
+                                'on_hold' => 'badge-hold',
                                 'done' => 'badge-done',
-                                'review' => 'badge-hold',
                                 default => 'badge-new'
                             };
                             $statusLabel = match ($statusValue) {
                                 'new' => 'Baru',
                                 'in_progress' => 'Sedang Berjalan',
+                                'on_hold' => 'Ditunda',
                                 'done' => 'Selesai',
-                                'review' => 'Review',
                                 default => 'Unknown'
                             };
                         @endphp
