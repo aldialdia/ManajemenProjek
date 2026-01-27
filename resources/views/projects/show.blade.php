@@ -40,14 +40,14 @@
                                 'new' => 'badge-new',
                                 'in_progress' => 'badge-inprogress',
                                 'done' => 'badge-done',
-                                'on_hold' => 'badge-hold',
+                                'review' => 'badge-hold',
                                 default => 'badge-new'
                             };
                             $statusLabel = match ($statusValue) {
                                 'new' => 'Baru',
                                 'in_progress' => 'Sedang Berjalan',
                                 'done' => 'Selesai',
-                                'on_hold' => 'Ditunda',
+                                'review' => 'Review',
                                 default => 'Unknown'
                             };
                         @endphp

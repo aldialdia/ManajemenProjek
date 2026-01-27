@@ -59,7 +59,7 @@
                 <div class="project-group {{ $currentProjectId == $project->id ? 'expanded' : '' }}">
                     <button class="project-toggle" onclick="toggleProject({{ $project->id }})">
                         <span class="project-dot"
-                            style="background: {{ $project->status->value === 'in_progress' ? '#3b82f6' : ($project->status->value === 'done' ? '#10b981' : ($project->status->value === 'on_hold' ? '#f97316' : '#94a3b8')) }};"></span>
+                            style="background: {{ $project->status->value === 'in_progress' ? '#3b82f6' : ($project->status->value === 'done' ? '#10b981' : ($project->status->value === 'review' ? '#f97316' : '#94a3b8')) }};"></span>
                         <span class="project-name">{{ Str::limit($project->name, 20) }}</span>
                         <i class="fas fa-chevron-down project-arrow"></i>
                     </button>

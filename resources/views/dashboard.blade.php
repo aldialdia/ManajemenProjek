@@ -122,12 +122,18 @@
             <h1 class="welcome-title">Selamat Datang Kembali, {{ auth()->user()->name ?? 'Guest' }}!</h1>
             <p class="welcome-subtitle">Berikut adalah ringkasan aktivitas proyek Anda hari ini.</p>
         </div>
-        @if($canCreateProject)
-            <a href="{{ route('projects.create') }}" class="btn btn-welcome">
-                <i class="fas fa-plus"></i>
-                Tambah Proyek Baru
+        <div class="welcome-actions">
+            @if($canCreateProject)
+                <a href="{{ route('projects.create') }}" class="btn btn-welcome">
+                    <i class="fas fa-plus"></i>
+                    Tambah Proyek Baru
+                </a>
+            @endif
+            <a href="{{ route('projects.kanban') }}" class="btn btn-kanban-small">
+                <i class="fas fa-columns"></i>
+                Kanban Proyek
             </a>
-        @endif
+        </div>
     </div>
 
     <!-- Stats Cards -->
@@ -217,76 +223,57 @@
             </div>
         </div>
     </div>
-
-    <!-- Bottom Row -->
-    <div class="grid grid-cols-2">
-        <!-- Active Projects -->
+    <!-- Projects & Deadlines Row (Side by Side) -->
+    <div class="grid grid-cols-2" style="margin-bottom: 1.5rem;">
+        <!-- Active Projects (Compact) -->
         <div class="card">
-            <div class="card-header">
-                <div>
-                    <span>Proyek Aktif</span>
-                    <p class="text-muted text-sm" style="margin: 0;">Progress terkini</p>
-                </div>
+            <div class="card-header" style="padding: 0.75rem 1rem;">
+                <span style="font-size: 0.9rem;"><i class="fas fa-rocket text-primary"></i> Proyek Aktif</span>
             </div>
-            <div class="card-body" style="padding: 0;">
+            <div class="card-body" style="padding: 0; max-height: 280px; overflow-y: auto;">
                 @forelse($activeProjectsList as $project)
-                    <div class="project-row">
+                    <div class="project-row-compact">
                         <div class="project-row-info">
-                            <a href="{{ route('projects.show', $project) }}" class="project-row-title">{{ $project->name }}</a>
+                            <a href="{{ route('projects.show', $project) }}" class="project-row-title">{{ Str::limit($project->name, 25) }}</a>
                             <span class="project-row-date">
-                                <i class="fas fa-calendar"></i> {{ $project->end_date?->format('Y-m-d') ?? 'No deadline' }}
+                                {{ $project->end_date?->format('d M') ?? '-' }}
                             </span>
                         </div>
                         <div class="project-row-progress">
-                            <span class="badge badge-primary">Tinggi</span>
-                            <div class="mini-progress">
+                            <div class="mini-progress" style="width: 50px;">
                                 <div class="mini-progress-fill" style="width: {{ $project->progress }}%;"></div>
                             </div>
                             <span class="progress-text">{{ $project->progress }}%</span>
                         </div>
                     </div>
                 @empty
-                    <div style="padding: 2rem; text-align: center; color: #64748b;">
-                        <p>Belum ada proyek aktif</p>
+                    <div style="padding: 1.5rem; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+                        <i class="fas fa-folder-open"></i> Belum ada proyek aktif
                     </div>
                 @endforelse
             </div>
         </div>
 
-        <!-- Upcoming Deadlines -->
+        <!-- Upcoming Deadlines (Compact) -->
         <div class="card">
-            <div class="card-header">
-                <div>
-                    <span><i class="fas fa-exclamation-circle text-warning"></i> Deadline Terdekat</span>
-                    <p class="text-muted text-sm" style="margin: 0;">Perhatian khusus diperlukan</p>
-                </div>
+            <div class="card-header" style="padding: 0.75rem 1rem;">
+                <span style="font-size: 0.9rem;"><i class="fas fa-exclamation-triangle text-warning"></i> Deadline Terdekat</span>
             </div>
-            <div class="card-body" style="padding: 0;">
+            <div class="card-body" style="padding: 0; max-height: 280px; overflow-y: auto;">
                 @forelse($upcomingDeadlines as $task)
-                    <div class="deadline-row">
-                        <div
-                            class="deadline-priority {{ $task->priority->value === 'high' ? 'priority-high' : ($task->priority->value === 'medium' ? 'priority-medium' : 'priority-low') }}">
-                            <i class="fas fa-flag"></i>
+                    <div class="deadline-row-compact">
+                        <div class="deadline-priority-dot {{ $task->priority->value === 'high' ? 'priority-high' : ($task->priority->value === 'medium' ? 'priority-medium' : 'priority-low') }}"></div>
+                        <div class="deadline-info" style="flex: 1; min-width: 0;">
+                            <a href="{{ route('tasks.show', $task) }}" class="deadline-title">{{ Str::limit($task->title, 30) }}</a>
                         </div>
-                        <div class="deadline-info">
-                            <a href="{{ route('tasks.show', $task) }}" class="deadline-title">{{ $task->title }}</a>
-                            <span class="deadline-project">{{ $task->project?->name ?? 'No project' }}</span>
-                        </div>
-                        <div class="deadline-meta">
-                            <span class="deadline-date">
-                                <i class="fas fa-calendar"></i> {{ $task->due_date->format('Y-m-d') }}
-                            </span>
-                            <span class="deadline-remaining">
-                                @php
-                                    $daysLeft = now()->startOfDay()->diffInDays($task->due_date->startOfDay());
-                                @endphp
-                                <i class="fas fa-clock"></i> {{ $daysLeft }} hari lagi
-                            </span>
-                        </div>
+                        <span class="deadline-remaining-badge {{ $task->due_date->isToday() ? 'urgent' : '' }}">
+                            @php $daysLeft = now()->startOfDay()->diffInDays($task->due_date->startOfDay()); @endphp
+                            @if($task->due_date->isToday()) Hari ini @elseif($daysLeft == 1) Besok @else {{ $daysLeft }}h @endif
+                        </span>
                     </div>
                 @empty
-                    <div style="padding: 2rem; text-align: center; color: #64748b;">
-                        <p>Tidak ada deadline mendekati</p>
+                    <div style="padding: 1.5rem; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+                        <i class="fas fa-check-circle" style="color: #10b981;"></i> Tidak ada deadline 🎉
                     </div>
                 @endforelse
             </div>
@@ -445,6 +432,32 @@
         .btn-welcome:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .welcome-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .btn-kanban-small {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-kanban-small:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
         }
 
         .stats-row {
@@ -698,6 +711,567 @@
 
         .btn-outline:hover {
             background: #f1f5f9;
+        }
+
+        /* Kanban Board Styles */
+        .kanban-board {
+            display: flex;
+            gap: 1rem;
+            min-height: 400px;
+            padding-bottom: 1rem;
+        }
+
+        .kanban-column {
+            flex: 1;
+            min-width: 240px;
+            max-width: 280px;
+            background: #f8fafc;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .kanban-column-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-radius: 16px 16px 0 0;
+            font-weight: 600;
+            color: white;
+        }
+
+        .kanban-column-header.new {
+            background: linear-gradient(135deg, #94a3b8, #64748b);
+        }
+
+        .kanban-column-header.in_progress {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .kanban-column-header.review {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .kanban-column-header.done {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .column-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .column-count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+        }
+
+        .kanban-column-body {
+            flex: 1;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-height: 100px;
+            transition: background 0.2s;
+        }
+
+        .kanban-column-body.drag-over {
+            background: rgba(99, 102, 241, 0.1);
+            border: 2px dashed #6366f1;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .kanban-card {
+            background: white;
+            border-radius: 10px;
+            padding: 0.875rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+        }
+
+        .kanban-card.draggable {
+            cursor: grab;
+        }
+
+        .kanban-card.draggable:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .kanban-card.dragging {
+            opacity: 0.5;
+            transform: rotate(3deg);
+            cursor: grabbing;
+        }
+
+        .kanban-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .kanban-card-title {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1e293b;
+            text-decoration: none;
+            line-height: 1.3;
+        }
+
+        .kanban-card-title:hover {
+            color: #6366f1;
+        }
+
+        .kanban-card-lock {
+            color: #94a3b8;
+            font-size: 0.7rem;
+        }
+
+        .kanban-card-progress {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bar-mini {
+            flex: 1;
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar-mini .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            font-size: 0.7rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .kanban-card-meta {
+            display: flex;
+            gap: 0.75rem;
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+
+        .kanban-card-meta i {
+            margin-right: 0.25rem;
+        }
+
+        .kanban-card-status-date {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #f1f5f9;
+            font-size: 0.65rem;
+            color: #94a3b8;
+        }
+
+        .kanban-card-status-date i {
+            margin-right: 0.25rem;
+        }
+
+        .status-changed-by {
+            font-style: italic;
+        }
+
+        .kanban-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
+
+        .kanban-empty i {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Compact Project Row Styles */
+        .project-row-compact {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.2s;
+        }
+
+        .project-row-compact:last-child {
+            border-bottom: none;
+        }
+
+        .project-row-compact:hover {
+            background: #f8fafc;
+        }
+
+        .project-row-compact .project-row-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #1e293b;
+            text-decoration: none;
+        }
+
+        .project-row-compact .project-row-title:hover {
+            color: #6366f1;
+        }
+
+        .project-row-compact .project-row-date {
+            font-size: 0.7rem;
+            color: #94a3b8;
+        }
+
+        /* Compact Deadline Row Styles */
+        .deadline-row-compact {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.2s;
+        }
+
+        .deadline-row-compact:last-child {
+            border-bottom: none;
+        }
+
+        .deadline-row-compact:hover {
+            background: #f8fafc;
+        }
+
+        .deadline-priority-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .deadline-priority-dot.priority-high {
+            background: #ef4444;
+        }
+
+        .deadline-priority-dot.priority-medium {
+            background: #f59e0b;
+        }
+
+        .deadline-priority-dot.priority-low {
+            background: #10b981;
+        }
+
+        .deadline-row-compact .deadline-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #1e293b;
+            text-decoration: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .deadline-row-compact .deadline-title:hover {
+            color: #6366f1;
+        }
+
+        .deadline-remaining-badge {
+            font-size: 0.7rem;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .deadline-remaining-badge.urgent {
+            background: #fef2f2;
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        /* Kanban Link Card Styles */
+        .kanban-link-card {
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .kanban-link-card:hover {
+            border-color: #6366f1;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+        }
+
+        .kanban-link-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .kanban-link-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+        }
+
+        .kanban-link-title {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 1rem;
+        }
+
+        .kanban-link-subtitle {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin: 0;
+        }
+
+        .kanban-status-badges {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .kanban-mini-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+    </style>
+
+    <script>        // Project Kanban Drag and Drop
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.kanban-card.draggable');
+            const columnBodies = document.querySelectorAll('.kanban-column-body');
+
+            cards.forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+            });
+
+            columnBodies.forEach(column => {
+                column.addEventListener('dragover', handleDragOver);
+                column.addEventListener('dragleave', handleDragLeave);
+                column.addEventListener('drop', handleDrop);
+            });
+
+            let draggedCard = null;
+
+            function handleDragStart(e) {
+                draggedCard = this;
+                this.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', this.dataset.projectId);
+            }
+
+            function handleDragEnd(e) {
+                this.classList.remove('dragging');
+                columnBodies.forEach(col => col.classList.remove('drag-over'));
+                draggedCard = null;
+            }
+
+            function handleDragOver(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                this.classList.add('drag-over');
+            }
+
+            function handleDragLeave(e) {
+                this.classList.remove('drag-over');
+            }
+
+            function handleDrop(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+
+                if (!draggedCard) return;
+
+                const projectId = draggedCard.dataset.projectId;
+                const projectName = draggedCard.dataset.projectName;
+                const newStatus = this.dataset.status;
+                const oldStatus = draggedCard.closest('.kanban-column').dataset.status;
+
+                if (newStatus === oldStatus) return;
+
+                // Optimistic UI update
+                this.appendChild(draggedCard);
+                updateColumnCounts();
+
+                // Send AJAX request
+                fetch(`/projects/${projectId}/update-status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.changed) {
+                        // Update the status date display
+                        let statusDateEl = draggedCard.querySelector('.kanban-card-status-date');
+                        if (!statusDateEl) {
+                            statusDateEl = document.createElement('div');
+                            statusDateEl.className = 'kanban-card-status-date';
+                            draggedCard.appendChild(statusDateEl);
+                        }
+                        statusDateEl.innerHTML = `<i class="fas fa-clock"></i> ${data.changed_at} <span class="status-changed-by">oleh ${data.changed_by}</span>`;
+                        
+                        showToast(`Proyek "${projectName}" dipindahkan ke ${getStatusLabel(newStatus)}`, 'success');
+                    } else if (!data.success) {
+                        // Revert on error
+                        document.querySelector(`.kanban-column[data-status="${oldStatus}"] .kanban-column-body`).appendChild(draggedCard);
+                        updateColumnCounts();
+                        showToast(data.message || 'Gagal memindahkan proyek', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Revert on error
+                    document.querySelector(`.kanban-column[data-status="${oldStatus}"] .kanban-column-body`).appendChild(draggedCard);
+                    updateColumnCounts();
+                    showToast('Terjadi kesalahan', 'error');
+                });
+            }
+
+            function updateColumnCounts() {
+                document.querySelectorAll('.kanban-column').forEach(column => {
+                    const count = column.querySelectorAll('.kanban-card').length;
+                    column.querySelector('.column-count').textContent = count;
+                    
+                    // Show/hide empty state
+                    const emptyState = column.querySelector('.kanban-empty');
+                    if (emptyState) {
+                        emptyState.style.display = count === 0 ? 'flex' : 'none';
+                    }
+                });
+            }
+
+            function getStatusLabel(status) {
+                const labels = {
+                    'new': 'Baru',
+                    'in_progress': 'Berjalan',
+                    'review': 'Review',
+                    'done': 'Selesai'
+                };
+                return labels[status] || status;
+            }
+
+            function showToast(message, type = 'info') {
+                // Create toast element
+                const toast = document.createElement('div');
+                toast.className = `toast-notification toast-${type}`;
+                toast.innerHTML = `
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                    <span>${message}</span>
+                `;
+                document.body.appendChild(toast);
+
+                // Animate in
+                setTimeout(() => toast.classList.add('show'), 10);
+
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+        });
+    </script>
+
+    <style>
+        /* Toast Notification - Compact & Modern */
+        .toast-notification {
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            padding: 0.65rem 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 9999;
+            transform: translateY(80px) scale(0.95);
+            opacity: 0;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.8rem;
+            max-width: 320px;
+            backdrop-filter: blur(8px);
+        }
+
+        .toast-notification.show {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        .toast-notification i {
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .toast-notification span {
+            line-height: 1.4;
+            color: #374151;
+        }
+
+        .toast-success {
+            border-left: 3px solid #10b981;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+        }
+
+        .toast-success i {
+            color: #10b981;
+        }
+
+        .toast-error {
+            border-left: 3px solid #ef4444;
+            background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+        }
+
+        .toast-error i {
+            color: #ef4444;
+        }
+
+        .toast-warning {
+            border-left: 3px solid #f59e0b;
+            background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
+        }
+
+        .toast-warning i {
+            color: #f59e0b;
         }
     </style>
 @endsection

@@ -40,10 +40,32 @@ class ProjectService
             $users = $data['users'] ?? null;
             unset($data['users']);
 
+            $oldEndDate = $project->end_date?->format('Y-m-d');
             $project->update($data);
 
             if ($users !== null) {
                 $this->syncUsers($project, $users);
+            }
+
+            // Early Warning: If new end_date is within 2 days (H-2), send warning to all members
+            $newEndDate = $data['end_date'] ?? null;
+            if ($newEndDate) {
+                $endDateCarbon = \Carbon\Carbon::parse($newEndDate)->startOfDay();
+                $twoDaysFromNow = now()->addDays(2)->endOfDay();
+                $today = now()->startOfDay();
+                
+                // If end_date is between today and 2 days from now
+                if ($endDateCarbon->gte($today) && $endDateCarbon->lte($twoDaysFromNow)) {
+                    $cacheKey = 'project_deadline_notified_' . $project->id;
+                    if (!cache()->has($cacheKey)) {
+                        $project->refresh();
+                        $project->load('users');
+                        foreach ($project->users as $user) {
+                            $user->notify(new \App\Notifications\ProjectDeadlineWarning($project));
+                        }
+                        cache()->put($cacheKey, true, now()->addDay());
+                    }
+                }
             }
 
             return $project->fresh();

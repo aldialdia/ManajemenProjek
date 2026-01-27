@@ -36,7 +36,7 @@
                         <option value="in_progress" {{ $currentStatus === 'in_progress' ? 'selected' : '' }}>Sedang Berjalan
                         </option>
                         <option value="done" {{ $currentStatus === 'done' ? 'selected' : '' }}>Selesai</option>
-                        <option value="on_hold" {{ $currentStatus === 'on_hold' ? 'selected' : '' }}>Ditunda</option>
+                        <option value="review" {{ $currentStatus === 'review' ? 'selected' : '' }}>Review</option>
                     </x-forms.input-label>
 
                     <x-forms.input-label label="Start Date" name="start_date" type="date" :value="old('start_date', $project->start_date?->format('Y-m-d'))" />

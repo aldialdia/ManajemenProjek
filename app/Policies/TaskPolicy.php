@@ -77,7 +77,7 @@ class TaskPolicy
         }
 
         // Assignee can update their assigned task status
-        return $task->assigned_to === $user->id;
+        return $task->assignees()->where('users.id', $user->id)->exists();
     }
 
     /**
@@ -137,7 +137,7 @@ class TaskPolicy
         }
 
         // Manager or Assignee can upload
-        return $user->isManagerInProject($task->project) || $task->assigned_to === $user->id;
+        return $user->isManagerInProject($task->project) || $task->assignees()->where('users.id', $user->id)->exists();
     }
 
     /**

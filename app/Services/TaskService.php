@@ -16,11 +16,26 @@ class TaskService
      */
     public function create(array $data): Task
     {
+        // Extract assignees before creating task
+        $assignees = $data['assignees'] ?? [];
+        unset($data['assignees']);
+
+        // Set primary assignee (first one) for backward compatibility
+        if (!empty($assignees)) {
+            $data['assigned_to'] = $assignees[0];
+        }
+
         $task = Task::create($data);
 
-        // Send notification if task is assigned to someone
-        if (isset($data['assigned_to']) && $data['assigned_to']) {
-            $this->notifyTaskAssigned($task);
+        // Sync multiple assignees
+        if (!empty($assignees)) {
+            $task->assignees()->sync($assignees);
+            $this->notifyTaskAssigned($task, $assignees);
+        }
+
+        // Update project status based on new task
+        if ($task->project) {
+            $task->project->checkAndUpdateStatusBasedOnTasks();
         }
 
         return $task;
@@ -31,14 +46,28 @@ class TaskService
      */
     public function update(Task $task, array $data): Task
     {
-        $oldAssignee = $task->assigned_to;
+        $oldAssigneeIds = $task->assignees()->pluck('users.id')->toArray();
+
+        // Extract assignees before updating task
+        $assignees = $data['assignees'] ?? null;
+        unset($data['assignees']);
+
+        // Set primary assignee (first one) for backward compatibility
+        if ($assignees !== null && !empty($assignees)) {
+            $data['assigned_to'] = $assignees[0];
+        }
 
         $task->update($data);
 
-        // If assignee changed, notify new assignee
-        if (isset($data['assigned_to']) && $data['assigned_to'] !== $oldAssignee && $data['assigned_to']) {
-            $task->refresh();
-            $this->notifyTaskAssigned($task);
+        // Sync multiple assignees if provided
+        if ($assignees !== null) {
+            $task->assignees()->sync($assignees);
+
+            // Notify new assignees only
+            $newAssignees = array_diff($assignees, $oldAssigneeIds);
+            if (!empty($newAssignees)) {
+                $this->notifyTaskAssigned($task, $newAssignees);
+            }
         }
 
         return $task->fresh();
@@ -61,12 +90,7 @@ class TaskService
             $this->notifyTaskCompleted($task);
         }
 
-        // Auto-update project status from 'new' to 'in_progress' when work starts
-        if ($status === TaskStatus::IN_PROGRESS && $task->project) {
-            $task->project->startIfNew();
-        }
-
-        // Check if all tasks are done and update project status accordingly
+        // Update project status based on task status changes
         if ($task->project) {
             $task->project->checkAndUpdateStatusBasedOnTasks();
         }
@@ -90,23 +114,24 @@ class TaskService
     }
 
     /**
-     * Notify user when task is assigned to them.
+     * Notify users when task is assigned to them.
      */
-    protected function notifyTaskAssigned(Task $task): void
+    protected function notifyTaskAssigned(Task $task, array $userIds = []): void
     {
-        if (!$task->assignee) {
-            return;
-        }
-
-        // Don't notify if user assigns task to themselves
-        if ($task->assignee->id === auth()->id()) {
-            return;
-        }
-
         $task->load('project');
         $assignedBy = auth()->user() ?? User::first(); // Fallback for seeding
 
-        $task->assignee->notify(new TaskAssigned($task, $assignedBy));
+        foreach ($userIds as $userId) {
+            // Don't notify if user assigns task to themselves
+            if ($userId === auth()->id()) {
+                continue;
+            }
+
+            $user = User::find($userId);
+            if ($user) {
+                $user->notify(new TaskAssigned($task, $assignedBy));
+            }
+        }
     }
 
     /**

@@ -93,7 +93,7 @@
                                 </a>
                                 @php
                                     $canDeleteAttachment = $attachment->uploaded_by === auth()->id()
-                                        || $task->assigned_to === auth()->id()
+                                        || $task->assignees->contains('id', auth()->id())
                                         || auth()->user()->isManagerInProject($task->project);
                                 @endphp
                                 @if($canDeleteAttachment)
@@ -120,7 +120,7 @@
                 @auth
                     @php
                         $isManager = auth()->user()->isManagerInProject($task->project);
-                        $isAssignee = $task->assigned_to === auth()->id();
+                        $isAssignee = $task->assignees->contains('id', auth()->id());
                         $projectOnHold = $task->project->isOnHold();
 
                         // If project on hold, only manager can upload
@@ -299,26 +299,30 @@
                             </div>
 
 
-                            <div class="info-row">
-                                <span class="info-label">Assignee</span>
-                                @if($task->assignee)
-                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        @php
-                                            $colorIndex = $task->assignee->id % 4;
-                                            $colors = [
-                                                ['start' => '#6366f1', 'end' => '#4f46e5'],
-                                                ['start' => '#f97316', 'end' => '#ea580c'],
-                                                ['start' => '#22c55e', 'end' => '#16a34a'],
-                                                ['start' => '#ec4899', 'end' => '#db2777'],
-                                            ];
-                                            $userColor = $colors[$colorIndex];
-                                        @endphp
-                                        @if($task->assignee->avatar)
-                                            <div class="avatar avatar-sm" style="background-image: url('{{ asset('storage/' . $task->assignee->avatar) }}'); background-size: cover; background-position: center;"></div>
-                                        @else
-                                            <div class="avatar avatar-sm" style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);">{{ $task->assignee->initials }}</div>
-                                        @endif
-                                        <span>{{ $task->assignee->name }}</span>
+                            <div class="info-row" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+                                <span class="info-label">Assignees</span>
+                                @if($task->assignees->count() > 0)
+                                    <div class="assignees-list">
+                                        @foreach($task->assignees as $assignee)
+                                            @php
+                                                $colorIndex = $assignee->id % 4;
+                                                $colors = [
+                                                    ['start' => '#6366f1', 'end' => '#4f46e5'],
+                                                    ['start' => '#f97316', 'end' => '#ea580c'],
+                                                    ['start' => '#22c55e', 'end' => '#16a34a'],
+                                                    ['start' => '#ec4899', 'end' => '#db2777'],
+                                                ];
+                                                $userColor = $colors[$colorIndex];
+                                            @endphp
+                                            <div class="assignee-tag">
+                                                @if($assignee->avatar)
+                                                    <div class="avatar avatar-xs" style="background-image: url('{{ asset('storage/' . $assignee->avatar) }}'); background-size: cover; background-position: center;"></div>
+                                                @else
+                                                    <div class="avatar avatar-xs" style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);">{{ $assignee->initials }}</div>
+                                                @endif
+                                                <span>{{ $assignee->name }}</span>
+                                            </div>
+                                        @endforeach
                                     </div>
                                 @else
                                     <span class="text-muted">Unassigned</span>
@@ -352,7 +356,7 @@
                     </div>
 
                     @php
-                        $isAssigneeForTimer = $task->assigned_to === auth()->id();
+                        $isAssigneeForTimer = $task->assignees->contains('id', auth()->id());
                         $statusValue = $task->status->value;
                         $canTrackTime = $isAssigneeForTimer && !in_array($statusValue, ['done', 'review']);
                         
@@ -515,7 +519,7 @@
                                 <div class="quick-actions">
                                     @php
                                         $isManager = auth()->user()->isManagerInProject($task->project);
-                                        $isAssignee = $task->assigned_to === auth()->id();
+                                        $isAssignee = $task->assignees->contains('id', auth()->id());
                                         $statusValue = $task->status->value;
                                     @endphp
 
@@ -700,6 +704,41 @@
 
                 .info-link:hover {
                     text-decoration: underline;
+                }
+
+                .assignees-list {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 0.5rem;
+                }
+
+                .assignee-tag {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.375rem;
+                    padding: 0.375rem 0.625rem;
+                    background: #f1f5f9;
+                    border-radius: 20px;
+                    font-size: 0.8rem;
+                    color: #334155;
+                }
+
+                .assignee-tag .avatar {
+                    width: 22px;
+                    height: 22px;
+                    font-size: 0.55rem;
+                }
+
+                .avatar-xs {
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-size: 0.6rem;
+                    font-weight: 600;
                 }
 
                 .quick-actions {

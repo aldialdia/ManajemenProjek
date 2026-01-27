@@ -8,7 +8,7 @@
             'new' => ['class' => 'badge-todo', 'label' => 'Baru'],
             'in_progress' => ['class' => 'badge-inprogress', 'label' => 'Sedang Berjalan'],
             'done' => ['class' => 'badge-done', 'label' => 'Selesai'],
-            'on_hold' => ['class' => 'badge-warning', 'label' => 'Ditunda'],
+            'review' => ['class' => 'badge-warning', 'label' => 'Review'],
         ],
         'task' => [
             'todo' => ['class' => 'badge-todo', 'label' => 'To Do'],
