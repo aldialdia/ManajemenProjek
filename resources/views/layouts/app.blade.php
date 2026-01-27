@@ -15,6 +15,24 @@
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 
+    <!-- Prevent FOUC - Critical CSS that must load before body -->
+    <style>
+        /* Hide body until ready to prevent FOUC */
+        html:not(.loaded) body {
+            visibility: hidden;
+            opacity: 0;
+        }
+        html.loaded body {
+            visibility: visible;
+            opacity: 1;
+            transition: opacity 0.2s ease-in, visibility 0s;
+        }
+        /* Ensure app-container is also hidden initially */
+        html:not(.loaded) .app-container {
+            visibility: hidden;
+        }
+    </style>
+
     <!-- Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -891,6 +909,30 @@
             if (e.target === this) {
                 closeProjectOnHoldModal();
             }
+        });
+
+        // Mark page as loaded after stylesheets are ready
+        // This prevents FOUC when navigating between pages
+        function markAsLoaded() {
+            document.documentElement.classList.add('loaded');
+        }
+
+        // Check if document is already loaded
+        if (document.readyState === 'complete') {
+            markAsLoaded();
+        } else {
+            window.addEventListener('load', markAsLoaded);
+        }
+        
+        // Also mark as loaded on DOMContentLoaded as fallback with slight delay
+        // This ensures styles have been applied
+        document.addEventListener('DOMContentLoaded', function() {
+            // Small delay to ensure CSS is parsed
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    markAsLoaded();
+                });
+            });
         });
     </script>
 </body>
