@@ -33,6 +33,11 @@ class TaskService
             $this->notifyTaskAssigned($task, $assignees);
         }
 
+        // Update project status based on new task
+        if ($task->project) {
+            $task->project->checkAndUpdateStatusBasedOnTasks();
+        }
+
         return $task;
     }
 
@@ -85,12 +90,7 @@ class TaskService
             $this->notifyTaskCompleted($task);
         }
 
-        // Auto-update project status from 'new' to 'in_progress' when work starts
-        if ($status === TaskStatus::IN_PROGRESS && $task->project) {
-            $task->project->startIfNew();
-        }
-
-        // Check if all tasks are done and update project status accordingly
+        // Update project status based on task status changes
         if ($task->project) {
             $task->project->checkAndUpdateStatusBasedOnTasks();
         }

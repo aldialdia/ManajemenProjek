@@ -7,7 +7,6 @@ enum ProjectStatus: string
     case NEW = 'new';
     case IN_PROGRESS = 'in_progress';
     case DONE = 'done';
-    case ON_HOLD = 'on_hold';
 
     public function label(): string
     {
@@ -15,7 +14,6 @@ enum ProjectStatus: string
             self::NEW => 'Baru',
             self::IN_PROGRESS => 'Sedang Berjalan',
             self::DONE => 'Selesai',
-            self::ON_HOLD => 'Ditunda',
         };
     }
 
@@ -25,7 +23,6 @@ enum ProjectStatus: string
             self::NEW => 'secondary',
             self::IN_PROGRESS => 'primary',
             self::DONE => 'success',
-            self::ON_HOLD => 'warning',
         };
     }
 
@@ -38,7 +35,7 @@ enum ProjectStatus: string
             self::NEW => '#94a3b8',      // Gray
             self::IN_PROGRESS => '#3b82f6', // Blue
             self::DONE => '#10b981',     // Green
-            self::ON_HOLD => '#f97316',  // Orange
         };
     }
 }
+

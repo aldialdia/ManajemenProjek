@@ -192,10 +192,12 @@ class Project extends Model
 
     /**
      * Check if project is on hold (ditunda).
+     * Note: ON_HOLD status was replaced with REVIEW in kanban.
+     * This method returns false for backward compatibility.
      */
     public function isOnHold(): bool
     {
-        return $this->status === ProjectStatus::ON_HOLD;
+        return false;
     }
 
     /**
@@ -212,26 +214,45 @@ class Project extends Model
     }
 
     /**
-     * Check if all tasks are completed and update project status accordingly.
+     * Check task statuses and update project status accordingly.
+     * Logic:
+     * - DONE: All tasks are done
+     * - IN_PROGRESS: Has any task that is not 'todo' (in_progress, review, or done but not all done)
+     * - NEW: No tasks or all tasks are 'todo'
      */
     public function checkAndUpdateStatusBasedOnTasks(): void
     {
         $totalTasks = $this->tasks()->count();
 
-        // If no tasks, don't change status
+        // If no tasks, keep as NEW
         if ($totalTasks === 0) {
+            if ($this->status !== ProjectStatus::NEW) {
+                $this->update(['status' => ProjectStatus::NEW]);
+            }
             return;
         }
 
         $doneTasks = $this->tasks()->where('status', 'done')->count();
+        $todoTasks = $this->tasks()->where('status', 'todo')->count();
 
-        // If all tasks are done, mark project as done
-        if ($doneTasks === $totalTasks && $this->status !== ProjectStatus::DONE) {
-            $this->update(['status' => ProjectStatus::DONE]);
+        $newStatus = null;
+
+        // All tasks done -> Project DONE
+        if ($doneTasks === $totalTasks) {
+            $newStatus = ProjectStatus::DONE;
         }
-        // If project was done but now has incomplete tasks (task reopened), revert to in_progress
-        elseif ($doneTasks < $totalTasks && $this->status === ProjectStatus::DONE) {
-            $this->update(['status' => ProjectStatus::IN_PROGRESS]);
+        // All tasks are todo -> Project NEW
+        elseif ($todoTasks === $totalTasks) {
+            $newStatus = ProjectStatus::NEW;
+        }
+        // Any other combination (has in_progress, review, or partial done) -> IN_PROGRESS
+        else {
+            $newStatus = ProjectStatus::IN_PROGRESS;
+        }
+
+        // Update only if status changed
+        if ($newStatus !== null && $this->status !== $newStatus) {
+            $this->update(['status' => $newStatus]);
         }
     }
 

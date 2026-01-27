@@ -749,7 +749,7 @@
             background: linear-gradient(135deg, #3b82f6, #2563eb);
         }
 
-        .kanban-column-header.on_hold {
+        .kanban-column-header.review {
             background: linear-gradient(135deg, #f59e0b, #d97706);
         }
 
@@ -1182,7 +1182,7 @@
                 const labels = {
                     'new': 'Baru',
                     'in_progress': 'Berjalan',
-                    'on_hold': 'Ditunda',
+                    'review': 'Review',
                     'done': 'Selesai'
                 };
                 return labels[status] || status;
@@ -1211,31 +1211,45 @@
     </script>
 
     <style>
-        /* Toast Notification */
+        /* Toast Notification - Compact & Modern */
         .toast-notification {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 1rem 1.5rem;
+            bottom: 16px;
+            right: 16px;
+            padding: 0.65rem 1rem;
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
             z-index: 9999;
-            transform: translateY(100px);
+            transform: translateY(80px) scale(0.95);
             opacity: 0;
-            transition: all 0.3s ease;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.8rem;
+            max-width: 320px;
+            backdrop-filter: blur(8px);
         }
 
         .toast-notification.show {
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
             opacity: 1;
         }
 
+        .toast-notification i {
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .toast-notification span {
+            line-height: 1.4;
+            color: #374151;
+        }
+
         .toast-success {
-            border-left: 4px solid #10b981;
+            border-left: 3px solid #10b981;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
         }
 
         .toast-success i {
@@ -1243,11 +1257,21 @@
         }
 
         .toast-error {
-            border-left: 4px solid #ef4444;
+            border-left: 3px solid #ef4444;
+            background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
         }
 
         .toast-error i {
             color: #ef4444;
+        }
+
+        .toast-warning {
+            border-left: 3px solid #f59e0b;
+            background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
+        }
+
+        .toast-warning i {
+            color: #f59e0b;
         }
     </style>
 @endsection

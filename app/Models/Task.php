@@ -15,6 +15,18 @@ class Task extends Model
 {
     use HasFactory;
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Update project status when task is deleted
+        static::deleted(function ($task) {
+            if ($task->project) {
+                $task->project->checkAndUpdateStatusBasedOnTasks();
+            }
+        });
+    }
+
     protected $fillable = [
         'title',
         'description',

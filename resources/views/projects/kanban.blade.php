@@ -96,32 +96,6 @@
         </div>
     </div>
 
-    <!-- Custom Confirmation Modal -->
-    <div class="confirm-modal-overlay" id="confirmModal">
-        <div class="confirm-modal">
-            <div class="confirm-modal-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <h3 class="confirm-modal-title">Konfirmasi Perubahan Status</h3>
-            <p class="confirm-modal-message" id="confirmModalMessage">
-                Proyek ini masih memiliki tugas yang belum selesai. Yakin ingin menandai sebagai selesai?
-            </p>
-            <div class="confirm-modal-info" id="confirmModalInfo">
-                <i class="fas fa-info-circle"></i>
-                <span id="confirmModalTaskCount">5 tugas belum selesai</span>
-            </div>
-            <div class="confirm-modal-actions">
-                <button class="btn-confirm-cancel" id="confirmCancel">
-                    <i class="fas fa-times"></i>
-                    Batal
-                </button>
-                <button class="btn-confirm-ok" id="confirmOk">
-                    <i class="fas fa-check"></i>
-                    Ya, Lanjutkan
-                </button>
-            </div>
-        </div>
-    </div>
 
     <style>
         .kanban-wrapper {
@@ -167,10 +141,6 @@
 
         .kanban-column-header.in_progress {
             background: linear-gradient(135deg, #3b82f6, #2563eb);
-        }
-
-        .kanban-column-header.on_hold {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
         }
 
         .kanban-column-header.done {
@@ -320,143 +290,76 @@
             margin-bottom: 0.5rem;
         }
 
-        /* Custom Confirmation Modal */
-        .confirm-modal-overlay {
+        /* Toast Notification - Compact & Modern */
+        .toast-notification {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(4px);
-            display: none;
+            bottom: 16px;
+            right: 16px;
+            padding: 0.65rem 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
+            display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 0.5rem;
             z-index: 9999;
-            animation: fadeIn 0.2s ease;
+            transform: translateY(80px) scale(0.95);
+            opacity: 0;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.8rem;
+            max-width: 320px;
+            backdrop-filter: blur(8px);
         }
 
-        .confirm-modal-overlay.show {
-            display: flex;
+        .toast-notification.show {
+            transform: translateY(0) scale(1);
+            opacity: 1;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .confirm-modal {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            max-width: 420px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
-            animation: slideUp 0.3s ease;
-        }
-
-        .confirm-modal-icon {
-            width: 70px;
-            height: 70px;
-            background: linear-gradient(135deg, #fef3c7, #fde68a);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 1.25rem;
-        }
-
-        .confirm-modal-icon i {
-            font-size: 2rem;
-            color: #d97706;
-        }
-
-        .confirm-modal-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 0.75rem;
-        }
-
-        .confirm-modal-message {
-            color: #64748b;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            margin-bottom: 1rem;
-        }
-
-        .confirm-modal-info {
-            background: #fef3c7;
-            border: 1px solid #fcd34d;
-            border-radius: 10px;
-            padding: 0.75rem 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .confirm-modal-info i {
-            color: #d97706;
-        }
-
-        .confirm-modal-info span {
-            color: #92400e;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .confirm-modal-actions {
-            display: flex;
-            gap: 0.75rem;
-            justify-content: center;
-        }
-
-        .btn-confirm-cancel {
-            padding: 0.75rem 1.5rem;
-            border-radius: 10px;
-            border: 1px solid #e2e8f0;
-            background: white;
-            color: #64748b;
-            font-weight: 600;
+        .toast-notification i {
             font-size: 0.9rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.2s;
+            flex-shrink: 0;
         }
 
-        .btn-confirm-cancel:hover {
-            background: #f1f5f9;
-            border-color: #cbd5e1;
+        .toast-notification span {
+            line-height: 1.4;
+            color: #374151;
         }
 
-        .btn-confirm-ok {
-            padding: 0.75rem 1.5rem;
-            border-radius: 10px;
-            border: none;
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            font-weight: 600;
-            font-size: 0.9rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.2s;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        .toast-success {
+            border-left: 3px solid #10b981;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
         }
 
-        .btn-confirm-ok:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        .toast-success i {
+            color: #10b981;
+        }
+
+        .toast-error {
+            border-left: 3px solid #ef4444;
+            background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+        }
+
+        .toast-error i {
+            color: #ef4444;
+        }
+
+        .toast-info {
+            border-left: 3px solid #3b82f6;
+            background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+        }
+
+        .toast-info i {
+            color: #3b82f6;
+        }
+
+        .toast-warning {
+            border-left: 3px solid #f59e0b;
+            background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
+        }
+
+        .toast-warning i {
+            color: #f59e0b;
         }
     </style>
 
@@ -465,16 +368,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             const cards = document.querySelectorAll('.kanban-card:not(.not-draggable)');
             const columns = document.querySelectorAll('.kanban-cards');
-            
-            // Modal elements
-            const modal = document.getElementById('confirmModal');
-            const modalMessage = document.getElementById('confirmModalMessage');
-            const modalTaskCount = document.getElementById('confirmModalTaskCount');
-            const confirmOk = document.getElementById('confirmOk');
-            const confirmCancel = document.getElementById('confirmCancel');
-            
-            // Store pending action for modal confirmation
-            let pendingAction = null;
 
             cards.forEach(card => {
                 card.addEventListener('dragstart', () => {
@@ -516,94 +409,38 @@
                     updateCounts();
 
                     // Send AJAX request
-                    updateProjectStatus(projectId, projectName, newStatus, oldColumn, card, false);
-                });
-            });
-
-            function updateProjectStatus(projectId, projectName, newStatus, oldColumn, card, confirmed) {
-                fetch(`/projects/${projectId}/update-status`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ status: newStatus, confirmed: confirmed })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.changed) {
-                        showToast(`Proyek "${projectName}" dipindahkan ke ${getStatusLabel(newStatus)}`, 'success');
-                    } else if (data.needs_confirmation) {
-                        // Store pending action and show modal
-                        pendingAction = {
-                            projectId,
-                            projectName,
-                            newStatus,
-                            oldColumn,
-                            card,
-                            incompleteTasks: data.incomplete_tasks
-                        };
-                        showConfirmModal(data.message, data.incomplete_tasks);
-                    } else if (!data.success) {
+                    fetch(`/projects/${projectId}/update-status`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ status: newStatus })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.changed) {
+                            showToast(`Proyek "${projectName}" dipindahkan ke ${getStatusLabel(newStatus)}`, 'success');
+                        } else if (!data.success) {
+                            // Revert on error
+                            oldColumn.appendChild(card);
+                            updateCounts();
+                            showToast(data.message || 'Gagal memindahkan proyek', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // Revert on error
                         oldColumn.appendChild(card);
                         updateCounts();
-                        showToast(data.message || 'Gagal memindahkan proyek', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    oldColumn.appendChild(card);
-                    updateCounts();
-                    showToast('Terjadi kesalahan', 'error');
+                        showToast('Terjadi kesalahan', 'error');
+                    });
                 });
-            }
-
-            function showConfirmModal(message, taskCount) {
-                modalMessage.textContent = message;
-                modalTaskCount.textContent = `${taskCount} tugas belum selesai`;
-                modal.classList.add('show');
-            }
-
-            function hideConfirmModal() {
-                modal.classList.remove('show');
-            }
-
-            // Modal button handlers
-            confirmOk.addEventListener('click', function() {
-                hideConfirmModal();
-                if (pendingAction) {
-                    updateProjectStatus(
-                        pendingAction.projectId,
-                        pendingAction.projectName,
-                        pendingAction.newStatus,
-                        pendingAction.oldColumn,
-                        pendingAction.card,
-                        true
-                    );
-                    pendingAction = null;
-                }
-            });
-
-            confirmCancel.addEventListener('click', function() {
-                hideConfirmModal();
-                if (pendingAction) {
-                    pendingAction.oldColumn.appendChild(pendingAction.card);
-                    updateCounts();
-                    showToast('Pemindahan dibatalkan', 'info');
-                    pendingAction = null;
-                }
-            });
-
-            // Close modal on overlay click
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    confirmCancel.click();
-                }
             });
 
             function updateCounts() {
-                const statuses = ['new', 'in_progress', 'on_hold', 'done'];
+                const statuses = ['new', 'in_progress', 'done'];
                 statuses.forEach(status => {
                     const count = document.querySelectorAll(`#column-${status} .kanban-card`).length;
                     document.getElementById(`count-${status}`).textContent = count;
@@ -614,10 +451,29 @@
                 const labels = {
                     'new': 'Baru',
                     'in_progress': 'Berjalan',
-                    'on_hold': 'Ditunda',
                     'done': 'Selesai'
                 };
                 return labels[status] || status;
+            }
+
+            function showToast(message, type = 'info') {
+                // Create toast element
+                const toast = document.createElement('div');
+                toast.className = `toast-notification toast-${type}`;
+                toast.innerHTML = `
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle')}"></i>
+                    <span>${message}</span>
+                `;
+                document.body.appendChild(toast);
+
+                // Animate in
+                setTimeout(() => toast.classList.add('show'), 10);
+
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
             }
         });
     </script>

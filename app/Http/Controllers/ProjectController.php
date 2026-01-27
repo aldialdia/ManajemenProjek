@@ -33,7 +33,6 @@ class ProjectController extends Controller
         $projectStatuses = [
             'new' => ['label' => 'Baru', 'color' => '#94a3b8', 'icon' => 'fa-plus-circle'],
             'in_progress' => ['label' => 'Berjalan', 'color' => '#3b82f6', 'icon' => 'fa-spinner'],
-            'on_hold' => ['label' => 'Ditunda', 'color' => '#f97316', 'icon' => 'fa-pause-circle'],
             'done' => ['label' => 'Selesai', 'color' => '#10b981', 'icon' => 'fa-check-circle'],
         ];
         
@@ -217,10 +216,11 @@ class ProjectController extends Controller
             'adjusted_tasks' => $affectedTasks->count()
         ]);
     }
-
     /**
      * Update project status via AJAX (Kanban Drag & Drop).
      * Only managers/admins can do this.
+     * Note: Status is automatically controlled by task statuses and cannot be manually overridden.
+     * The project status always follows the state of its tasks.
      */
     public function updateStatus(\Illuminate\Http\Request $request, Project $project): \Illuminate\Http\JsonResponse
     {
@@ -233,8 +233,7 @@ class ProjectController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'required|in:new,in_progress,on_hold,done',
-            'confirmed' => 'sometimes|boolean',
+            'status' => 'required|in:new,in_progress,done',
         ]);
 
         $oldStatus = $project->status->value;
@@ -245,21 +244,56 @@ class ProjectController extends Controller
             return response()->json(['success' => true, 'changed' => false]);
         }
 
-        // Check for incomplete tasks when moving to 'done'
-        if ($newStatus === 'done') {
-            $incompleteTasks = $project->tasks()
-                ->whereNotIn('status', ['done', 'approved'])
-                ->count();
+        // Get task statistics
+        $totalTasks = $project->tasks()->count();
+        $doneTasks = $project->tasks()->where('status', 'done')->count();
+        $todoTasks = $project->tasks()->where('status', 'todo')->count();
+        $incompleteTasks = $totalTasks - $doneTasks;
 
-            // If there are incomplete tasks and not confirmed, ask for confirmation
-            if ($incompleteTasks > 0 && !($validated['confirmed'] ?? false)) {
-                return response()->json([
-                    'success' => false,
-                    'needs_confirmation' => true,
-                    'incomplete_tasks' => $incompleteTasks,
-                    'message' => "Proyek ini masih memiliki {$incompleteTasks} tugas yang belum selesai. Yakin ingin menandai sebagai selesai?"
-                ]);
+        // Determine what status the project SHOULD be based on tasks
+        $expectedStatus = 'new';
+        if ($totalTasks > 0) {
+            if ($doneTasks === $totalTasks) {
+                $expectedStatus = 'done';
+            } elseif ($todoTasks === $totalTasks) {
+                $expectedStatus = 'new';
+            } else {
+                $expectedStatus = 'in_progress';
             }
+        }
+
+        // Cannot move to 'done' if there are incomplete tasks
+        if ($newStatus === 'done' && $incompleteTasks > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => "Tidak dapat memindahkan ke Selesai. Masih ada {$incompleteTasks} tugas yang belum selesai."
+            ]);
+        }
+
+        // Cannot move FROM 'done' if all tasks are still complete
+        if ($oldStatus === 'done' && $doneTasks === $totalTasks && $totalTasks > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => "Tidak dapat memindahkan dari Selesai. Semua tugas sudah selesai. Tambahkan tugas baru terlebih dahulu untuk mengubah status proyek."
+            ]);
+        }
+
+        // Cannot move to 'new' if there are non-todo tasks
+        if ($newStatus === 'new' && $totalTasks > 0 && $todoTasks !== $totalTasks) {
+            $nonTodoTasks = $totalTasks - $todoTasks;
+            return response()->json([
+                'success' => false,
+                'message' => "Tidak dapat memindahkan ke Baru. Ada {$nonTodoTasks} tugas yang sudah dikerjakan atau selesai."
+            ]);
+        }
+
+        // Cannot move from 'new' to 'in_progress' if all tasks are still todo
+        // (this is prevented automatically, but we enforce it to be consistent)
+        if ($newStatus === 'in_progress' && $totalTasks > 0 && $todoTasks === $totalTasks) {
+            return response()->json([
+                'success' => false,
+                'message' => "Tidak dapat memindahkan ke Berjalan. Mulai kerjakan minimal satu tugas terlebih dahulu."
+            ]);
         }
 
         // Update status (this will trigger the boot() method to log the change)
