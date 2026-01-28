@@ -12,24 +12,14 @@
             <span>Dashboard</span>
         </a>
 
-        <!-- Recent Projects Section -->
+        <!-- Active Project Section -->
         <div class="nav-section">
             <div class="nav-section-header">
-                <span class="nav-section-title">RECENT PROJECTS</span>
-                <a href="{{ route('projects.create') }}" class="nav-add-btn" title="Add Project">
-                    <i class="fas fa-plus"></i>
-                </a>
+                <span class="nav-section-title">PROYEK AKTIF</span>
             </div>
 
             @php
                 $user = auth()->user();
-                // Jika admin, ambil semua project. Jika bukan, ambil project user saja.
-                // Sesuai request: "project pada sistem hanya akan ada pada orang memiliki peran didalamnya"
-                // Maka admin pun jika tidak diajak tidak melihat di sidebar?
-                // "jika user tersebut tidak memiliki peran apapun dalam suatu project maka , project tersebut juga tidak akan muncul di side bar"
-                // Ini berarti logic strict: hanya yang direlasikan.
-
-                $allProjects = $user->projects()->latest()->get();
 
                 // Detect current project ID from various sources
                 $currentProjectId = null;
@@ -53,20 +43,23 @@
                 elseif (request()->is('projects/*')) {
                     $currentProjectId = request()->segment(2);
                 }
+
+                // Get the current active project if exists
+                $activeProject = $currentProjectId ? $user->projects()->find($currentProjectId) : null;
             @endphp
 
-            @foreach($allProjects as $project)
-                <div class="project-group {{ $currentProjectId == $project->id ? 'expanded' : '' }}">
-                    <button class="project-toggle" onclick="toggleProject({{ $project->id }})">
+            @if($activeProject)
+                <div class="project-group expanded">
+                    <button class="project-toggle" onclick="toggleProject({{ $activeProject->id }})">
                         <span class="project-dot"
-                            style="background: {{ $project->status->value === 'in_progress' ? '#3b82f6' : ($project->status->value === 'done' ? '#10b981' : ($project->status->value === 'on_hold' ? '#f59e0b' : '#94a3b8')) }};"></span>
-                        <span class="project-name">{{ Str::limit($project->name, 20) }}</span>
+                            style="background: {{ $activeProject->status->value === 'in_progress' ? '#3b82f6' : ($activeProject->status->value === 'done' ? '#10b981' : ($activeProject->status->value === 'on_hold' ? '#f59e0b' : '#94a3b8')) }};"></span>
+                        <span class="project-name">{{ Str::limit($activeProject->name, 20) }}</span>
                         <i class="fas fa-chevron-down project-arrow"></i>
                     </button>
 
-                    <div class="project-submenu" id="project-menu-{{ $project->id }}">
-                        <a href="{{ route('projects.show', $project) }}"
-                            class="submenu-item {{ request()->is('projects/' . $project->id) && !request()->is('projects/' . $project->id . '/edit') ? 'active' : '' }}">
+                    <div class="project-submenu" id="project-menu-{{ $activeProject->id }}">
+                        <a href="{{ route('projects.show', $activeProject) }}"
+                            class="submenu-item {{ request()->is('projects/' . $activeProject->id) && !request()->is('projects/' . $activeProject->id . '/edit') ? 'active' : '' }}">
                             <i class="fas fa-eye icon-overview"></i>
                             <span>Overview Proyek</span>
                         </a>
@@ -74,47 +67,52 @@
                             // Detect if current page is task-related for this project
                             $isTaskActive = false;
                             if (request()->is('tasks*') && !request()->routeIs('tasks.calendar')) {
-                                if (request('project_id') == $project->id) {
+                                if (request('project_id') == $activeProject->id) {
                                     $isTaskActive = true;
-                                } elseif (request()->route('task') && request()->route('task')->project_id == $project->id) {
+                                } elseif (request()->route('task') && request()->route('task')->project_id == $activeProject->id) {
                                     $isTaskActive = true;
                                 }
                             }
                         @endphp
-                        <a href="{{ route('tasks.index', ['project_id' => $project->id]) }}"
+                        <a href="{{ route('tasks.index', ['project_id' => $activeProject->id]) }}"
                             class="submenu-item {{ $isTaskActive ? 'active' : '' }}">
                             <i class="fas fa-check-square icon-tugas"></i>
                             <span>Tugas</span>
                         </a>
-                        <a href="{{ route('tasks.calendar', ['project_id' => $project->id]) }}"
-                            class="submenu-item {{ request()->routeIs('tasks.calendar') && request('project_id') == $project->id ? 'active' : '' }}">
+                        <a href="{{ route('tasks.calendar', ['project_id' => $activeProject->id]) }}"
+                            class="submenu-item {{ request()->routeIs('tasks.calendar') && request('project_id') == $activeProject->id ? 'active' : '' }}">
                             <i class="fas fa-calendar icon-kalender"></i>
                             <span>Kalender</span>
                         </a>
 
-                        <a href="{{ route('projects.team.index', $project) }}"
-                            class="submenu-item {{ request()->routeIs('projects.team.*') && request()->segment(2) == $project->id ? 'active' : '' }}">
+                        <a href="{{ route('projects.team.index', $activeProject) }}"
+                            class="submenu-item {{ request()->routeIs('projects.team.*') && request()->segment(2) == $activeProject->id ? 'active' : '' }}">
                             <i class="fas fa-users icon-tim"></i>
                             <span>Tim</span>
                         </a>
-                        <a href="{{ route('projects.reports.index', $project) }}"
-                            class="submenu-item {{ request()->routeIs('projects.reports.*') && request()->segment(2) == $project->id ? 'active' : '' }}">
+                        <a href="{{ route('projects.reports.index', $activeProject) }}"
+                            class="submenu-item {{ request()->routeIs('projects.reports.*') && request()->segment(2) == $activeProject->id ? 'active' : '' }}">
                             <i class="fas fa-chart-bar icon-laporan"></i>
                             <span>Laporan</span>
                         </a>
-                        <a href="{{ route('time-tracking.index', ['project_id' => $project->id]) }}"
-                            class="submenu-item {{ request()->routeIs('time-tracking.*') && request('project_id') == $project->id ? 'active' : '' }}">
+                        <a href="{{ route('time-tracking.index', ['project_id' => $activeProject->id]) }}"
+                            class="submenu-item {{ request()->routeIs('time-tracking.*') && request('project_id') == $activeProject->id ? 'active' : '' }}">
                             <i class="fas fa-clock icon-time"></i>
                             <span>Time Tracking</span>
                         </a>
-                        <a href="{{ route('projects.documents.index', $project) }}"
-                            class="submenu-item {{ request()->routeIs('projects.documents.*') && request()->segment(2) == $project->id ? 'active' : '' }}">
+                        <a href="{{ route('projects.documents.index', $activeProject) }}"
+                            class="submenu-item {{ request()->routeIs('projects.documents.*') && request()->segment(2) == $activeProject->id ? 'active' : '' }}">
                             <i class="fas fa-file-alt icon-dokumen"></i>
                             <span>Dokumen</span>
                         </a>
                     </div>
                 </div>
-            @endforeach
+            @else
+                <div class="no-active-project">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Pilih proyek dari Dashboard</span>
+                </div>
+            @endif
         </div>
     </nav>
 
@@ -370,6 +368,50 @@
 
     .submenu-item.active i {
         color: white !important;
+    }
+
+    /* No Active Project State */
+    .no-active-project {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1.5rem 1rem;
+        color: #94a3b8;
+        font-size: 0.8rem;
+        text-align: center;
+    }
+
+    .no-active-project i {
+        font-size: 1.5rem;
+        color: #cbd5e1;
+    }
+
+    /* View All Projects Link */
+    .view-all-projects-link {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        padding: 0.625rem 1rem;
+        margin: 0.5rem 0.25rem;
+        border-radius: 8px;
+        color: #6366f1;
+        text-decoration: none;
+        font-size: 0.8rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        background: #f1f5ff;
+        border: 1px dashed #c7d2fe;
+    }
+
+    .view-all-projects-link:hover {
+        background: #e0e7ff;
+        color: #4f46e5;
+        border-color: #a5b4fc;
+    }
+
+    .view-all-projects-link i {
+        font-size: 0.75rem;
     }
 
     /* Footer */
