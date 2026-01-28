@@ -5,18 +5,12 @@
 @section('content')
 <div class="page-header">
     <div>
+        <a href="{{ route('projects.index') }}" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Kembali ke Semua Proyek
+        </a>
         <h1 class="page-title">Create New Project</h1>
         <p class="page-subtitle">Fill in the details to create a new project</p>
-    </div>
-    <div style="display: flex; gap: 0.75rem; align-items: center;">
-        <a href="{{ route('dashboard') }}" class="btn btn-secondary" title="Kembali ke Dashboard">
-            <i class="fas fa-home"></i>
-            Dashboard
-        </a>
-        <a href="{{ route('projects.index') }}" class="btn btn-secondary" title="Kembali ke Semua Proyek">
-            <i class="fas fa-folder-open"></i>
-            Semua Proyek
-        </a>
     </div>
 </div>
 
@@ -76,6 +70,24 @@
 </div>
 
 <style>
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6366f1;
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.75rem;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    .back-link:hover {
+        color: #4f46e5;
+        transform: translateX(-3px);
+    }
+
     .form-actions {
         display: flex;
         gap: 1rem;
