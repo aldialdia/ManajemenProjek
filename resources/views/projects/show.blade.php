@@ -55,6 +55,12 @@
                             <i class="fas fa-circle"></i>
                             {{ $statusLabel }}
                         </span>
+                        @if($project->type)
+                            <span class="badge-type {{ $project->type->value == 'rbb' ? 'badge-type-rbb' : 'badge-type-non-rbb' }}">
+                                <i class="fas {{ $project->type->value == 'rbb' ? 'fa-building' : 'fa-folder' }}"></i>
+                                {{ $project->type->label() }}
+                            </span>
+                        @endif
                         <span class="badge-date">
                             <i class="fas fa-calendar"></i>
                             {{ $project->start_date?->format('d M Y') ?? 'TBD' }} -
@@ -306,7 +312,8 @@
                             @include('components.mention-comment-box', [
                                 'action' => route('projects.comments.store', $project),
                                 'id' => 'project-' . $project->id,
-                                'placeholder' => 'Tulis pesan... (@ untuk mention)'
+                                'placeholder' => 'Tulis pesan... (@ untuk mention)',
+                                'projectId' => $project->id
                             ])
                         </div>
                     @else
@@ -589,6 +596,27 @@
 
             .badge-date i {
                 color: #6366f1;
+            }
+
+            /* Type Badge Styles */
+            .badge-type {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.375rem;
+                padding: 0.5rem 0.875rem;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                font-weight: 600;
+            }
+
+            .badge-type-rbb {
+                background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+                color: #4f46e5;
+            }
+
+            .badge-type-non-rbb {
+                background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+                color: #475569;
             }
 
             /* Stats Row */

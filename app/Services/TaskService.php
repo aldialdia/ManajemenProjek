@@ -95,15 +95,17 @@ class TaskService
     }
 
     /**
-     * Assign task to a user.
+     * Assign task to a user (add to assignees).
      */
     public function assignTo(Task $task, ?int $userId): Task
     {
-        $task->update(['assigned_to' => $userId]);
-
         if ($userId) {
+            // Add user to assignees if not already assigned
+            if (!$task->assignees()->where('user_id', $userId)->exists()) {
+                $task->assignees()->attach($userId, ['assigned_at' => now()]);
+            }
             $task->refresh();
-            $this->notifyTaskAssigned($task);
+            $this->notifyTaskAssigned($task, [$userId]);
         }
 
         return $task->fresh();

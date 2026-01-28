@@ -67,7 +67,9 @@
                                 @endforeach
                             </div>
                             @error('assignees')
-                                <span class="error-message">{{ $message }}</span>
+                                <span class="error-message" style="display: flex; align-items: center; gap: 0.5rem; color: #dc2626; background: #fef2f2; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #fecaca; margin-top: 0.5rem;">
+                                    <i class="fas fa-exclamation-circle"></i> {{ $message }}
+                                </span>
                             @enderror
                             <small class="text-muted"><i class="fas fa-info-circle"></i> Pilih satu atau lebih anggota tim</small>
                         </div>

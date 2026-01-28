@@ -269,7 +269,8 @@
                                         @include('components.mention-comment-box', [
                                             'action' => route('tasks.comments.store', $task),
                                             'id' => 'task-' . $task->id,
-                                            'placeholder' => 'Tulis pesan... (@ untuk mention)'
+                                            'placeholder' => 'Tulis pesan... (@ untuk mention)',
+                                            'projectId' => $task->project_id
                                         ])
                                     </div>
                                 @else

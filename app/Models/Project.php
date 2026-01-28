@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ProjectStatus;
+use App\Enums\ProjectType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,6 +42,7 @@ class Project extends Model
 
     protected $fillable = [
         'name',
+        'type',
         'description',
         'goals',
         'status',
@@ -53,6 +55,7 @@ class Project extends Model
     protected function casts(): array
     {
         return [
+            'type' => ProjectType::class,
             'status' => ProjectStatus::class,
             'start_date' => 'date',
             'end_date' => 'date',

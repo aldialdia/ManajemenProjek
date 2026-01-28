@@ -145,9 +145,13 @@
                 return;
             }
 
-            // Fetch users
+            // Fetch users - filter by project if project_id is provided
             try {
-                const response = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery)}`);
+                const projectId = '{{ $projectId ?? '' }}';
+                const apiUrl = projectId
+                    ? `/api/users/search?q=${encodeURIComponent(searchQuery)}&project_id=${projectId}`
+                    : `/api/users/search?q=${encodeURIComponent(searchQuery)}`;
+                const response = await fetch(apiUrl);
                 users = await response.json();
 
                 if (users.length > 0) {
