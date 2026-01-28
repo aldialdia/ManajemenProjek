@@ -23,6 +23,47 @@ class ProjectController extends Controller
     }
 
     /**
+     * Display list of all projects grouped by year.
+     * Admin/Manager: see ALL projects in the system
+     * Member: see only projects they are added to
+     */
+    public function index(): View
+    {
+        $user = Auth::user();
+        
+        // Check if user can create projects (admin or has manager role in any project)
+        $canCreateProject = $user->isAdmin() || $user->projects()
+            ->wherePivotIn('role', ['manager', 'admin'])
+            ->exists();
+        
+        // Check if user is admin or has manager role in any project
+        $isAdminOrManager = $user->isAdmin() || $user->projects()
+            ->wherePivotIn('role', ['manager', 'admin'])
+            ->exists();
+        
+        if ($isAdminOrManager) {
+            // Admin/Manager can see ALL projects in the system
+            $allProjects = Project::with(['tasks', 'members'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } else {
+            // Member can only see projects they are added to
+            $allProjects = $user->projects()
+                ->with(['tasks', 'members'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+        
+        $projectsByYear = $allProjects->groupBy(function($project) {
+            return $project->created_at->format('Y');
+        });
+        
+        $totalProjects = $allProjects->count();
+        
+        return view('projects.index', compact('projectsByYear', 'totalProjects', 'canCreateProject', 'isAdminOrManager'));
+    }
+
+    /**
      * Display project kanban board.
      */
     public function kanban(): View

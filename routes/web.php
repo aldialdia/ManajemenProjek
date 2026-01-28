@@ -58,6 +58,7 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::get('/search', [\App\Http\Controllers\SearchController::class, 'search'])->name('search');
 
     // Projects (index excluded - projects shown in dashboard)
+    Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::resource('projects', ProjectController::class)->except(['index']);
     Route::get('/projects-kanban', [ProjectController::class, 'kanban'])->name('projects.kanban');
     Route::post('/projects/{project}/check-end-date', [ProjectController::class, 'checkEndDateUpdate'])->name('projects.check-end-date');

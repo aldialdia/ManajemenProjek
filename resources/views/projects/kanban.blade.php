@@ -5,14 +5,12 @@
 @section('content')
     <div class="page-header">
         <div>
+            <a href="{{ route('projects.index') }}" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+                Kembali ke Semua Proyek
+            </a>
             <h1 class="page-title">Kanban Proyek</h1>
             <p class="page-subtitle">Drag and drop proyek untuk mengubah status</p>
-        </div>
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <a href="{{ route('dashboard') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i>
-                Kembali
-            </a>
         </div>
     </div>
 
@@ -98,6 +96,24 @@
 
 
     <style>
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #6366f1;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .back-link:hover {
+            color: #4f46e5;
+            transform: translateX(-3px);
+        }
+
         .kanban-wrapper {
             display: flex;
             flex-direction: column;

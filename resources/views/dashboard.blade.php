@@ -123,15 +123,9 @@
             <p class="welcome-subtitle">Berikut adalah ringkasan aktivitas proyek Anda hari ini.</p>
         </div>
         <div class="welcome-actions">
-            @if($canCreateProject)
-                <a href="{{ route('projects.create') }}" class="btn btn-welcome">
-                    <i class="fas fa-plus"></i>
-                    Tambah Proyek Baru
-                </a>
-            @endif
-            <a href="{{ route('projects.kanban') }}" class="btn btn-kanban-small">
-                <i class="fas fa-columns"></i>
-                Kanban Proyek
+            <a href="{{ route('projects.index') }}" class="btn btn-welcome">
+                <i class="fas fa-folder-open"></i>
+                Semua Proyek
             </a>
         </div>
     </div>
@@ -284,6 +278,7 @@
             </div>
         </div>
     </div>
+
 
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1070,6 +1065,247 @@
             color: white;
             font-size: 0.7rem;
             font-weight: 600;
+        }
+
+        /* My Projects Section Styles */
+        .my-projects-section {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-top: 1.5rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .section-header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0;
+        }
+
+        .section-title i {
+            color: #6366f1;
+        }
+
+        .projects-count {
+            font-size: 0.8rem;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+        }
+
+        /* Empty State */
+        .empty-projects-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #64748b;
+        }
+
+        .empty-projects-state .empty-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+        }
+
+        .empty-projects-state .empty-icon i {
+            font-size: 2rem;
+            color: #94a3b8;
+        }
+
+        .empty-projects-state h3 {
+            font-size: 1.125rem;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-projects-state p {
+            font-size: 0.875rem;
+            margin-bottom: 1.25rem;
+        }
+
+        /* Year Groups */
+        .year-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .year-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .year-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+
+        /* Projects Grid */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        /* Project Card Item */
+        .project-card-item {
+            display: block;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .project-card-item:hover {
+            background: white;
+            border-color: #6366f1;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .project-card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .project-status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 4px;
+        }
+
+        .project-card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        .project-card-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .project-status-badge {
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .project-status-badge.new {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .project-status-badge.in_progress {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .project-status-badge.on_hold {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .project-status-badge.done {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .project-date {
+            font-size: 0.7rem;
+            color: #94a3b8;
+        }
+
+        .project-date i {
+            margin-right: 0.25rem;
+        }
+
+        .project-card-progress {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .progress-bar-small {
+            flex: 1;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar-small .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .progress-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #64748b;
+            min-width: 32px;
+            text-align: right;
+        }
+
+        .project-card-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.7rem;
+            color: #94a3b8;
+        }
+
+        .project-card-stats i {
+            margin-right: 0.25rem;
+        }
+
+        @media (max-width: 768px) {
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
         }
     </style>
 

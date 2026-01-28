@@ -5,13 +5,13 @@
 @section('content')
 <div class="page-header">
     <div>
+        <a href="{{ route('projects.index') }}" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Kembali ke Semua Proyek
+        </a>
         <h1 class="page-title">Create New Project</h1>
         <p class="page-subtitle">Fill in the details to create a new project</p>
     </div>
-    <a href="{{ route('dashboard') }}" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i>
-        Back to Dashboard
-    </a>
 </div>
 
 <div class="card">
@@ -63,13 +63,31 @@
                     <i class="fas fa-save"></i>
                     Create Project
                 </button>
-                <a href="{{ route('dashboard') }}" class="btn btn-secondary">Cancel</a>
+                <a href="{{ route('projects.index') }}" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </div>
 </div>
 
 <style>
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6366f1;
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.75rem;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    .back-link:hover {
+        color: #4f46e5;
+        transform: translateX(-3px);
+    }
+
     .form-actions {
         display: flex;
         gap: 1rem;
