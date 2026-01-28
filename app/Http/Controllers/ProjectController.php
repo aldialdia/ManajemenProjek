@@ -30,17 +30,15 @@ class ProjectController extends Controller
     public function index(): View
     {
         $user = Auth::user();
-        
-        // Check if user can create projects (admin or has manager role in any project)
-        $canCreateProject = $user->isAdmin() || $user->projects()
-            ->wherePivotIn('role', ['manager', 'admin'])
-            ->exists();
-        
+
+        // All authenticated users can create projects
+        $canCreateProject = true;
+
         // Check if user is admin or has manager role in any project
         $isAdminOrManager = $user->isAdmin() || $user->projects()
             ->wherePivotIn('role', ['manager', 'admin'])
             ->exists();
-        
+
         if ($isAdminOrManager) {
             // Admin/Manager can see ALL projects in the system
             $allProjects = Project::with(['tasks', 'members'])
@@ -53,13 +51,13 @@ class ProjectController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
         }
-        
-        $projectsByYear = $allProjects->groupBy(function($project) {
+
+        $projectsByYear = $allProjects->groupBy(function ($project) {
             return $project->created_at->format('Y');
         });
-        
+
         $totalProjects = $allProjects->count();
-        
+
         return view('projects.index', compact('projectsByYear', 'totalProjects', 'canCreateProject', 'isAdminOrManager'));
     }
 

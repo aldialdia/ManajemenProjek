@@ -38,40 +38,30 @@
     <!-- Filters -->
     <div class="card" style="margin-bottom: 1.5rem;">
         <div class="card-body">
-            <form action="{{ route('tasks.index') }}" method="GET" class="filter-form">
-                @if($project)
-                    <input type="hidden" name="project_id" value="{{ $project->id }}">
-                @endif
-                <div class="filter-row">
-                    <div class="filter-group" style="flex: 2;">
-                        <input type="text" name="search" class="form-control" placeholder="Cari tugas..."
-                            value="{{ request('search') }}">
-                    </div>
-                    <div class="filter-group">
-                        <select name="status" class="form-control">
-                            <option value="">Semua Status</option>
-                            <option value="todo" {{ request('status') === 'todo' ? 'selected' : '' }}>To Do</option>
-                            <option value="in_progress" {{ request('status') === 'in_progress' ? 'selected' : '' }}>In
-                                Progress</option>
-                            <option value="review" {{ request('status') === 'review' ? 'selected' : '' }}>Review</option>
-                            <option value="done" {{ request('status') === 'done' ? 'selected' : '' }}>Done</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <select name="priority" class="form-control">
-                            <option value="">Semua Prioritas</option>
-                            <option value="low" {{ request('priority') === 'low' ? 'selected' : '' }}>Low</option>
-                            <option value="medium" {{ request('priority') === 'medium' ? 'selected' : '' }}>Medium</option>
-                            <option value="high" {{ request('priority') === 'high' ? 'selected' : '' }}>High</option>
-                            <option value="urgent" {{ request('priority') === 'urgent' ? 'selected' : '' }}>Urgent</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-secondary">
-                        <i class="fas fa-filter"></i>
-                        Filter
-                    </button>
+            <div class="filter-row">
+                <div class="filter-group" style="flex: 2;">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Cari tugas..."
+                        onkeyup="filterTasks()">
                 </div>
-            </form>
+                <div class="filter-group">
+                    <select id="statusFilter" class="form-control" onchange="filterTasks()">
+                        <option value="">Semua Status</option>
+                        <option value="todo">To Do</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="review">Review</option>
+                        <option value="done">Done</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <select id="priorityFilter" class="form-control" onchange="filterTasks()">
+                        <option value="">Semua Prioritas</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -92,7 +82,9 @@
                 <tbody>
                     @forelse($tasks as $task)
                         {{-- Parent Task --}}
-                        <tr class="task-row parent-task">
+                        <tr class="task-row parent-task" data-title="{{ strtolower($task->title) }}"
+                            data-status="{{ $task->status->value ?? $task->status }}"
+                            data-priority="{{ $task->priority->value ?? $task->priority }}">
                             <td>
                                 <a href="{{ route('tasks.show', $task) }}" class="task-link">
                                     {{ $task->title }}
@@ -122,13 +114,18 @@
                                                 $userColor = $colors[$colorIndex];
                                             @endphp
                                             @if($assignee->avatar)
-                                                <div class="avatar avatar-sm stacked" style="background-image: url('{{ asset('storage/' . $assignee->avatar) }}'); background-size: cover; background-position: center;" title="{{ $assignee->name }}"></div>
+                                                <div class="avatar avatar-sm stacked"
+                                                    style="background-image: url('{{ asset('storage/' . $assignee->avatar) }}'); background-size: cover; background-position: center;"
+                                                    title="{{ $assignee->name }}"></div>
                                             @else
-                                                <div class="avatar avatar-sm stacked" style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);" title="{{ $assignee->name }}">{{ $assignee->initials }}</div>
+                                                <div class="avatar avatar-sm stacked"
+                                                    style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);"
+                                                    title="{{ $assignee->name }}">{{ $assignee->initials }}</div>
                                             @endif
                                         @endforeach
                                         @if($task->assignees->count() > 3)
-                                            <div class="avatar avatar-sm stacked more" title="{{ $task->assignees->count() - 3 }} more">+{{ $task->assignees->count() - 3 }}</div>
+                                            <div class="avatar avatar-sm stacked more" title="{{ $task->assignees->count() - 3 }} more">
+                                                +{{ $task->assignees->count() - 3 }}</div>
                                         @endif
                                         @if($task->assignees->count() == 1)
                                             <span class="assignee-name">{{ $task->assignees->first()->name }}</span>
@@ -170,7 +167,10 @@
 
                         {{-- Subtasks --}}
                         @foreach($task->subtasks as $subtask)
-                            <tr class="task-row subtask-row">
+                            <tr class="task-row subtask-row" data-title="{{ strtolower($subtask->title) }}"
+                                data-status="{{ $subtask->status->value ?? $subtask->status }}"
+                                data-priority="{{ $subtask->priority->value ?? $subtask->priority }}"
+                                data-parent-id="{{ $task->id }}">
                                 <td>
                                     <div class="subtask-indent">
                                         <i class="fas fa-level-up-alt fa-rotate-90 subtask-icon"></i>
@@ -200,13 +200,19 @@
                                                     $userColor = $colors[$colorIndex];
                                                 @endphp
                                                 @if($assignee->avatar)
-                                                    <div class="avatar avatar-sm stacked" style="background-image: url('{{ asset('storage/' . $assignee->avatar) }}'); background-size: cover; background-position: center;" title="{{ $assignee->name }}"></div>
+                                                    <div class="avatar avatar-sm stacked"
+                                                        style="background-image: url('{{ asset('storage/' . $assignee->avatar) }}'); background-size: cover; background-position: center;"
+                                                        title="{{ $assignee->name }}"></div>
                                                 @else
-                                                    <div class="avatar avatar-sm stacked" style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);" title="{{ $assignee->name }}">{{ $assignee->initials }}</div>
+                                                    <div class="avatar avatar-sm stacked"
+                                                        style="background: linear-gradient(135deg, {{ $userColor['start'] }} 0%, {{ $userColor['end'] }} 100%);"
+                                                        title="{{ $assignee->name }}">{{ $assignee->initials }}</div>
                                                 @endif
                                             @endforeach
                                             @if($subtask->assignees->count() > 3)
-                                                <div class="avatar avatar-sm stacked more" title="{{ $subtask->assignees->count() - 3 }} more">+{{ $subtask->assignees->count() - 3 }}</div>
+                                                <div class="avatar avatar-sm stacked more"
+                                                    title="{{ $subtask->assignees->count() - 3 }} more">
+                                                    +{{ $subtask->assignees->count() - 3 }}</div>
                                             @endif
                                             @if($subtask->assignees->count() == 1)
                                                 <span class="assignee-name">{{ $subtask->assignees->first()->name }}</span>
@@ -254,6 +260,13 @@
                             </td>
                         </tr>
                     @endforelse
+                    <!-- No Results Row (hidden by default when there are tasks) -->
+                    <tr id="noResultsRow" style="display: none;">
+                        <td colspan="6" style="text-align: center; padding: 3rem;">
+                            <i class="fas fa-search" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 1rem;"></i>
+                            <p class="text-muted">Tidak ada tugas yang cocok dengan filter</p>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -267,7 +280,7 @@
     @endif
 
     <style>
-        .filter-form .filter-row {
+        .filter-row {
             display: flex;
             gap: 1rem;
             align-items: center;
@@ -375,11 +388,49 @@
 
     @if($project && $project->isOnHold())
         @push('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                showProjectOnHoldModal('Project "{{ $project->name }}" sedang ditunda. Tugas-tugas tidak dapat dikerjakan saat ini.');
-            });
-        </script>
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    showProjectOnHoldModal('Project "{{ $project->name }}" sedang ditunda. Tugas-tugas tidak dapat dikerjakan saat ini.');
+                });
+            </script>
         @endpush
     @endif
+
+    @push('scripts')
+        <script>
+            function filterTasks() {
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                const statusFilter = document.getElementById('statusFilter').value;
+                const priorityFilter = document.getElementById('priorityFilter').value;
+                const noResultsRow = document.getElementById('noResultsRow');
+
+                let visibleTasks = 0;
+
+                // Get all task rows
+                const taskRows = document.querySelectorAll('.task-row');
+
+                taskRows.forEach(row => {
+                    const title = row.getAttribute('data-title') || '';
+                    const status = row.getAttribute('data-status') || '';
+                    const priority = row.getAttribute('data-priority') || '';
+
+                    const searchMatch = !searchTerm || title.includes(searchTerm);
+                    const statusMatch = !statusFilter || status === statusFilter;
+                    const priorityMatch = !priorityFilter || priority === priorityFilter;
+
+                    if (searchMatch && statusMatch && priorityMatch) {
+                        row.style.display = '';
+                        visibleTasks++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Show/hide no results message
+                if (noResultsRow) {
+                    noResultsRow.style.display = visibleTasks === 0 ? '' : 'none';
+                }
+            }
+        </script>
+    @endpush
 @endsection
