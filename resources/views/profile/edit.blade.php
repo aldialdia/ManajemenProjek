@@ -128,6 +128,44 @@
         </div>
     </div>
 
+    <!-- Camera Capture Modal -->
+    <div id="cameraModal" class="photo-modal-overlay" style="display: none;">
+        <div class="photo-modal-content camera-modal">
+            <div class="photo-modal-header">
+                <h3>Ambil Foto</h3>
+                <button type="button" class="photo-modal-close" onclick="closeCameraModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="photo-modal-body">
+                <div class="camera-container">
+                    <video id="cameraVideo" autoplay playsinline></video>
+                    <div class="camera-overlay">
+                        <div class="camera-circle"></div>
+                    </div>
+                    <div id="cameraLoading" class="camera-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Mengakses kamera...</span>
+                    </div>
+                    <div id="cameraError" class="camera-error" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Tidak dapat mengakses kamera</span>
+                        <small>Pastikan izin kamera sudah diberikan</small>
+                    </div>
+                </div>
+            </div>
+            <div class="photo-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCameraModal()">
+                    Batal
+                </button>
+                <button type="button" class="btn btn-primary" id="captureBtn" onclick="capturePhoto()" disabled>
+                    <i class="fas fa-camera"></i> Ambil Foto
+                </button>
+            </div>
+        </div>
+    </div>
+
+
         <!-- Edit Form -->
         <div class="card" style="grid-column: span 2;">
             <div class="card-header">Account Information</div>
@@ -318,6 +356,79 @@
         .form-control.is-invalid {
             border-color: #dc2626 !important;
             box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
+        }
+
+        /* Camera Modal Styles */
+        .camera-modal {
+            width: 420px;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 0 auto;
+            background: #1e293b;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .camera-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror effect */
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .camera-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.5);
+            border: 3px solid white;
+        }
+
+        .camera-loading,
+        .camera-error {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #1e293b;
+            color: white;
+            gap: 0.75rem;
+        }
+
+        .camera-loading i,
+        .camera-error i {
+            font-size: 2rem;
+        }
+
+        .camera-error {
+            color: #f87171;
+        }
+
+        .camera-error small {
+            color: #94a3b8;
+            font-size: 0.75rem;
         }
 
         /* Photo Modal Overlay */
@@ -656,9 +767,81 @@
             document.getElementById('photoSourceModal').style.display = 'none';
         }
 
+        // Camera stream variable
+        let cameraStream = null;
+
         function openCamera() {
             closePhotoSourceModal();
-            document.getElementById('cameraInput').click();
+
+            // Show camera modal
+            document.getElementById('cameraModal').style.display = 'flex';
+            document.getElementById('cameraLoading').style.display = 'flex';
+            document.getElementById('cameraError').style.display = 'none';
+            document.getElementById('captureBtn').disabled = true;
+
+            // Request camera access
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'user',
+                    width: { ideal: 640 },
+                    height: { ideal: 640 }
+                },
+                audio: false
+            })
+            .then(function(stream) {
+                cameraStream = stream;
+                const video = document.getElementById('cameraVideo');
+                video.srcObject = stream;
+
+                video.onloadedmetadata = function() {
+                    document.getElementById('cameraLoading').style.display = 'none';
+                    document.getElementById('captureBtn').disabled = false;
+                };
+            })
+            .catch(function(err) {
+                console.error('Camera error:', err);
+                document.getElementById('cameraLoading').style.display = 'none';
+                document.getElementById('cameraError').style.display = 'flex';
+            });
+        }
+
+        function closeCameraModal() {
+            // Stop camera stream
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+
+            const video = document.getElementById('cameraVideo');
+            video.srcObject = null;
+
+            document.getElementById('cameraModal').style.display = 'none';
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.createElement('canvas');
+
+            // Set canvas size to video size
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            const ctx = canvas.getContext('2d');
+            // Mirror the image (since front camera is mirrored)
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0);
+
+            // Convert to blob
+            canvas.toBlob(function(blob) {
+                const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+
+                // Close camera modal
+                closeCameraModal();
+
+                // Handle the captured file like a regular file selection
+                handleFileSelection(file);
+            }, 'image/jpeg', 0.9);
         }
 
         function openGallery() {
