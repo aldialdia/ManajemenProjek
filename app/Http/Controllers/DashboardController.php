@@ -47,7 +47,6 @@ class DashboardController extends Controller
             ->orderBy('due_date')
             ->take(5)
             ->get();
-
         return view('dashboard', compact('stats', 'recentProjects', 'myTasks', 'upcomingDeadlines'));
     }
 }
