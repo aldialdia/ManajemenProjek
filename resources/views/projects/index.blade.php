@@ -11,7 +11,7 @@
             </a>
         </div>
         <div class="page-actions">
-            <a href="{{ route('projects.kanban') }}" class="btn btn-secondary">
+            <a href="{{ route('projects.kanban') }}" id="kanbanLink" class="btn btn-secondary">
                 <i class="fas fa-columns"></i>
                 Kanban Proyek
             </a>
@@ -395,6 +395,16 @@
             const yearFilter = document.getElementById('yearFilter').value;
             const typeFilter = document.getElementById('typeFilter').value;
             const noResultsMessage = document.getElementById('noResultsMessage');
+            const kanbanLink = document.getElementById('kanbanLink');
+
+            // Update Kanban link with year and type parameters
+            const baseKanbanUrl = '{{ route('projects.kanban') }}';
+            if (kanbanLink) {
+                let params = [];
+                if (yearFilter) params.push('year=' + yearFilter);
+                if (typeFilter) params.push('type=' + typeFilter);
+                kanbanLink.href = params.length > 0 ? baseKanbanUrl + '?' + params.join('&') : baseKanbanUrl;
+            }
 
             let totalVisibleProjects = 0;
 
@@ -443,7 +453,31 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            console.log('Project Index initialized');
+            // Check if there are year/type parameters in the URL and pre-select them
+            const urlParams = new URLSearchParams(window.location.search);
+            const yearParam = urlParams.get('year');
+            const typeParam = urlParams.get('type');
+            let shouldFilter = false;
+
+            if (yearParam) {
+                const yearFilter = document.getElementById('yearFilter');
+                if (yearFilter) {
+                    yearFilter.value = yearParam;
+                    shouldFilter = true;
+                }
+            }
+
+            if (typeParam) {
+                const typeFilter = document.getElementById('typeFilter');
+                if (typeFilter) {
+                    typeFilter.value = typeParam;
+                    shouldFilter = true;
+                }
+            }
+
+            if (shouldFilter) {
+                filterProjects();
+            }
         });
     </script>
 @endpush

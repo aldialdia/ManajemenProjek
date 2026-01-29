@@ -24,8 +24,6 @@ class ProjectController extends Controller
 
     /**
      * Display list of all projects grouped by year.
-     * Admin/Manager: see ALL projects in the system
-     * Member: see only projects they are added to
      */
     public function index(): View
     {
@@ -63,11 +61,14 @@ class ProjectController extends Controller
 
     /**
      * Display project kanban board.
+     * Optionally filter by year and type from query parameters.
      */
-    public function kanban(): View
+    public function kanban(\Illuminate\Http\Request $request): View
     {
         $user = Auth::user();
         $userProjectIds = $user->projects()->pluck('projects.id')->toArray();
+        $year = $request->query('year');
+        $type = $request->query('type');
 
         $projectStatuses = [
             'new' => ['label' => 'Baru', 'color' => '#94a3b8', 'icon' => 'fa-plus-circle'],
@@ -76,19 +77,42 @@ class ProjectController extends Controller
             'done' => ['label' => 'Selesai', 'color' => '#10b981', 'icon' => 'fa-check-circle'],
         ];
 
-        $projects = Project::whereIn('id', $userProjectIds)
-            ->with(['tasks', 'latestStatusLog.changedBy'])
-            ->get()
-            ->groupBy(fn($p) => $p->status->value);
+        $query = Project::whereIn('id', $userProjectIds)
+            ->with(['tasks', 'latestStatusLog.changedBy']);
+
+        // Filter by year if provided
+        if ($year) {
+            $query->whereYear('created_at', $year);
+        }
+
+        // Filter by type if provided
+        if ($type) {
+            $query->where('type', $type);
+        }
+
+        $projects = $query->get()->groupBy(fn($p) => $p->status->value);
 
         // Get recent project status logs
-        $projectStatusLogs = \App\Models\ProjectStatusLog::whereIn('project_id', $userProjectIds)
+        $projectStatusLogsQuery = \App\Models\ProjectStatusLog::whereIn('project_id', $userProjectIds)
             ->with(['project', 'changedBy'])
             ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
+            ->limit(10);
 
-        return view('projects.kanban', compact('projectStatuses', 'projects', 'projectStatusLogs'));
+        // Also filter logs by year and type if provided
+        if ($year || $type) {
+            $projectStatusLogsQuery->whereHas('project', function ($q) use ($year, $type) {
+                if ($year) {
+                    $q->whereYear('created_at', $year);
+                }
+                if ($type) {
+                    $q->where('type', $type);
+                }
+            });
+        }
+
+        $projectStatusLogs = $projectStatusLogsQuery->get();
+
+        return view('projects.kanban', compact('projectStatuses', 'projects', 'projectStatusLogs', 'year', 'type'));
     }
 
     public function create(): View

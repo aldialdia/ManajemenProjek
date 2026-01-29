@@ -3,13 +3,30 @@
 @section('title', 'Kanban Proyek')
 
 @section('content')
+    @php
+        // Build query string for back link
+        $backParams = [];
+        if ($year) $backParams[] = 'year=' . $year;
+        if ($type) $backParams[] = 'type=' . $type;
+        $backQueryString = count($backParams) > 0 ? '?' . implode('&', $backParams) : '';
+
+        // Get type label
+        $typeLabel = $type === 'rbb' ? 'RBB' : ($type === 'non_rbb' ? 'Non-RBB' : null);
+    @endphp
     <div class="page-header">
         <div>
-            <a href="{{ route('projects.index') }}" class="back-link">
+            <a href="{{ route('projects.index') }}{{ $backQueryString }}" class="back-link">
                 <i class="fas fa-arrow-left"></i>
                 Kembali ke Semua Proyek
             </a>
-            <h1 class="page-title">Kanban Proyek</h1>
+            <h1 class="page-title">
+                Kanban Proyek
+                @if($year || $typeLabel)
+                    <span style="font-size: 0.9rem; font-weight: 500; color: #64748b; margin-left: 0.5rem;">
+                        ({{ collect([$year, $typeLabel])->filter()->implode(', ') }})
+                    </span>
+                @endif
+            </h1>
             <p class="page-subtitle">Drag and drop proyek untuk mengubah status</p>
         </div>
     </div>
