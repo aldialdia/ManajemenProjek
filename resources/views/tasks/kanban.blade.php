@@ -101,6 +101,53 @@
         </div>
     </div>
 
+    <!-- Activity Log Section -->
+    <div class="activity-log-section">
+        <h4 class="activity-log-title">
+            <i class="fas fa-history"></i>
+            Activity Log
+        </h4>
+        <div class="activity-log-list">
+            @forelse($statusLogs as $log)
+                <div class="activity-log-item">
+                    <span class="log-timestamp">{{ $log->created_at->format('d M Y H:i') }}</span>
+                    <span class="log-content">
+                        <strong>{{ $log->changedBy->name ?? 'System' }}</strong>
+                        mengubah status task
+                        <strong>"{{ $log->task->title }}"</strong>
+                        dari
+                        @php
+                            $fromStatus = $log->from_status?->value ?? 'new';
+                            $fromColor = match ($fromStatus) {
+                                'done' => 'background: #dcfce7; color: #166534;',
+                                'review' => 'background: #fef3c7; color: #92400e;',
+                                'in_progress' => 'background: #dbeafe; color: #1e40af;',
+                                default => 'background: #f1f5f9; color: #475569;',
+                            };
+                        @endphp
+                        <span class="status-badge" style="{{ $fromColor }}">{{ $log->from_status?->label() ?? 'New' }}</span>
+                        ke
+                        @php
+                            $toStatus = $log->to_status->value;
+                            $toColor = match ($toStatus) {
+                                'done' => 'background: #dcfce7; color: #166534;',
+                                'review' => 'background: #fef3c7; color: #92400e;',
+                                'in_progress' => 'background: #dbeafe; color: #1e40af;',
+                                default => 'background: #f1f5f9; color: #475569;',
+                            };
+                        @endphp
+                        <span class="status-badge" style="{{ $toColor }}">{{ $log->to_status->label() }}</span>
+                    </span>
+                </div>
+            @empty
+                <div class="activity-log-empty">
+                    <i class="fas fa-info-circle"></i>
+                    Belum ada aktivitas perubahan status
+                </div>
+            @endforelse
+        </div>
+    </div>
+
     <style>
         .subtask-toggle {
             display: flex;
@@ -374,6 +421,86 @@
             transform: none;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
+
+        /* Activity Log Styles */
+        .activity-log-section {
+            margin-top: 1.5rem;
+            padding: 1rem 1.25rem;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .activity-log-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0 0 0.75rem 0;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .activity-log-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .activity-log-item {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.8rem;
+            color: #475569;
+            line-height: 1.5;
+        }
+
+        .activity-log-item:last-child {
+            border-bottom: none;
+        }
+
+        .log-timestamp {
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            min-width: 110px;
+        }
+
+        .log-content {
+            flex: 1;
+        }
+
+        .log-content strong {
+            color: #1e293b;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .status-badge.from {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-badge.to {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .activity-log-empty {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
     </style>
 
     @push('scripts')
@@ -397,40 +524,40 @@
                         const notDraggableClass = canDrag ? '' : 'not-draggable';
 
                         return `
-                                                                            <div class="kanban-card ${notDraggableClass}" ${draggableAttr} data-task-id="${task.id}">
-                                                                                <div class="card-title">
-                                                                                    <a href="/tasks/${task.id}">${task.title}</a>
-                                                                                </div>
-                                                                                                        ${task.parent ? `
-                                                                                                            <div class="subtask-indicator">
-                                                                                                                <i class="fas fa-level-up-alt fa-rotate-90"></i>
-                                                                                                                Sub-task dari: ${task.parent.title}
-                                                                                                            </div>
-                                                                                                        ` : ''}
-                                                                                                        <div class="card-project">
-                                                                                                            <i class="fas fa-folder"></i>
-                                                                                                            ${task.project?.name || 'No Project'}
+                                                                                                    <div class="kanban-card ${notDraggableClass}" ${draggableAttr} data-task-id="${task.id}">
+                                                                                                        <div class="card-title">
+                                                                                                            <a href="/tasks/${task.id}">${task.title}</a>
                                                                                                         </div>
-                                                                                                        <div class="card-meta">
-                                                                                                            <span class="card-priority priority-${task.priority}">
-                                                                                                                ${task.priority}
-                                                                                                            </span>
-                                                                                                            ${task.assignees && task.assignees.length > 0 ? `
-                                                                                                                <div class="avatar avatar-sm" style="width: 28px; height: 28px; font-size: 0.7rem;">
-                                                                                                                    ${getInitials(task.assignees[0].name)}
-                                                                                                                </div>
-                                                                                                            ` : ''}
-                                                                                                        </div>
-                                                                                                        ${task.due_date ? `
-                                                                                                            <div class="card-footer">
-                                                                                                                <span class="card-due ${isOverdue(task.due_date) ? 'overdue' : ''}">
-                                                                                                                    <i class="fas fa-calendar"></i>
-                                                                                                                    ${formatDate(task.due_date)}
-                                                                                                                </span>
-                                                                                                            </div>
-                                                                                                        ` : ''}
-                                                                                                    </div>
-                                                                                                `;
+                                                                                                                                ${task.parent ? `
+                                                                                                                                    <div class="subtask-indicator">
+                                                                                                                                        <i class="fas fa-level-up-alt fa-rotate-90"></i>
+                                                                                                                                        Sub-task dari: ${task.parent.title}
+                                                                                                                                    </div>
+                                                                                                                                ` : ''}
+                                                                                                                                <div class="card-project">
+                                                                                                                                    <i class="fas fa-folder"></i>
+                                                                                                                                    ${task.project?.name || 'No Project'}
+                                                                                                                                </div>
+                                                                                                                                <div class="card-meta">
+                                                                                                                                    <span class="card-priority priority-${task.priority}">
+                                                                                                                                        ${task.priority}
+                                                                                                                                    </span>
+                                                                                                                                    ${task.assignees && task.assignees.length > 0 ? `
+                                                                                                                                        <div class="avatar avatar-sm" style="width: 28px; height: 28px; font-size: 0.7rem;">
+                                                                                                                                            ${getInitials(task.assignees[0].name)}
+                                                                                                                                        </div>
+                                                                                                                                    ` : ''}
+                                                                                                                                </div>
+                                                                                                                                ${task.due_date ? `
+                                                                                                                                    <div class="card-footer">
+                                                                                                                                        <span class="card-due ${isOverdue(task.due_date) ? 'overdue' : ''}">
+                                                                                                                                            <i class="fas fa-calendar"></i>
+                                                                                                                                            ${formatDate(task.due_date)}
+                                                                                                                                        </span>
+                                                                                                                                    </div>
+                                                                                                                                ` : ''}
+                                                                                                                            </div>
+                                                                                                                        `;
                     }).join('');
                 });
 
@@ -527,7 +654,7 @@
                 @if($project && $project->isOnHold())
                     showProjectOnHoldModal('Project "{{ $project->name }}" sedang ditunda. Tugas-tugas tidak dapat dikerjakan saat ini.');
                 @endif
-                                                    });
+                                                                            });
         </script>
     @endpush
 @endsection

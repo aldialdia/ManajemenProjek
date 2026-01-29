@@ -81,7 +81,14 @@ class ProjectController extends Controller
             ->get()
             ->groupBy(fn($p) => $p->status->value);
 
-        return view('projects.kanban', compact('projectStatuses', 'projects'));
+        // Get recent project status logs
+        $projectStatusLogs = \App\Models\ProjectStatusLog::whereIn('project_id', $userProjectIds)
+            ->with(['project', 'changedBy'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        return view('projects.kanban', compact('projectStatuses', 'projects', 'projectStatusLogs'));
     }
 
     public function create(): View

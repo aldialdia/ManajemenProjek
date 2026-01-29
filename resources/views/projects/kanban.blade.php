@@ -94,6 +94,53 @@
         </div>
     </div>
 
+    <!-- Activity Log Section -->
+    <div class="activity-log-section" style="margin-top: 1.5rem; padding: 1rem 1.25rem; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+        <h4 style="display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.75rem 0; font-size: 0.85rem; font-weight: 600; color: #64748b;">
+            <i class="fas fa-history"></i>
+            Activity Log
+        </h4>
+        <div style="max-height: 150px; overflow-y: auto;">
+            @forelse($projectStatusLogs as $log)
+                <div style="display: flex; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid #e2e8f0; font-size: 0.8rem; color: #475569; line-height: 1.5;">
+                    <span style="flex-shrink: 0; font-size: 0.75rem; color: #94a3b8; min-width: 110px;">{{ $log->created_at->format('d M Y H:i') }}</span>
+                    <span style="flex: 1;">
+                        <strong style="color: #1e293b;">{{ $log->changedBy->name ?? 'System' }}</strong>
+                        mengubah status proyek
+                        <strong style="color: #1e293b;">"{{ $log->project->name }}"</strong>
+                        dari
+                        @php
+                            $fromStatus = $log->from_status?->value ?? 'new';
+                            $fromColor = match($fromStatus) {
+                                'done' => 'background: #dcfce7; color: #166534;',
+                                'on_hold' => 'background: #fef3c7; color: #92400e;',
+                                'in_progress' => 'background: #dbeafe; color: #1e40af;',
+                                default => 'background: #f1f5f9; color: #475569;',
+                            };
+                        @endphp
+                        <span style="display: inline-block; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-weight: 500; {{ $fromColor }}">{{ $log->from_status?->label() ?? 'New' }}</span>
+                        ke
+                        @php
+                            $toStatus = $log->to_status->value;
+                            $toColor = match($toStatus) {
+                                'done' => 'background: #dcfce7; color: #166534;',
+                                'on_hold' => 'background: #fef3c7; color: #92400e;',
+                                'in_progress' => 'background: #dbeafe; color: #1e40af;',
+                                default => 'background: #f1f5f9; color: #475569;',
+                            };
+                        @endphp
+                        <span style="display: inline-block; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-weight: 500; {{ $toColor }}">{{ $log->to_status->label() }}</span>
+                    </span>
+                </div>
+            @empty
+                <div style="display: flex; align-items: center; gap: 0.5rem; padding: 1rem; color: #94a3b8; font-size: 0.8rem;">
+                    <i class="fas fa-info-circle"></i>
+                    Belum ada aktivitas perubahan status
+                </div>
+            @endforelse
+        </div>
+    </div>
+
 
     <style>
         .back-link {

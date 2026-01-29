@@ -122,7 +122,15 @@ class TaskController extends Controller
             }
         });
 
-        return view('tasks.kanban', compact('tasks', 'project', 'showSubtasks'));
+        // Get recent activity logs for tasks
+        $taskIds = $tasks->pluck('id');
+        $statusLogs = \App\Models\TaskStatusLog::whereIn('task_id', $taskIds)
+            ->with(['task', 'changedBy'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        return view('tasks.kanban', compact('tasks', 'project', 'showSubtasks', 'statusLogs'));
     }
 
     /**

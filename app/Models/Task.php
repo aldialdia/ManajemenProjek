@@ -174,4 +174,33 @@ class Task extends Model
     {
         return $query->where('priority', $priority);
     }
+
+    /**
+     * Get all status logs for this task.
+     */
+    public function statusLogs(): HasMany
+    {
+        return $this->hasMany(TaskStatusLog::class)->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Get the latest status log.
+     */
+    public function getLatestStatusLogAttribute(): ?TaskStatusLog
+    {
+        return $this->statusLogs()->first();
+    }
+
+    /**
+     * Log a status change.
+     */
+    public function logStatusChange(?TaskStatus $fromStatus, TaskStatus $toStatus, ?int $changedBy = null, ?string $notes = null): TaskStatusLog
+    {
+        return $this->statusLogs()->create([
+            'changed_by' => $changedBy ?? auth()->id(),
+            'from_status' => $fromStatus?->value,
+            'to_status' => $toStatus->value,
+            'notes' => $notes,
+        ]);
+    }
 }

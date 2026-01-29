@@ -79,16 +79,23 @@ class TaskService
         }
 
         $oldStatus = $task->status;
-        $task->update(['status' => $status]);
 
-        // Send notification if task is completed
-        if ($status === TaskStatus::DONE && $oldStatus !== TaskStatus::DONE) {
-            $this->notifyTaskCompleted($task);
-        }
+        // Only log if status actually changes
+        if ($oldStatus !== $status) {
+            $task->update(['status' => $status]);
 
-        // Update project status based on task status changes
-        if ($task->project) {
-            $task->project->checkAndUpdateStatusBasedOnTasks();
+            // Log the status change
+            $task->logStatusChange($oldStatus, $status);
+
+            // Send notification if task is completed
+            if ($status === TaskStatus::DONE && $oldStatus !== TaskStatus::DONE) {
+                $this->notifyTaskCompleted($task);
+            }
+
+            // Update project status based on task status changes
+            if ($task->project) {
+                $task->project->checkAndUpdateStatusBasedOnTasks();
+            }
         }
 
         return $task->fresh();
