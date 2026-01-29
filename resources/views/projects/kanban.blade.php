@@ -489,6 +489,7 @@
                     .then(data => {
                         if (data.success && data.changed) {
                             showToast(`Proyek "${projectName}" dipindahkan ke ${getStatusLabel(newStatus)}`, 'success');
+                            location.reload();
                         } else if (!data.success) {
                             // Revert on error
                             oldColumn.appendChild(card);

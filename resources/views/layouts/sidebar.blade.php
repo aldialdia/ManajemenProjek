@@ -578,6 +578,11 @@
 
     // Auto-detect and add current project on page load
     document.addEventListener('DOMContentLoaded', function () {
+        // Check if a project was just deleted and remove from localStorage
+        @if(session('deleted_project_id'))
+            removeRecentProject({{ session('deleted_project_id') }});
+        @endif
+
         // Render existing recent projects
         renderRecentProjects();
 

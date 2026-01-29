@@ -625,6 +625,8 @@
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
                     body: JSON.stringify({ status })
+                }).then(() => {
+                    location.reload();
                 });
             }
 

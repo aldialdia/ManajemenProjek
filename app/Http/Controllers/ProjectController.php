@@ -161,11 +161,13 @@ class ProjectController extends Controller
     {
         $this->authorize('delete', $project);
 
+        $projectId = $project->id;
         $project->delete();
 
         return redirect()
             ->route('dashboard')
-            ->with('success', 'Project deleted successfully.');
+            ->with('success', 'Project deleted successfully.')
+            ->with('deleted_project_id', $projectId);
     }
 
     /**
