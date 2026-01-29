@@ -397,7 +397,8 @@
 
 <script>
     // Recent Projects localStorage functions
-    const RECENT_PROJECTS_KEY = 'recentProjects';
+    const USER_ID = {{ auth()->id() ?? 0 }};
+    const RECENT_PROJECTS_KEY = `recentProjects_user_${USER_ID}`;
     const MAX_RECENT_PROJECTS = 3;
 
     function getRecentProjects() {
