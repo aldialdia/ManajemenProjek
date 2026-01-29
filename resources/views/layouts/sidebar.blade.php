@@ -12,107 +12,22 @@
             <span>Dashboard</span>
         </a>
 
-        <!-- Active Project Section -->
+        <!-- Recent Projects Section -->
         <div class="nav-section">
             <div class="nav-section-header">
-                <span class="nav-section-title">PROYEK AKTIF</span>
+                <span class="nav-section-title">RECENT PROYEK</span>
             </div>
 
-            @php
-                $user = auth()->user();
+            <!-- Recent Projects Container (rendered by JavaScript) -->
+            <div id="recentProjectsContainer">
+                <!-- Projects will be rendered here by JavaScript -->
+            </div>
 
-                // Detect current project ID from various sources
-                $currentProjectId = null;
-
-                // 1. From route parameter 'project'
-                if (request()->route('project')) {
-                    $currentProjectId = request()->route('project')->id ?? request()->route('project');
-                }
-                // 2. From query parameter 'project_id'
-                elseif (request('project_id')) {
-                    $currentProjectId = request('project_id');
-                }
-                // 3. From task route - detect project from task model
-                elseif (request()->route('task')) {
-                    $task = request()->route('task');
-                    if ($task && $task->project_id) {
-                        $currentProjectId = $task->project_id;
-                    }
-                }
-                // 4. From projects/* URL segment
-                elseif (request()->is('projects/*')) {
-                    $currentProjectId = request()->segment(2);
-                }
-
-                // Get the current active project if exists
-                $activeProject = $currentProjectId ? $user->projects()->find($currentProjectId) : null;
-            @endphp
-
-            @if($activeProject)
-                <div class="project-group expanded">
-                    <button class="project-toggle" onclick="toggleProject({{ $activeProject->id }})">
-                        <span class="project-dot"
-                            style="background: {{ $activeProject->status->value === 'in_progress' ? '#3b82f6' : ($activeProject->status->value === 'done' ? '#10b981' : ($activeProject->status->value === 'on_hold' ? '#f59e0b' : '#94a3b8')) }};"></span>
-                        <span class="project-name">{{ Str::limit($activeProject->name, 20) }}</span>
-                        <i class="fas fa-chevron-down project-arrow"></i>
-                    </button>
-
-                    <div class="project-submenu" id="project-menu-{{ $activeProject->id }}">
-                        <a href="{{ route('projects.show', $activeProject) }}"
-                            class="submenu-item {{ request()->is('projects/' . $activeProject->id) && !request()->is('projects/' . $activeProject->id . '/edit') ? 'active' : '' }}">
-                            <i class="fas fa-eye icon-overview"></i>
-                            <span>Overview Proyek</span>
-                        </a>
-                        @php
-                            // Detect if current page is task-related for this project
-                            $isTaskActive = false;
-                            if (request()->is('tasks*') && !request()->routeIs('tasks.calendar')) {
-                                if (request('project_id') == $activeProject->id) {
-                                    $isTaskActive = true;
-                                } elseif (request()->route('task') && request()->route('task')->project_id == $activeProject->id) {
-                                    $isTaskActive = true;
-                                }
-                            }
-                        @endphp
-                        <a href="{{ route('tasks.index', ['project_id' => $activeProject->id]) }}"
-                            class="submenu-item {{ $isTaskActive ? 'active' : '' }}">
-                            <i class="fas fa-check-square icon-tugas"></i>
-                            <span>Tugas</span>
-                        </a>
-                        <a href="{{ route('tasks.calendar', ['project_id' => $activeProject->id]) }}"
-                            class="submenu-item {{ request()->routeIs('tasks.calendar') && request('project_id') == $activeProject->id ? 'active' : '' }}">
-                            <i class="fas fa-calendar icon-kalender"></i>
-                            <span>Kalender</span>
-                        </a>
-
-                        <a href="{{ route('projects.team.index', $activeProject) }}"
-                            class="submenu-item {{ request()->routeIs('projects.team.*') && request()->segment(2) == $activeProject->id ? 'active' : '' }}">
-                            <i class="fas fa-users icon-tim"></i>
-                            <span>Tim</span>
-                        </a>
-                        <a href="{{ route('projects.reports.index', $activeProject) }}"
-                            class="submenu-item {{ request()->routeIs('projects.reports.*') && request()->segment(2) == $activeProject->id ? 'active' : '' }}">
-                            <i class="fas fa-chart-bar icon-laporan"></i>
-                            <span>Laporan</span>
-                        </a>
-                        <a href="{{ route('time-tracking.index', ['project_id' => $activeProject->id]) }}"
-                            class="submenu-item {{ request()->routeIs('time-tracking.*') && request('project_id') == $activeProject->id ? 'active' : '' }}">
-                            <i class="fas fa-clock icon-time"></i>
-                            <span>Time Tracking</span>
-                        </a>
-                        <a href="{{ route('projects.documents.index', $activeProject) }}"
-                            class="submenu-item {{ request()->routeIs('projects.documents.*') && request()->segment(2) == $activeProject->id ? 'active' : '' }}">
-                            <i class="fas fa-file-alt icon-dokumen"></i>
-                            <span>Dokumen</span>
-                        </a>
-                    </div>
-                </div>
-            @else
-                <div class="no-active-project">
-                    <i class="fas fa-folder-open"></i>
-                    <span>Pilih proyek dari Dashboard</span>
-                </div>
-            @endif
+            <!-- Empty State (shown when no recent projects) -->
+            <div id="noRecentProjects" class="no-active-project" style="display: none;">
+                <i class="fas fa-folder-open"></i>
+                <span>Belum ada proyek yang dikunjungi</span>
+            </div>
         </div>
     </nav>
 
@@ -234,11 +149,17 @@
         margin-bottom: 0.25rem;
     }
 
+    .project-header {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
     .project-toggle {
         display: flex;
         align-items: center;
         gap: 0.625rem;
-        width: 100%;
+        flex: 1;
         padding: 0.75rem 1rem;
         border-radius: 8px;
         background: transparent;
@@ -249,6 +170,26 @@
         cursor: pointer;
         transition: all 0.2s;
         text-align: left;
+    }
+
+    .remove-recent-btn {
+        width: 14px;
+        height: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: transparent;
+        color: #94a3b8;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.2s;
+        font-size: 0.6rem;
+    }
+
+    .remove-recent-btn:hover {
+        background: #fee2e2;
+        color: #ef4444;
     }
 
     .project-toggle:hover {
@@ -455,16 +396,194 @@
 </style>
 
 <script>
-    function toggleProject(projectId) {
-        const group = document.querySelector(`#project-menu-${projectId}`).closest('.project-group');
-        group.classList.toggle('expanded');
+    // Recent Projects localStorage functions
+    const RECENT_PROJECTS_KEY = 'recentProjects';
+    const MAX_RECENT_PROJECTS = 3;
+
+    function getRecentProjects() {
+        try {
+            const stored = localStorage.getItem(RECENT_PROJECTS_KEY);
+            return stored ? JSON.parse(stored) : [];
+        } catch (e) {
+            return [];
+        }
     }
 
-    // Auto-expand current project on page load
-    document.addEventListener('DOMContentLoaded', function () {
-        const expandedGroups = document.querySelectorAll('.project-group.expanded');
-        expandedGroups.forEach(group => {
-            group.classList.add('expanded');
+    function addRecentProject(project) {
+        let recentProjects = getRecentProjects();
+
+        // Remove if already exists (to move to top)
+        recentProjects = recentProjects.filter(p => p.id !== project.id);
+
+        // Add to beginning
+        recentProjects.unshift(project);
+
+        // Limit to max
+        if (recentProjects.length > MAX_RECENT_PROJECTS) {
+            recentProjects = recentProjects.slice(0, MAX_RECENT_PROJECTS);
+        }
+
+        localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(recentProjects));
+        renderRecentProjects();
+    }
+
+    function removeRecentProject(projectId) {
+        let recentProjects = getRecentProjects();
+        recentProjects = recentProjects.filter(p => p.id !== projectId);
+        localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(recentProjects));
+
+        // Hide the project group from DOM immediately
+        const projectGroup = document.getElementById(`recent-project-${projectId}`);
+        if (projectGroup) {
+            projectGroup.style.display = 'none';
+        }
+
+        // Check if empty
+        if (recentProjects.length === 0) {
+            document.getElementById('noRecentProjects').style.display = 'flex';
+        }
+    }
+
+    function toggleProject(projectId) {
+        const group = document.getElementById(`recent-project-${projectId}`);
+        if (group) {
+            group.classList.toggle('expanded');
+        }
+    }
+
+    function getStatusColor(status) {
+        const colors = {
+            'in_progress': '#3b82f6',
+            'done': '#10b981',
+            'on_hold': '#f59e0b',
+            'planning': '#94a3b8'
+        };
+        return colors[status] || '#94a3b8';
+    }
+
+    function renderRecentProjects() {
+        const container = document.getElementById('recentProjectsContainer');
+        const emptyState = document.getElementById('noRecentProjects');
+        let recentProjects = getRecentProjects();
+
+        // Enforce max limit (in case limit was changed)
+        if (recentProjects.length > MAX_RECENT_PROJECTS) {
+            recentProjects = recentProjects.slice(0, MAX_RECENT_PROJECTS);
+            localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(recentProjects));
+        }
+
+        if (!container) return;
+
+        if (recentProjects.length === 0) {
+            container.innerHTML = '';
+            if (emptyState) emptyState.style.display = 'flex';
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+
+        // Get current project ID from URL
+        const currentProjectId = getCurrentProjectId();
+
+        let html = '';
+        recentProjects.forEach(project => {
+            const isExpanded = project.id == currentProjectId ? 'expanded' : '';
+            const statusColor = getStatusColor(project.status);
+
+            html += `
+                <div class="project-group ${isExpanded}" id="recent-project-${project.id}">
+                    <div class="project-header">
+                        <button class="project-toggle" onclick="toggleProject(${project.id})">
+                            <span class="project-dot" style="background: ${statusColor};"></span>
+                            <span class="project-name">${truncateText(project.name, 20)}</span>
+                            <i class="fas fa-chevron-down project-arrow"></i>
+                        </button>
+                        <button class="remove-recent-btn" onclick="event.stopPropagation(); removeRecentProject(${project.id})" title="Hapus dari recent">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="project-submenu" id="project-menu-${project.id}">
+                        <a href="/projects/${project.id}" class="submenu-item">
+                            <i class="fas fa-eye icon-overview"></i>
+                            <span>Overview Proyek</span>
+                        </a>
+                        <a href="/tasks?project_id=${project.id}" class="submenu-item">
+                            <i class="fas fa-check-square icon-tugas"></i>
+                            <span>Tugas</span>
+                        </a>
+                        <a href="/tasks/calendar?project_id=${project.id}" class="submenu-item">
+                            <i class="fas fa-calendar icon-kalender"></i>
+                            <span>Kalender</span>
+                        </a>
+                        <a href="/projects/${project.id}/team" class="submenu-item">
+                            <i class="fas fa-users icon-tim"></i>
+                            <span>Tim</span>
+                        </a>
+                        <a href="/projects/${project.id}/reports" class="submenu-item">
+                            <i class="fas fa-chart-bar icon-laporan"></i>
+                            <span>Laporan</span>
+                        </a>
+                        <a href="/time-tracking?project_id=${project.id}" class="submenu-item">
+                            <i class="fas fa-clock icon-time"></i>
+                            <span>Time Tracking</span>
+                        </a>
+                        <a href="/projects/${project.id}/documents" class="submenu-item">
+                            <i class="fas fa-file-alt icon-dokumen"></i>
+                            <span>Dokumen</span>
+                        </a>
+                    </div>
+                </div>
+            `;
         });
+
+        container.innerHTML = html;
+        highlightActiveSubmenu();
+    }
+
+    function truncateText(text, maxLength) {
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
+    }
+
+    function getCurrentProjectId() {
+        // Check URL patterns
+        const path = window.location.pathname;
+        const search = window.location.search;
+
+        // Pattern: /projects/{id}
+        const projectMatch = path.match(/\/projects\/(\d+)/);
+        if (projectMatch) return parseInt(projectMatch[1]);
+
+        // Pattern: ?project_id={id}
+        const params = new URLSearchParams(search);
+        const projectId = params.get('project_id');
+        if (projectId) return parseInt(projectId);
+
+        return null;
+    }
+
+    function highlightActiveSubmenu() {
+        const currentPath = window.location.pathname + window.location.search;
+        const submenuItems = document.querySelectorAll('.submenu-item');
+
+        submenuItems.forEach(item => {
+            const href = item.getAttribute('href');
+            if (currentPath.includes(href) || href === currentPath) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+
+    // Auto-detect and add current project on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        // Render existing recent projects
+        renderRecentProjects();
+
+        // Check if we're on a project page and auto-add
+        if (window.currentProject) {
+            addRecentProject(window.currentProject);
+        }
     });
 </script>

@@ -1687,6 +1687,13 @@
 
         @push('scripts')
             <script>
+                // Inject current project data for Recent Projects sidebar
+                window.currentProject = {
+                    id: {{ $project->id }},
+                    name: "{{ addslashes($project->name) }}",
+                    status: "{{ $project->status->value ?? $project->status }}"
+                };
+
                 document.addEventListener('DOMContentLoaded', function() {
                     @if($project->isOnHold() && !auth()->user()->isManagerInProject($project))
                         // Show warning popup for members when project is on hold

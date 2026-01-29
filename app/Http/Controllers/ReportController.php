@@ -189,15 +189,15 @@ class ReportController extends Controller
         // Tasks by user in THIS PROJECT with work hours
         $tasksByUser = $project->users()->withCount([
             'assignedTasks as completed_count' => function ($q) use ($project, $startDate, $endDate) {
-                $q->where('status', 'done')
-                    ->where('project_id', $project->id)
-                    ->whereBetween('updated_at', [$startDate, $endDate]);
+                $q->where('tasks.status', 'done')
+                    ->where('tasks.project_id', $project->id)
+                    ->whereBetween('tasks.updated_at', [$startDate, $endDate]);
             },
             'assignedTasks as total_tasks_count' => function ($q) use ($project, $startDate, $endDate) {
-                $q->where('project_id', $project->id)
+                $q->where('tasks.project_id', $project->id)
                     ->where(function ($subQ) use ($startDate, $endDate) {
-                        $subQ->whereBetween('created_at', [$startDate, $endDate])
-                            ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                        $subQ->whereBetween('tasks.created_at', [$startDate, $endDate])
+                            ->orWhereBetween('tasks.updated_at', [$startDate, $endDate]);
                     });
             }
         ])->get()->map(function ($user) use ($project, $startDate, $endDate) {
@@ -372,15 +372,15 @@ class ReportController extends Controller
         // Tasks by user with work hours
         $tasksByUser = $project->users()->withCount([
             'assignedTasks as completed_count' => function ($q) use ($project, $startDate, $endDate) {
-                $q->where('status', 'done')
-                    ->where('project_id', $project->id)
-                    ->whereBetween('updated_at', [$startDate, $endDate]);
+                $q->where('tasks.status', 'done')
+                    ->where('tasks.project_id', $project->id)
+                    ->whereBetween('tasks.updated_at', [$startDate, $endDate]);
             },
             'assignedTasks as total_tasks_count' => function ($q) use ($project, $startDate, $endDate) {
-                $q->where('project_id', $project->id)
+                $q->where('tasks.project_id', $project->id)
                     ->where(function ($subQ) use ($startDate, $endDate) {
-                        $subQ->whereBetween('created_at', [$startDate, $endDate])
-                            ->orWhereBetween('updated_at', [$startDate, $endDate]);
+                        $subQ->whereBetween('tasks.created_at', [$startDate, $endDate])
+                            ->orWhereBetween('tasks.updated_at', [$startDate, $endDate]);
                     });
             }
         ])->get()->map(function ($user) use ($project, $startDate, $endDate) {

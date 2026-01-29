@@ -431,6 +431,15 @@
                     noResultsRow.style.display = visibleTasks === 0 ? '' : 'none';
                 }
             }
+
+            @if($project)
+                // Inject current project data for Recent Projects sidebar
+                window.currentProject = {
+                    id: {{ $project->id }},
+                    name: "{{ addslashes($project->name) }}",
+                    status: "{{ $project->status->value ?? $project->status }}"
+                };
+            @endif
         </script>
     @endpush
 @endsection
