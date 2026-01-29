@@ -57,18 +57,39 @@
                             @php
                                 $currentAssigneeIds = old('assignees', $task->assignees->pluck('id')->toArray());
                             @endphp
-                            <div class="assignee-selector">
-                                @foreach($users ?? [] as $user)
-                                    <label class="assignee-option">
-                                        <input type="checkbox" name="assignees[]" value="{{ $user->id }}" 
-                                            {{ in_array($user->id, $currentAssigneeIds) ? 'checked' : '' }}>
-                                        <span class="assignee-info">
-                                            <span class="assignee-avatar">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
-                                            <span class="assignee-name">{{ $user->name }}</span>
-                                        </span>
-                                        <span class="checkmark"><i class="fas fa-check"></i></span>
-                                    </label>
-                                @endforeach
+                            <div class="multi-select-dropdown">
+                                <div class="dropdown-trigger" id="assigneeDropdownTrigger">
+                                    <div class="selected-items" id="selectedAssignees">
+                                        <span class="placeholder">Pilih anggota tim...</span>
+                                    </div>
+                                    <i class="fas fa-chevron-down dropdown-icon"></i>
+                                </div>
+                                <div class="dropdown-menu" id="assigneeDropdownMenu">
+                                    <div class="dropdown-search">
+                                        <i class="fas fa-search search-icon"></i>
+                                        <input type="text" id="assigneeSearch" class="search-input" placeholder="Cari anggota tim...">
+                                    </div>
+                                    <div class="dropdown-items-container">
+                                        @foreach($users ?? [] as $user)
+                                            <label class="dropdown-item" data-name="{{ strtolower($user->name) }}">
+                                                <input type="checkbox" name="assignees[]" value="{{ $user->id }}" 
+                                                    data-name="{{ $user->name }}"
+                                                    {{ in_array($user->id, $currentAssigneeIds) ? 'checked' : '' }}>
+                                                <span class="assignee-info">
+                                                    <span class="assignee-avatar">
+                                                        @if($user->avatar)
+                                                            <img src="{{ asset('storage/' . $user->avatar) }}" alt="{{ $user->name }}" class="avatar-img">
+                                                        @else
+                                                            {{ strtoupper(substr($user->name, 0, 1)) }}
+                                                        @endif
+                                                    </span>
+                                                    <span class="assignee-name">{{ $user->name }}</span>
+                                                </span>
+                                                <span class="checkmark"><i class="fas fa-check"></i></span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </div>
                             </div>
                             @error('assignees')
                                 <span class="error-message" style="display: flex; align-items: center; gap: 0.5rem; color: #dc2626; background: #fef2f2; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #fecaca; margin-top: 0.5rem;">
@@ -174,20 +195,139 @@
             color: #1e293b;
         }
 
-        /* Multi-select Assignee Styles */
-        .assignee-selector {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            max-height: 200px;
-            overflow-y: auto;
-            padding: 0.75rem;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
+        /* Multi-select Dropdown Styles */
+        .multi-select-dropdown {
+            position: relative;
+            width: 100%;
         }
 
-        .assignee-option {
+        .dropdown-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 45px;
+        }
+
+        .dropdown-trigger:hover {
+            border-color: #6366f1;
+            background: #f5f3ff;
+        }
+
+        .dropdown-trigger.active {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .selected-items {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.375rem;
+            align-items: center;
+        }
+
+        .selected-items .placeholder {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .selected-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.25rem 0.5rem;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .selected-tag .remove-tag {
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .selected-tag .remove-tag:hover {
+            opacity: 1;
+        }
+
+        .dropdown-icon {
+            color: #64748b;
+            font-size: 0.875rem;
+            transition: transform 0.2s ease;
+        }
+
+        .dropdown-trigger.active .dropdown-icon {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            max-height: 300px;
+            overflow: hidden;
+            z-index: 1000;
+            display: none;
+        }
+
+        .dropdown-menu.show {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dropdown-search {
+            position: relative;
+            padding: 0.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 0.875rem;
+            pointer-events: none;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.5rem 0.75rem 0.5rem 2rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .dropdown-items-container {
+            overflow-y: auto;
+            max-height: 250px;
+            padding: 0.5rem;
+        }
+
+        .dropdown-item {
             display: flex;
             align-items: center;
             gap: 0.75rem;
@@ -197,30 +337,34 @@
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s ease;
-            margin: 0;
+            margin-bottom: 0.375rem;
         }
 
-        .assignee-option:hover {
+        .dropdown-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .dropdown-item:hover {
             border-color: #6366f1;
             background: #f5f3ff;
         }
 
-        .assignee-option input[type="checkbox"] {
+        .dropdown-item input[type="checkbox"] {
             display: none;
         }
 
-        .assignee-option input[type="checkbox"]:checked + .assignee-info + .checkmark {
+        .dropdown-item input[type="checkbox"]:checked + .assignee-info + .checkmark {
             background: #6366f1;
             border-color: #6366f1;
             color: white;
         }
 
-        .assignee-option input[type="checkbox"]:checked ~ .assignee-info .assignee-avatar {
+        .dropdown-item input[type="checkbox"]:checked ~ .assignee-info .assignee-avatar {
             background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
             color: white;
         }
 
-        .assignee-option:has(input:checked) {
+        .dropdown-item:has(input:checked) {
             border-color: #6366f1;
             background: #f5f3ff;
         }
@@ -230,6 +374,21 @@
             align-items: center;
             gap: 0.625rem;
             flex: 1;
+        }
+
+        .no-results-message {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1.5rem;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            text-align: center;
+        }
+
+        .no-results-message i {
+            font-size: 1rem;
         }
 
         .assignee-avatar {
@@ -244,6 +403,17 @@
             font-weight: 600;
             color: #64748b;
             transition: all 0.2s ease;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
         .assignee-name {
@@ -265,27 +435,140 @@
             transition: all 0.2s ease;
         }
 
-        .assignee-selector::-webkit-scrollbar {
+        .dropdown-items-container::-webkit-scrollbar {
             width: 6px;
         }
 
-        .assignee-selector::-webkit-scrollbar-track {
+        .dropdown-items-container::-webkit-scrollbar-track {
             background: #f1f5f9;
             border-radius: 3px;
         }
 
-        .assignee-selector::-webkit-scrollbar-thumb {
+        .dropdown-items-container::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 3px;
         }
 
-        .assignee-selector::-webkit-scrollbar-thumb:hover {
+        .dropdown-items-container::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
     </style>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Multi-select dropdown functionality
+            const dropdownTrigger = document.getElementById('assigneeDropdownTrigger');
+            const dropdownMenu = document.getElementById('assigneeDropdownMenu');
+            const selectedAssignees = document.getElementById('selectedAssignees');
+            const searchInput = document.getElementById('assigneeSearch');
+            const dropdownItems = dropdownMenu.querySelectorAll('.dropdown-item');
+            const checkboxes = dropdownMenu.querySelectorAll('input[type="checkbox"]');
+
+            // Toggle dropdown
+            dropdownTrigger.addEventListener('click', function(e) {
+                e.stopPropagation();
+                dropdownMenu.classList.toggle('show');
+                dropdownTrigger.classList.toggle('active');
+                
+                // Focus search input when dropdown opens
+                if (dropdownMenu.classList.contains('show')) {
+                    setTimeout(() => searchInput.focus(), 100);
+                }
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!dropdownTrigger.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                    dropdownMenu.classList.remove('show');
+                    dropdownTrigger.classList.remove('active');
+                    searchInput.value = ''; // Clear search on close
+                    filterItems(''); // Reset filter
+                }
+            });
+
+            // Search functionality
+            searchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                filterItems(searchTerm);
+            });
+
+            // Prevent dropdown from closing when clicking on search input
+            searchInput.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            function filterItems(searchTerm) {
+                let visibleCount = 0;
+                
+                dropdownItems.forEach(item => {
+                    const name = item.getAttribute('data-name');
+                    if (name.includes(searchTerm)) {
+                        item.style.display = 'flex';
+                        visibleCount++;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+
+                // Show "no results" message if needed
+                let noResultsMsg = dropdownMenu.querySelector('.no-results-message');
+                if (visibleCount === 0) {
+                    if (!noResultsMsg) {
+                        noResultsMsg = document.createElement('div');
+                        noResultsMsg.className = 'no-results-message';
+                        noResultsMsg.innerHTML = '<i class="fas fa-search"></i> Tidak ada anggota yang ditemukan';
+                        dropdownMenu.querySelector('.dropdown-items-container').appendChild(noResultsMsg);
+                    }
+                    noResultsMsg.style.display = 'flex';
+                } else {
+                    if (noResultsMsg) {
+                        noResultsMsg.style.display = 'none';
+                    }
+                }
+            }
+
+            // Update selected items display
+            function updateSelectedDisplay() {
+                const selected = Array.from(checkboxes).filter(cb => cb.checked);
+                
+                if (selected.length === 0) {
+                    selectedAssignees.innerHTML = '<span class="placeholder">Pilih anggota tim...</span>';
+                } else {
+                    selectedAssignees.innerHTML = selected.map(cb => {
+                        const name = cb.getAttribute('data-name');
+                        const id = cb.value;
+                        return `
+                            <span class="selected-tag">
+                                ${name}
+                                <i class="fas fa-times remove-tag" data-id="${id}"></i>
+                            </span>
+                        `;
+                    }).join('');
+
+                    // Add event listeners to remove buttons
+                    selectedAssignees.querySelectorAll('.remove-tag').forEach(btn => {
+                        btn.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            const id = this.getAttribute('data-id');
+                            const checkbox = dropdownMenu.querySelector(`input[value="${id}"]`);
+                            if (checkbox) {
+                                checkbox.checked = false;
+                                updateSelectedDisplay();
+                            }
+                        });
+                    });
+                }
+            }
+
+            // Handle checkbox changes
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateSelectedDisplay);
+            });
+
+            // Initialize display on page load
+            updateSelectedDisplay();
+
+            // Parent task deadline functionality
             const parentSelect = document.getElementById('parent_task_id');
             const dueDateInput = document.getElementById('due_date');
             const parentDeadlineInfo = document.getElementById('parent-deadline-info');
