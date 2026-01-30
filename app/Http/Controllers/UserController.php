@@ -35,12 +35,13 @@ class UserController extends Controller
                     ->orWhere('email', 'like', '%' . $query . '%');
             })
             ->take(10)
-            ->get(['id', 'name', 'email'])
+            ->get(['id', 'name', 'email', 'avatar'])
             ->map(function ($user) {
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'avatar' => $user->avatar,
                     'initials' => $user->initials,
                 ];
             });
