@@ -65,8 +65,23 @@ class NotificationController extends Controller
         if (isset($data['type']) && $data['type'] === 'project_invitation' && isset($data['invitation_token'])) {
             return redirect()->route('invitations.show', $data['invitation_token']);
         } elseif (isset($data['task_id'])) {
+            // Get task with project info for sidebar auto-expand
+            $task = \App\Models\Task::with('project')->find($data['task_id']);
+            if ($task && $task->project) {
+                session()->flash('expand_project', [
+                    'id' => $task->project->id,
+                    'name' => $task->project->name,
+                    'status' => $task->project->status->value ?? 'new',
+                ]);
+            }
             return redirect()->route('tasks.show', $data['task_id']);
         } elseif (isset($data['project_id']) && $data['type'] === 'new_comment' && $data['target_type'] === 'project') {
+            return redirect()->route('projects.show', $data['project_id']);
+        } elseif (isset($data['project_id']) && $data['type'] === 'project_deadline_warning') {
+            // Project deadline warning - redirect to project
+            return redirect()->route('projects.show', $data['project_id']);
+        } elseif (isset($data['project_id'])) {
+            // Generic project notification
             return redirect()->route('projects.show', $data['project_id']);
         }
 

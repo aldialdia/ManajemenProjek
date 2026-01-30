@@ -64,8 +64,14 @@
                                     @case('user_mentioned')
                                         <i class="fas fa-at"></i>
                                         @break
+                                    @case('project_invitation')
+                                        <i class="fas fa-envelope-open-text"></i>
+                                        @break
                                     @case('deadline_warning')
                                         <i class="fas fa-clock"></i>
+                                        @break
+                                    @case('project_deadline_warning')
+                                        <i class="fas fa-calendar-times"></i>
                                         @break
                                     @default
                                         <i class="fas fa-bell"></i>
@@ -492,12 +498,20 @@
         background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
     }
 
+    .notification-dropdown-icon.project_invitation {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    }
+
     .notification-dropdown-icon.default {
         background: linear-gradient(135deg, #64748b 0%, #475569 100%);
     }
 
     .notification-dropdown-icon.deadline_warning {
         background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .notification-dropdown-icon.project_deadline_warning {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
     }
 
     .notification-dropdown-content {

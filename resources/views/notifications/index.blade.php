@@ -55,11 +55,18 @@
                     @case('project_invitation')
                         <i class="fas fa-envelope-open-text"></i>
                         @break
+                    @case('deadline_warning')
+                        <i class="fas fa-clock"></i>
+                        @break
+                    @case('project_deadline_warning')
+                        <i class="fas fa-calendar-times"></i>
+                        @break
                     @default
                         <i class="fas fa-bell"></i>
                 @endswitch
             </div>
             <div class="notification-content">
+                <p class="notification-title">{{ $notification->data['title'] ?? 'Notifikasi' }}</p>
                 <p class="notification-message">{{ $notification->data['message'] ?? 'Notifikasi baru' }}</p>
                 <span class="notification-time">{{ $notification->created_at->diffForHumans() }}</span>
             </div>
@@ -236,14 +243,30 @@
         background: linear-gradient(135deg, #64748b 0%, #475569 100%);
     }
 
+    .notification-icon.deadline_warning {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .notification-icon.project_deadline_warning {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    }
+
     .notification-content {
         flex: 1;
         min-width: 0;
     }
 
-    .notification-message {
+    .notification-title {
         color: #1e293b;
         font-size: 0.9rem;
+        font-weight: 600;
+        margin: 0 0 0.25rem 0;
+        line-height: 1.4;
+    }
+
+    .notification-message {
+        color: #64748b;
+        font-size: 0.85rem;
         margin: 0 0 0.25rem 0;
         line-height: 1.4;
     }
