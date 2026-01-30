@@ -259,30 +259,36 @@ class TaskController extends Controller
 
         $task->update($validated);
 
-        // Notify assignee if due_date was changed/capped
-        if ($task->assignee && $oldDueDate && $oldDueDate !== $newDueDate) {
+        // Notify all assignees if due_date was changed/capped
+        if ($oldDueDate && $oldDueDate !== $newDueDate) {
+            $task->load('assignees');
             $reason = $wasCapped ? 'melebihi deadline tugas utama' : 'perubahan jadwal';
-            $task->assignee->notify(new \App\Notifications\TaskDeadlineAdjusted(
-                $task,
-                $oldDueDate,
-                $newDueDate,
-                $reason
-            ));
+            foreach ($task->assignees as $assignee) {
+                $assignee->notify(new \App\Notifications\TaskDeadlineAdjusted(
+                    $task,
+                    $oldDueDate,
+                    $newDueDate,
+                    $reason
+                ));
+            }
         }
 
         // Early Warning: If new due_date is tomorrow (H-1), send warning notification
-        if ($task->assignee && $task->status !== \App\Enums\TaskStatus::DONE) {
+        if ($task->status !== \App\Enums\TaskStatus::DONE) {
+            $task->load('assignees');
             $dueDateCarbon = \Carbon\Carbon::parse($newDueDate);
-            $tomorrow = now()->addDay()->startOfDay();
+            $tomorrow = now()->addDay()->endOfDay();
             $today = now()->startOfDay();
 
             // Check if due_date is between today and tomorrow (H-1)
             if ($dueDateCarbon->gte($today) && $dueDateCarbon->lte($tomorrow)) {
-                $cacheKey = 'task_deadline_notified_' . $task->id;
-                if (!cache()->has($cacheKey)) {
-                    $task->refresh(); // Refresh to get updated due_date as Carbon
-                    $task->assignee->notify(new \App\Notifications\TaskDeadlineWarning($task));
-                    cache()->put($cacheKey, true, now()->addDay());
+                $task->refresh(); // Refresh to get updated due_date as Carbon
+                foreach ($task->assignees as $assignee) {
+                    $cacheKey = 'task_deadline_notified_' . $task->id . '_' . $assignee->id . '_' . now()->format('Y-m-d');
+                    if (!cache()->has($cacheKey)) {
+                        $assignee->notify(new \App\Notifications\TaskDeadlineWarning($task));
+                        cache()->put($cacheKey, true, now()->addDay());
+                    }
                 }
             }
         }

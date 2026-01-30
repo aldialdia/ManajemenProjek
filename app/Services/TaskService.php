@@ -7,7 +7,9 @@ use App\Models\Task;
 use App\Models\User;
 use App\Notifications\TaskAssigned;
 use App\Notifications\TaskCompleted;
+use App\Notifications\TaskDeadlineWarning;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class TaskService
 {
@@ -32,6 +34,9 @@ class TaskService
         if ($task->project) {
             $task->project->checkAndUpdateStatusBasedOnTasks();
         }
+
+        // Check and send deadline warning immediately if due_date is H-1 or less
+        $this->checkAndNotifyDeadlineWarning($task);
 
         return $task;
     }
@@ -65,6 +70,9 @@ class TaskService
         if (isset($data['status']) && $oldStatus->value !== $data['status']) {
             $task->project->checkAndUpdateStatusBasedOnTasks();
         }
+
+        // Check and send deadline warning immediately if due_date is H-1 or less
+        $this->checkAndNotifyDeadlineWarning($task->fresh());
 
         return $task->fresh();
     }
@@ -155,6 +163,40 @@ class TaskService
             // Don't notify if the manager completed it themselves
             if ($manager->id !== auth()->id()) {
                 $manager->notify(new TaskCompleted($task));
+            }
+        }
+    }
+
+    /**
+     * Check and send deadline warning notification immediately.
+     * Sends notification when task due_date is tomorrow (H-1) or earlier but not yet overdue.
+     */
+    protected function checkAndNotifyDeadlineWarning(Task $task): void
+    {
+        // Skip if task has no due date, is already done, or has no assignees
+        if (!$task->due_date || $task->status === TaskStatus::DONE) {
+            return;
+        }
+
+        $task->load('assignees');
+        
+        if ($task->assignees->isEmpty()) {
+            return;
+        }
+
+        $tomorrow = now()->addDay()->endOfDay();
+        $today = now()->startOfDay();
+
+        // Only notify if due_date is between today and tomorrow (H-1)
+        if ($task->due_date->gte($today) && $task->due_date->lte($tomorrow)) {
+            foreach ($task->assignees as $assignee) {
+                // Use cache to prevent duplicate notifications per task per user per day
+                $cacheKey = 'task_deadline_notified_' . $task->id . '_' . $assignee->id . '_' . now()->format('Y-m-d');
+                
+                if (!Cache::has($cacheKey)) {
+                    $assignee->notify(new TaskDeadlineWarning($task));
+                    Cache::put($cacheKey, true, now()->addDay());
+                }
             }
         }
     }
