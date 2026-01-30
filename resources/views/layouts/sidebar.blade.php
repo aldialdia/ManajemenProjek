@@ -59,7 +59,7 @@
     }
 
     .sidebar-header {
-        padding: 1.25rem 1.5rem;
+        padding: 1.25rem 2rem;
         border-bottom: 1px solid #f1f5f9;
     }
 
@@ -70,7 +70,7 @@
     }
 
     .logo-image {
-        max-width: 160px;
+        max-width: 140px;
         height: auto;
     }
 

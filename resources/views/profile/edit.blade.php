@@ -13,55 +13,102 @@
         </a>
     </div>
 
-    <div class="grid grid-cols-3">
-        <!-- Profile Picture -->
-        <div class="card" style="grid-column: span 1;">
-            <div class="card-header">Profile Picture</div>
-            <div class="card-body" style="text-align: center;">
-                <div class="avatar-upload-container" style="position: relative; margin-bottom: 1.5rem;">
-                    <div class="avatar avatar-lg" id="avatarPreviewContainer"
-                        style="width: 120px; height: 120px; font-size: 3rem; margin: 0 auto; position: relative; overflow: hidden; border-radius: 50%;">
-                        @if($user->avatar)
-                            <img src="{{ asset('storage/' . $user->avatar) }}" alt="Avatar" id="avatarPreview"
-                                style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
-                        @else
-                            <span id="avatarInitials">{{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}</span>
-                            <img src="" alt="Avatar" id="avatarPreview"
-                                style="display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
-                        @endif
+    <div class="grid grid-cols-1">
+        <!-- Combined Profile Picture & Account Information Card -->
+        <div class="card">
+            <div class="card-header">Edit Profile</div>
+            <div class="card-body">
+                <form action="{{ route('profile.update') }}" method="POST" id="profileForm" enctype="multipart/form-data">
+                    @csrf
+                    @method('PUT')
+
+                    <!-- Hidden file input for avatar (populated by crop function) -->
+                    <input type="file" name="avatar" id="avatarInput" style="display: none;">
+
+                    <!-- Avatar Section - Centered at Top -->
+                    <div style="text-align: center; margin-bottom: 2rem; position: relative;">
+                        <div class="avatar-upload-container"
+                            style="position: relative; display: inline-block; margin-bottom: 1rem;">
+                            <div class="avatar avatar-lg" id="avatarPreviewContainer"
+                                style="width: 120px; height: 120px; font-size: 3rem; position: relative; overflow: hidden; border-radius: 50%;">
+                                @if($user->avatar)
+                                    <img src="{{ asset('storage/' . $user->avatar) }}" alt="Avatar" id="avatarPreview"
+                                        style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                                @else
+                                    <span id="avatarInitials">{{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}</span>
+                                    <img src="" alt="Avatar" id="avatarPreview"
+                                        style="display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                                @endif
+                            </div>
+
+                            <!-- Edit Photo Icon Button on Avatar -->
+                            <button type="button" id="editPhotoBtn" class="avatar-edit-btn" title="Edit Foto">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                        </div>
+
+                        <p class="text-muted" style="font-size: 0.75rem; margin-bottom: 0;">
+                            Max 2MB (JPG, PNG, GIF, WebP)
+                        </p>
+
+                        <!-- Status indicator for pending photo change -->
+                        <div id="photoChangeStatus"
+                            style="display: none; margin-top: 1rem; padding: 0.5rem 0.75rem; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; font-size: 0.8rem; color: #92400e; max-width: 400px; margin-left: auto; margin-right: auto;">
+                            <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
+                            Foto baru akan tersimpan setelah klik "Save Changes"
+                        </div>
+
+                        @error('avatar')
+                            <div class="alert alert-danger"
+                                style="padding: 0.5rem; font-size: 0.8rem; margin-top: 1rem; max-width: 400px; margin-left: auto; margin-right: auto;">
+                                {{ $message }}
+                            </div>
+                        @enderror
                     </div>
-                </div>
 
-                <p class="text-muted" style="font-size: 0.75rem; margin-bottom: 1rem;">
-                    Max 2MB (JPG, PNG, GIF, WebP)
-                </p>
+                    <!-- Account Information Section -->
+                    <div style="border-top: 1px solid #e2e8f0; padding-top: 2rem;">
+                        <h4
+                            style="font-size: 1rem; font-weight: 600; margin-bottom: 1.5rem; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-user-circle"></i>
+                            Account Information
+                        </h4>
 
-                <!-- Hidden file inputs for photo selection -->
-                <input type="file" id="galleryInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display: none;">
-                <input type="file" id="cameraInput" accept="image/*" capture="user" style="display: none;">
+                        <div class="grid grid-cols-2" style="gap: 1.5rem; margin-bottom: 1.5rem;">
+                            <div class="form-group">
+                                <label for="name" class="form-label">Full Name</label>
+                                <input type="text" id="name" name="name" class="form-control"
+                                    value="{{ old('name', $user->name ?? '') }}" required>
+                                @error('name')
+                                    <span class="error-message">{{ $message }}</span>
+                                @enderror
+                            </div>
 
-                <!-- Hidden canvas for cropped image -->
-                <canvas id="cropCanvas" style="display: none;"></canvas>
+                            <div class="form-group">
+                                <label for="email" class="form-label">Email Address</label>
+                                <input type="email" id="email" class="form-control" value="{{ $user->email ?? '' }}"
+                                    disabled readonly style="background-color: #f1f5f9; cursor: not-allowed;">
+                                <small class="text-muted">Email tidak dapat diubah</small>
+                            </div>
+                        </div>
 
-                <!-- Status indicator for pending photo change -->
-                <div id="photoChangeStatus" style="display: none; margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; font-size: 0.8rem; color: #92400e;">
-                    <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
-                    Foto baru akan tersimpan setelah klik "Save Changes"
-                </div>
-
-                @error('avatar')
-                    <div class="alert alert-danger" style="padding: 0.5rem; font-size: 0.8rem; margin-bottom: 1rem;">
-                        {{ $message }}
+                        <div style="display: flex; justify-content: flex-end;">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                        </div>
                     </div>
-                @enderror
-
-                <!-- Edit Photo Button -->
-                <button type="button" id="editPhotoBtn" class="btn btn-primary"
-                    style="padding: 0.5rem 1.25rem; font-size: 0.875rem; display: block; margin: 0 auto;">
-                    <i class="fas fa-camera"></i> Edit Foto
-                </button>
+                </form>
             </div>
         </div>
+    </div>
+
+    <!-- Hidden file inputs for photo selection -->
+    <input type="file" id="galleryInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display: none;">
+    <input type="file" id="cameraInput" accept="image/*" capture="user" style="display: none;">
+
+    <!-- Hidden canvas for cropped image -->
+    <canvas id="cropCanvas" style="display: none;"></canvas>
 
     <!-- Photo Source Selection Modal -->
     <div id="photoSourceModal" class="photo-modal-overlay" style="display: none;">
@@ -165,43 +212,6 @@
         </div>
     </div>
 
-
-        <!-- Edit Form -->
-        <div class="card" style="grid-column: span 2;">
-            <div class="card-header">Account Information</div>
-            <div class="card-body">
-                <form action="{{ route('profile.update') }}" method="POST" id="profileForm" enctype="multipart/form-data">
-                    @csrf
-                    @method('PUT')
-
-                    <!-- Hidden file input for avatar (populated by crop function) -->
-                    <input type="file" name="avatar" id="avatarInput" style="display: none;">
-
-                    <div class="form-group">
-                        <label for="name" class="form-label">Full Name</label>
-                        <input type="text" id="name" name="name" class="form-control"
-                            value="{{ old('name', $user->name ?? '') }}" required>
-                        @error('name')
-                            <span class="error-message">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    <div class="form-group">
-                        <label for="email" class="form-label">Email Address</label>
-                        <input type="email" id="email" class="form-control" value="{{ $user->email ?? '' }}" disabled
-                            readonly style="background-color: #f1f5f9; cursor: not-allowed;">
-                        <small class="text-muted">Email tidak dapat diubah</small>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Save Changes
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-
-
     <!-- Floating Password Error Notification -->
     @if($errors->has('current_password') || $errors->has('password'))
         <div id="passwordErrorToast" class="password-error-toast">
@@ -209,10 +219,10 @@
             <span>
                 @php
                     $errorMessages = [];
-                    if($errors->has('current_password')) {
+                    if ($errors->has('current_password')) {
                         $errorMessages[] = 'Password terkini tidak sesuai';
                     }
-                    if($errors->has('password')) {
+                    if ($errors->has('password')) {
                         $errorMessages[] = 'Password baru dan konfirmasi tidak sama';
                     }
                 @endphp
@@ -238,14 +248,16 @@
                 <div class="grid grid-cols-3" style="gap: 1.5rem;">
                     <div class="form-group">
                         <label for="current_password" class="form-label">Current Password</label>
-                        <input type="password" id="current_password" name="current_password" class="form-control @error('current_password') is-invalid @enderror"
+                        <input type="password" id="current_password" name="current_password"
+                            class="form-control @error('current_password') is-invalid @enderror"
                             placeholder="Enter current password" required>
                     </div>
 
                     <div class="form-group">
                         <label for="password" class="form-label">New Password</label>
-                        <input type="password" id="password" name="password" class="form-control @error('password') is-invalid @enderror"
-                            placeholder="Enter new password" required>
+                        <input type="password" id="password" name="password"
+                            class="form-control @error('password') is-invalid @enderror" placeholder="Enter new password"
+                            required>
                     </div>
 
                     <div class="form-group">
@@ -269,6 +281,33 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        .avatar-edit-btn {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            border-radius: 50%;
+            border: 3px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .avatar-edit-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.5);
+        }
+
+        .avatar-edit-btn i {
+            font-size: 0.875rem;
         }
 
         /* Password Error Toast */
@@ -295,6 +334,7 @@
                 opacity: 0;
                 transform: translateX(-50%) translateY(-20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateX(-50%) translateY(0);
@@ -302,9 +342,19 @@
         }
 
         @keyframes shake {
-            0%, 100% { transform: translateX(-50%) translateY(0); }
-            25% { transform: translateX(-50%) translateX(-5px); }
-            75% { transform: translateX(-50%) translateX(5px); }
+
+            0%,
+            100% {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            25% {
+                transform: translateX(-50%) translateX(-5px);
+            }
+
+            75% {
+                transform: translateX(-50%) translateX(5px);
+            }
         }
 
         @keyframes fadeOut {
@@ -312,6 +362,7 @@
                 opacity: 1;
                 transform: translateX(-50%) translateY(0);
             }
+
             to {
                 opacity: 0;
                 transform: translateX(-50%) translateY(-20px);
@@ -377,7 +428,8 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* Mirror effect */
+            transform: scaleX(-1);
+            /* Mirror effect */
         }
 
         .camera-overlay {
@@ -448,8 +500,13 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         /* Photo Modal Content */
@@ -462,8 +519,15 @@
         }
 
         @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .photo-source-modal {
@@ -788,21 +852,21 @@
                 },
                 audio: false
             })
-            .then(function(stream) {
-                cameraStream = stream;
-                const video = document.getElementById('cameraVideo');
-                video.srcObject = stream;
+                .then(function (stream) {
+                    cameraStream = stream;
+                    const video = document.getElementById('cameraVideo');
+                    video.srcObject = stream;
 
-                video.onloadedmetadata = function() {
+                    video.onloadedmetadata = function () {
+                        document.getElementById('cameraLoading').style.display = 'none';
+                        document.getElementById('captureBtn').disabled = false;
+                    };
+                })
+                .catch(function (err) {
+                    console.error('Camera error:', err);
                     document.getElementById('cameraLoading').style.display = 'none';
-                    document.getElementById('captureBtn').disabled = false;
-                };
-            })
-            .catch(function(err) {
-                console.error('Camera error:', err);
-                document.getElementById('cameraLoading').style.display = 'none';
-                document.getElementById('cameraError').style.display = 'flex';
-            });
+                    document.getElementById('cameraError').style.display = 'flex';
+                });
         }
 
         function closeCameraModal() {
@@ -833,7 +897,7 @@
             ctx.drawImage(video, 0, 0);
 
             // Convert to blob
-            canvas.toBlob(function(blob) {
+            canvas.toBlob(function (blob) {
                 const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
 
                 // Close camera modal
@@ -1003,7 +1067,7 @@
         }
 
         // Auto-hide password error toast after 5 seconds
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const toast = document.getElementById('passwordErrorToast');
             if (toast) {
                 setTimeout(() => {
