@@ -6,9 +6,11 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\TimeTrackingLog;
+use App\Notifications\TimeTrackingOverdue;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class TimeTrackingController extends Controller
@@ -94,6 +96,9 @@ class TimeTrackingController extends Controller
             ->completed()
             ->sum('duration_seconds');
 
+        // Check and notify if user has overdue timer (running > 24 hours)
+        $this->checkAndNotifyOverdueTimer($user);
+
         return view('time-tracking.index', compact(
             'project',
             'availableTasks',
@@ -105,6 +110,31 @@ class TimeTrackingController extends Controller
             'recentLogs',
             'totalSeconds'
         ));
+    }
+
+    /**
+     * Check and send notification for overdue timer (running > 24 hours).
+     */
+    protected function checkAndNotifyOverdueTimer($user): void
+    {
+        // Find timers running for more than 24 hours for this user
+        $overdueTimers = TimeEntry::forUser($user->id)
+            ->where('is_running', true)
+            ->where('started_at', '<', now()->subHours(24))
+            ->with('task')
+            ->get();
+
+        foreach ($overdueTimers as $timeEntry) {
+            // Use cache to prevent duplicate notifications (remind every 6 hours)
+            $cacheKey = 'timer_overdue_notified_' . $timeEntry->id . '_' . now()->format('Y-m-d-H');
+            $cacheKeyBase = 'timer_overdue_notified_base_' . $timeEntry->id;
+            
+            // Only notify once every 6 hours
+            if (!Cache::has($cacheKeyBase)) {
+                $user->notify(new TimeTrackingOverdue($timeEntry));
+                Cache::put($cacheKeyBase, true, now()->addHours(6));
+            }
+        }
     }
 
     /**
@@ -459,6 +489,9 @@ class TimeTrackingController extends Controller
     {
         $user = auth()->user();
         $projectId = $request->project_id;
+
+        // Check and notify if user has overdue timer (running > 24 hours)
+        $this->checkAndNotifyOverdueTimer($user);
 
         $runningEntry = TimeEntry::forUser($user->id)
             ->forProject($projectId)
