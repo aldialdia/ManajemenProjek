@@ -55,11 +55,18 @@
                     @case('project_invitation')
                         <i class="fas fa-envelope-open-text"></i>
                         @break
+                    @case('deadline_warning')
+                        <i class="fas fa-clock"></i>
+                        @break
+                    @case('project_deadline_warning')
+                        <i class="fas fa-calendar-times"></i>
+                        @break
                     @default
                         <i class="fas fa-bell"></i>
                 @endswitch
             </div>
             <div class="notification-content">
+                <p class="notification-title">{{ $notification->data['title'] ?? 'Notifikasi' }}</p>
                 <p class="notification-message">{{ $notification->data['message'] ?? 'Notifikasi baru' }}</p>
                 <span class="notification-time">{{ $notification->created_at->diffForHumans() }}</span>
             </div>
@@ -114,9 +121,49 @@
 </div>
 
 <!-- Pagination -->
-@if($notifications->hasPages())
+@if($notifications->hasPages() || $notifications->total() > 0)
     <div class="pagination-wrapper">
-        {{ $notifications->links() }}
+        <div class="pagination-left">
+            <div class="per-page-selector">
+                <span class="per-page-label">Results per page:</span>
+                <div class="per-page-dropdown">
+                    <button type="button" class="per-page-btn" onclick="togglePerPageDropdown()">
+                        {{ $perPage }} <i class="fas fa-chevron-up"></i>
+                    </button>
+                    <div class="per-page-menu" id="perPageMenu">
+                        @foreach([8, 12, 16, 20] as $option)
+                            <a href="{{ request()->fullUrlWithQuery(['per_page' => $option, 'page' => 1]) }}" 
+                               class="per-page-option {{ $perPage == $option ? 'active' : '' }}">
+                                {{ $option }}
+                                @if($perPage == $option) <i class="fas fa-check"></i> @endif
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="pagination-right">
+            @if($notifications->onFirstPage())
+                <span class="page-nav disabled"><i class="fas fa-chevron-left"></i></span>
+            @else
+                <a href="{{ $notifications->previousPageUrl() }}" class="page-nav"><i class="fas fa-chevron-left"></i></a>
+            @endif
+            
+            @foreach($notifications->getUrlRange(1, $notifications->lastPage()) as $page => $url)
+                @if($page == $notifications->currentPage())
+                    <span class="page-num active">{{ $page }}</span>
+                @else
+                    <a href="{{ $url }}" class="page-num">{{ $page }}</a>
+                @endif
+            @endforeach
+            
+            @if($notifications->hasMorePages())
+                <a href="{{ $notifications->nextPageUrl() }}" class="page-nav"><i class="fas fa-chevron-right"></i></a>
+            @else
+                <span class="page-nav disabled"><i class="fas fa-chevron-right"></i></span>
+            @endif
+        </div>
     </div>
 @endif
 
@@ -236,14 +283,30 @@
         background: linear-gradient(135deg, #64748b 0%, #475569 100%);
     }
 
+    .notification-icon.deadline_warning {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .notification-icon.project_deadline_warning {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    }
+
     .notification-content {
         flex: 1;
         min-width: 0;
     }
 
-    .notification-message {
+    .notification-title {
         color: #1e293b;
         font-size: 0.9rem;
+        font-weight: 600;
+        margin: 0 0 0.25rem 0;
+        line-height: 1.4;
+    }
+
+    .notification-message {
+        color: #64748b;
+        font-size: 0.85rem;
         margin: 0 0 0.25rem 0;
         line-height: 1.4;
     }
@@ -309,7 +372,149 @@
     .pagination-wrapper {
         margin-top: 1.5rem;
         display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: white;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .pagination-left {
+        display: flex;
+        align-items: center;
+    }
+
+    .per-page-selector {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .per-page-label {
+        font-size: 0.875rem;
+        color: #64748b;
+    }
+
+    .per-page-dropdown {
+        position: relative;
+    }
+
+    .per-page-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .per-page-btn:hover {
+        border-color: #cbd5e1;
+    }
+
+    .per-page-btn i {
+        font-size: 0.7rem;
+        color: #94a3b8;
+        transition: transform 0.2s;
+    }
+
+    .per-page-menu {
+        position: absolute;
+        bottom: 100%;
+        left: 0;
+        margin-bottom: 0.5rem;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        min-width: 100px;
+        display: none;
+        z-index: 100;
+        overflow: hidden;
+    }
+
+    .per-page-menu.show {
+        display: block;
+    }
+
+    .per-page-option {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+        color: #1e293b;
+        text-decoration: none;
+        transition: background 0.15s;
+    }
+
+    .per-page-option:hover {
+        background: #f1f5f9;
+    }
+
+    .per-page-option.active {
+        color: #6366f1;
+        font-weight: 500;
+    }
+
+    .per-page-option i {
+        color: #6366f1;
+        font-size: 0.75rem;
+    }
+
+    .pagination-right {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .page-nav, .page-num {
+        display: flex;
+        align-items: center;
         justify-content: center;
+        min-width: 32px;
+        height: 32px;
+        padding: 0 0.5rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #64748b;
+        text-decoration: none;
+        transition: all 0.15s;
+    }
+
+    .page-nav:hover:not(.disabled), .page-num:hover:not(.active) {
+        background: #f1f5f9;
+        color: #1e293b;
+    }
+
+    .page-nav.disabled {
+        color: #cbd5e1;
+        cursor: not-allowed;
+    }
+
+    .page-num.active {
+        color: #1e293b;
+        font-weight: 600;
+        position: relative;
+    }
+
+    .page-num.active::after {
+        content: '';
+        position: absolute;
+        bottom: 2px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 16px;
+        height: 2px;
+        background: #1e293b;
+        border-radius: 1px;
     }
 
     .header-actions {
@@ -317,4 +522,20 @@
         gap: 0.75rem;
     }
 </style>
+
+<script>
+    function togglePerPageDropdown() {
+        const menu = document.getElementById('perPageMenu');
+        menu.classList.toggle('show');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const dropdown = document.querySelector('.per-page-dropdown');
+        const menu = document.getElementById('perPageMenu');
+        if (dropdown && menu && !dropdown.contains(e.target)) {
+            menu.classList.remove('show');
+        }
+    });
+</script>
 @endsection

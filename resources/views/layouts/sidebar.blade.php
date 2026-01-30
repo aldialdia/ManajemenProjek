@@ -584,6 +584,28 @@
             removeRecentProject({{ session('deleted_project_id') }});
         @endif
 
+            // Check if we need to expand a specific project from notification
+            @if(session('expand_project'))
+                const expandProject = @json(session('expand_project'));
+                // Add project to recent list first
+                addRecentProject(expandProject);
+                // After render, expand the project and highlight Tugas menu
+                setTimeout(() => {
+                    const projectGroup = document.getElementById(`recent-project-${expandProject.id}`);
+                    if (projectGroup) {
+                        projectGroup.classList.add('expanded');
+                        // Highlight Tugas submenu
+                        const tugasLink = projectGroup.querySelector('a[href*="/tasks?project_id="]');
+                        if (tugasLink) {
+                            tugasLink.classList.add('active');
+                            tugasLink.style.background = 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)';
+                            tugasLink.style.color = 'white';
+                            tugasLink.style.borderRadius = '8px';
+                        }
+                    }
+                }, 100);
+            @endif
+
         // Render existing recent projects
         renderRecentProjects();
 
