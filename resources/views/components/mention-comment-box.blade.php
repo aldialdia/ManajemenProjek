@@ -78,6 +78,9 @@
         justify-content: center;
         font-size: 0.75rem;
         font-weight: 600;
+        background-size: cover;
+        background-position: center;
+        overflow: hidden;
     }
 
     .mention-item-info {
@@ -192,15 +195,27 @@
 
         function showDropdown(users) {
             selectedIndex = 0;
-            dropdown.innerHTML = users.map((user, index) => `
-            <div class="mention-item ${index === 0 ? 'selected' : ''}" data-index="${index}" data-id="${user.id}" data-name="${user.name}">
-                <div class="mention-item-avatar">${user.initials}</div>
-                <div class="mention-item-info">
-                    <div class="mention-item-name">${user.name}</div>
-                    <div class="mention-item-email">${user.email}</div>
+            dropdown.innerHTML = users.map((user, index) => {
+                // Determine avatar display
+                let avatarContent = '';
+                if (user.avatar) {
+                    // User has profile picture - show image
+                    avatarContent = `<div class="mention-item-avatar" style="background-image: url('/storage/${user.avatar}');"></div>`;
+                } else {
+                    // No profile picture - show initials with gradient
+                    avatarContent = `<div class="mention-item-avatar">${user.initials}</div>`;
+                }
+                
+                return `
+                <div class="mention-item ${index === 0 ? 'selected' : ''}" data-index="${index}" data-id="${user.id}" data-name="${user.name}">
+                    ${avatarContent}
+                    <div class="mention-item-info">
+                        <div class="mention-item-name">${user.name}</div>
+                        <div class="mention-item-email">${user.email}</div>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+            }).join('');
 
             // Add click handlers
             dropdown.querySelectorAll('.mention-item').forEach(item => {
