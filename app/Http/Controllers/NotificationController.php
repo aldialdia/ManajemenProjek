@@ -20,9 +20,10 @@ class NotificationController extends Controller
             $query = auth()->user()->unreadNotifications();
         }
 
-        $notifications = $query->paginate(20);
+        $perPage = $request->input('per_page', 8);
+        $notifications = $query->paginate($perPage)->appends($request->query());
 
-        return view('notifications.index', compact('notifications'));
+        return view('notifications.index', compact('notifications', 'perPage'));
     }
 
     /**
