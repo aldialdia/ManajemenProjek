@@ -58,21 +58,27 @@ class TaskPolicy
      * Determine whether the user can update task status.
      * Only Manager, Admin, or Assignee can update status.
      * If project is on_hold, only Manager can update status.
+     * Super Admin can update status but cannot directly mark as done (must use approve).
      */
     public function updateStatus(User $user, Task $task): bool
     {
-        // Must be project member first
-        if (!$user->isMemberOfProject($task->project)) {
+        // Must be project member first (or super admin)
+        if (!$user->isSuperAdmin() && !$user->isMemberOfProject($task->project)) {
             return false;
         }
 
-        // If project is on_hold, only Manager can update status
+        // If project is on_hold, only Manager or Super Admin can update status
         if ($task->project->isOnHold()) {
-            return $user->isManagerInProject($task->project);
+            return $user->isSuperAdmin() || $user->isManagerInProject($task->project);
         }
 
         // Manager or Admin can update status
         if ($user->isManagerInProject($task->project)) {
+            return true;
+        }
+
+        // Super admin can update status (but controller will prevent marking as done)
+        if ($user->isSuperAdmin()) {
             return true;
         }
 

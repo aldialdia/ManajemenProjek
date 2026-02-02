@@ -139,6 +139,24 @@ class DashboardController extends Controller
             'unassigned_tasks' => Task::doesntHave('assignees')->count(),
         ];
 
+        // Project type distribution (RBB vs Non-RBB)
+        $projectsByType = [
+            'rbb' => Project::where('type', 'rbb')->count(),
+            'non_rbb' => Project::where('type', 'non_rbb')->count(),
+        ];
+
+        // Task distribution per member (top 10 members with most tasks)
+        $taskDistribution = User::select('users.id', 'users.name')
+            ->join('task_user', 'users.id', '=', 'task_user.user_id')
+            ->join('tasks', 'task_user.task_id', '=', 'tasks.id')
+            ->groupBy('users.id', 'users.name')
+            ->selectRaw('COUNT(tasks.id) as total_tasks')
+            ->selectRaw('SUM(CASE WHEN tasks.status = "done" THEN 1 ELSE 0 END) as completed_tasks')
+            ->selectRaw('SUM(CASE WHEN tasks.status != "done" THEN 1 ELSE 0 END) as pending_tasks')
+            ->orderByDesc('total_tasks')
+            ->take(10)
+            ->get();
+
         return view('dashboard-super-admin', compact(
             'stats',
             'projectsByStatus',
@@ -147,7 +165,9 @@ class DashboardController extends Controller
             'projectsWithIssues',
             'topUsers',
             'monthlyTrends',
-            'systemHealth'
+            'systemHealth',
+            'projectsByType',
+            'taskDistribution'
         ));
     }
 
