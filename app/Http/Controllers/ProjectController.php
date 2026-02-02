@@ -66,7 +66,14 @@ class ProjectController extends Controller
     public function kanban(\Illuminate\Http\Request $request): View
     {
         $user = Auth::user();
-        $userProjectIds = $user->projects()->pluck('projects.id')->toArray();
+
+        // Super admin can see all projects, regular users only their projects
+        if ($user->isSuperAdmin()) {
+            $userProjectIds = Project::pluck('id')->toArray();
+        } else {
+            $userProjectIds = $user->projects()->pluck('projects.id')->toArray();
+        }
+
         $year = $request->query('year');
         $type = $request->query('type');
 
