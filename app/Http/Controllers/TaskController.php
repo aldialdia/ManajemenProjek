@@ -456,9 +456,23 @@ class TaskController extends Controller
 
         $user = auth()->user();
         $isManager = $user->isManagerInProject($task->project);
+        $newStatus = $request->validated('status');
+
+        // Super Admin cannot directly mark task as done, must use approve
+        if ($user->isSuperAdmin() && !$isManager && $newStatus === 'done') {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Super Admin tidak dapat langsung menandai task sebagai selesai. Gunakan tombol Approve untuk task yang sudah di-review.',
+                ], 403);
+            }
+            return redirect()
+                ->route('tasks.show', $task)
+                ->with('error', 'Super Admin tidak dapat langsung menandai task sebagai selesai. Gunakan tombol Approve untuk task yang sudah di-review.');
+        }
 
         // Only Manager/Admin can reopen a done task
-        if ($task->status->value === 'done' && !$isManager) {
+        if ($task->status->value === 'done' && !$isManager && !$user->isSuperAdmin()) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
@@ -470,7 +484,7 @@ class TaskController extends Controller
                 ->with('error', 'Hanya Manager atau Admin yang dapat membuka kembali task yang sudah selesai.');
         }
 
-        $this->taskService->updateStatus($task, $request->validated('status'));
+        $this->taskService->updateStatus($task, $newStatus);
 
         // Return JSON for AJAX requests (Kanban), redirect for form submissions
         if ($request->expectsJson()) {

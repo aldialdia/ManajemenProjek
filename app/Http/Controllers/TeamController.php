@@ -19,8 +19,8 @@ class TeamController extends Controller
         $user = auth()->user();
         $userRole = $user->getRoleInProject($project);
 
-        // Check if user is member of project
-        if (!$userRole) {
+        // Super admin can access all projects, regular users need to be members
+        if (!$user->isSuperAdmin() && !$userRole) {
             abort(403, 'Anda bukan anggota project ini.');
         }
 
@@ -37,9 +37,9 @@ class TeamController extends Controller
             ->with('user', 'inviter')
             ->get();
 
-        // Check if current user can invite (manager or admin)
-        $canInvite = in_array($userRole, ['manager', 'admin']);
-        $isManager = $userRole === 'manager';
+        // Super admin or manager/admin can invite
+        $canInvite = $user->isSuperAdmin() || in_array($userRole, ['manager', 'admin']);
+        $isManager = $user->isSuperAdmin() || $userRole === 'manager';
 
         return view('team.index', compact('project', 'members', 'pendingInvitations', 'canInvite', 'isManager', 'userRole'));
     }
@@ -52,9 +52,9 @@ class TeamController extends Controller
         $currentUser = auth()->user();
         $currentRole = $currentUser->getRoleInProject($project);
 
-        // Only manager can change roles
-        if ($currentRole !== 'manager') {
-            return back()->with('error', 'Hanya manajer yang dapat mengubah role anggota.');
+        // Super admin or manager can change roles
+        if (!$currentUser->isSuperAdmin() && $currentRole !== 'manager') {
+            return back()->with('error', 'Hanya super admin atau manajer yang dapat mengubah role anggota.');
         }
 
         // Cannot change own role
@@ -81,9 +81,15 @@ class TeamController extends Controller
         $currentRole = $currentUser->getRoleInProject($project);
         $targetRole = $user->getRoleInProject($project);
 
+        // Super admin can remove anyone except themselves
+        if ($currentUser->isSuperAdmin()) {
+            if ($user->id === $currentUser->id) {
+                return back()->with('error', 'Anda tidak dapat menghapus diri sendiri dari project.');
+            }
+        }
         // Manager can remove anyone except themselves
         // Admin can remove members only
-        if ($currentRole === 'manager') {
+        elseif ($currentRole === 'manager') {
             if ($user->id === $currentUser->id) {
                 return back()->with('error', 'Anda tidak dapat menghapus diri sendiri dari project.');
             }
