@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -24,6 +25,7 @@ class User extends Authenticatable
         'email',
         'password',
         'avatar',
+        'role',
     ];
 
     /**
@@ -52,6 +54,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class,
         ];
     }
 
@@ -120,26 +123,44 @@ class User extends Authenticatable
 
     /**
      * Check if user is manager or admin in a specific project.
+     * Super admin is always considered as manager in all projects.
      */
     public function isManagerInProject(Project $project): bool
     {
+        // Super admin has manager access to all projects
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
         $role = $this->getRoleInProject($project);
         return in_array($role, ['manager', 'admin']);
     }
 
     /**
      * Check if user is admin in a specific project.
+     * Super admin is always considered as admin in all projects.
      */
     public function isAdminInProject(Project $project): bool
     {
+        // Super admin has admin access to all projects
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
         return $this->getRoleInProject($project) === 'admin';
     }
 
     /**
      * Check if user is member of a specific project.
+     * Super admin is always considered as member of all projects.
      */
     public function isMemberOfProject(Project $project): bool
     {
+        // Super admin is member of all projects
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
         return $this->projects()->where('project_id', $project->id)->exists();
     }
 
@@ -157,11 +178,20 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is a system admin.
-     * Admin bisa melihat semua project.
+     * Check if user is a super admin.
+     * Super admin can access and manage all projects in the system.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === UserRole::SUPER_ADMIN;
+    }
+
+    /**
+     * Check if user is a system admin (alias for isSuperAdmin).
+     * Super admin can see and manage all projects.
      */
     public function isAdmin(): bool
     {
-        return $this->status === 'admin';
+        return $this->isSuperAdmin();
     }
 }
