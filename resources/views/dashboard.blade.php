@@ -123,7 +123,7 @@
             <p class="welcome-subtitle">Berikut adalah ringkasan aktivitas proyek Anda hari ini.</p>
         </div>
         <div class="welcome-actions">
-            <a href="{{ route('projects.index') }}" class="btn btn-welcome">
+            <a href="{{ route('projects.index') }}" class="btn-welcome">
                 <i class="fas fa-folder-open"></i>
                 Semua Proyek
             </a>
@@ -352,9 +352,9 @@
                 labels: ['Done', 'In Progress', 'Review', 'To Do'],
                 datasets: [{
                     data: [
-                                                {{ $tasksByStatus['done'] }},
-                                                {{ $tasksByStatus['in_progress'] }},
-                                                {{ $tasksByStatus['review'] }},
+                                                    {{ $tasksByStatus['done'] }},
+                                                    {{ $tasksByStatus['in_progress'] }},
+                                                    {{ $tasksByStatus['review'] }},
                         {{ $tasksByStatus['todo'] }}
                     ],
                     backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#94a3b8'],
@@ -1300,7 +1300,7 @@
             .projects-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .section-header {
                 flex-direction: column;
                 align-items: flex-start;
@@ -1434,9 +1434,9 @@
                 const toast = document.createElement('div');
                 toast.className = `toast-notification toast-${type}`;
                 toast.innerHTML = `
-                        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
-                        <span>${message}</span>
-                    `;
+                            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                            <span>${message}</span>
+                        `;
                 document.body.appendChild(toast);
 
                 // Animate in

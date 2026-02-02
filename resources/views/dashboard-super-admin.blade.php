@@ -168,93 +168,64 @@
         </div>
     </div>
 
-    <!-- Bottom Row: Recent Projects & Top Users -->
+    <!-- Bottom Row: Project Type Distribution & Task Distribution -->
     <div class="grid grid-cols-2" style="margin-bottom: 1.5rem;">
-        <!-- Recent Projects -->
+        <!-- Project Type Distribution (RBB vs Non-RBB) -->
         <div class="card">
             <div class="card-header">
-                <span><i class="fas fa-folder text-primary"></i> Recent Projects</span>
-                <a href="{{ route('projects.index') }}" class="text-sm text-primary">View All</a>
+                <span><i class="fas fa-chart-pie text-primary"></i> Distribusi Tipe Project</span>
+                <span class="text-muted text-sm">RBB vs Non-RBB</span>
             </div>
-            <div class="card-body" style="padding: 0; max-height: 400px; overflow-y: auto;">
-                @forelse($recentProjects as $project)
-                    <div class="admin-list-item">
-                        <div class="item-icon {{ $project->status->value }}">
-                            <i class="fas fa-folder"></i>
-                        </div>
-                        <div class="item-content">
-                            <a href="{{ route('projects.show', $project) }}" class="item-title">
-                                {{ Str::limit($project->name, 40) }}
-                            </a>
-                            <div class="item-meta">
-                                <span class="meta-item">
-                                    <i class="fas fa-calendar"></i>
-                                    {{ $project->created_at->locale('id')->diffForHumans() }}
-                                </span>
-                                <span class="meta-item">
-                                    <i class="fas fa-users"></i>
-                                    {{ $project->users->count() }} members
-                                </span>
-                            </div>
-                        </div>
-                        <div class="item-status">
-                            <span class="status-badge {{ $project->status->value }}">
-                                {{ $project->status->label() }}
-                            </span>
-                        </div>
-                    </div>
-                @empty
-                    <div class="empty-state">
-                        <i class="fas fa-folder-open"></i>
-                        <p>Belum ada project</p>
-                    </div>
-                @endforelse
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height: 300px;">
+                    <canvas id="projectTypeChart"></canvas>
+                </div>
             </div>
         </div>
 
-        <!-- Top Active Users -->
+        <!-- Task Distribution per Member -->
         <div class="card">
             <div class="card-header">
-                <span><i class="fas fa-trophy text-warning"></i> Top Active Users (Bulan Ini)</span>
+                <span><i class="fas fa-user-check text-success"></i> Distribusi Tugas per Anggota</span>
+                <span class="text-muted text-sm">Top 10 Members</span>
             </div>
             <div class="card-body" style="padding: 0; max-height: 400px; overflow-y: auto;">
-                @forelse($topUsers as $index => $topUser)
+                @forelse($taskDistribution as $index => $member)
                     <div class="admin-list-item">
-                        <div class="rank-badge rank-{{ $index + 1 }}">
+                        <div class="rank-badge-small">
                             #{{ $index + 1 }}
                         </div>
-                        <div class="user-avatar">
-                            @if($topUser->avatar)
-                                <img src="{{ asset('storage/' . $topUser->avatar) }}" alt="{{ $topUser->name }}">
-                            @else
-                                @php
-                                    $words = explode(' ', $topUser->name);
-                                    $initials = '';
-                                    foreach (array_slice($words, 0, 2) as $word) {
-                                        $initials .= strtoupper(substr($word, 0, 1));
-                                    }
-                                @endphp
-                                <div class="avatar-initials">{{ $initials }}</div>
-                            @endif
-                        </div>
                         <div class="item-content">
-                            <div class="item-title">{{ $topUser->name }}</div>
+                            <div class="item-title">{{ $member->name }}</div>
                             <div class="item-meta">
                                 <span class="meta-item">
+                                    <i class="fas fa-tasks"></i>
+                                    {{ $member->total_tasks }} tugas
+                                </span>
+                                <span class="meta-item text-success">
+                                    <i class="fas fa-check-circle"></i>
+                                    {{ $member->completed_tasks }} selesai
+                                </span>
+                                <span class="meta-item text-warning">
                                     <i class="fas fa-clock"></i>
-                                    @if($topUser->total_seconds > 0)
-                                        {{ number_format($topUser->total_seconds / 3600, 1) }} jam
-                                    @else
-                                        <span style="color: #cbd5e1;">Belum ada aktivitas</span>
-                                    @endif
+                                    {{ $member->pending_tasks }} pending
                                 </span>
                             </div>
+                        </div>
+                        <div class="task-progress-bar">
+                            @php
+                                $completionRate = $member->total_tasks > 0 ? round(($member->completed_tasks / $member->total_tasks) * 100) : 0;
+                            @endphp
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" style="width: {{ $completionRate }}%;"></div>
+                            </div>
+                            <span class="progress-text">{{ $completionRate }}%</span>
                         </div>
                     </div>
                 @empty
                     <div class="empty-state">
-                        <i class="fas fa-user-clock"></i>
-                        <p>Belum ada user aktif</p>
+                        <i class="fas fa-user-slash"></i>
+                        <p>Belum ada distribusi tugas</p>
                     </div>
                 @endforelse
             </div>
@@ -375,9 +346,9 @@
                 labels: ['New', 'In Progress', 'On Hold', 'Done'],
                 datasets: [{
                     data: [
-                            {{ $projectsByStatus['new'] }},
-                            {{ $projectsByStatus['in_progress'] }},
-                            {{ $projectsByStatus['on_hold'] }},
+                                            {{ $projectsByStatus['new'] }},
+                                            {{ $projectsByStatus['in_progress'] }},
+                                            {{ $projectsByStatus['on_hold'] }},
                         {{ $projectsByStatus['done'] }}
                     ],
                     backgroundColor: ['#94a3b8', '#3b82f6', '#f59e0b', '#10b981'],
@@ -406,7 +377,7 @@
 
     <style>
         .super-admin-banner {
-            background: linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%);
+            background: linear-gradient(135deg, #f97316 0%, #3b82f6 50%, #1d4ed8 100%);
             border-radius: 16px;
             padding: 2rem 2.5rem;
             margin-bottom: 1.5rem;
@@ -414,7 +385,7 @@
             justify-content: space-between;
             align-items: center;
             color: white;
-            box-shadow: 0 10px 30px rgba(220, 38, 38, 0.3);
+            box-shadow: 0 10px 30px rgba(249, 115, 22, 0.3);
         }
 
         .admin-badge {
@@ -813,6 +784,50 @@
 
         .issue-item:hover {
             background: #fee2e2;
+        }
+
+        /* Task Distribution Styles */
+        .rank-badge-small {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.75rem;
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .task-progress-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 100px;
+        }
+
+        .progress-bar-container {
+            flex: 1;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+            border-radius: 999px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--dark);
+            min-width: 35px;
+            text-align: right;
         }
     </style>
 @endsection
