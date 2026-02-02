@@ -21,7 +21,12 @@ class ProjectPolicy
      */
     public function view(User $user, Project $project): bool
     {
-        // User must be a member of the project (manager or member)
+        // Super admin can view all projects
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Regular user must be a member of the project
         return $project->users->contains($user->id);
     }
 
@@ -39,7 +44,12 @@ class ProjectPolicy
      */
     public function update(User $user, Project $project): bool
     {
-        // Manager or Admin can update project
+        // Super admin can update all projects
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Manager or Admin in the project can update
         $member = $project->users()->where('user_id', $user->id)->first();
         return $member && in_array($member->pivot->role, ['manager', 'admin']);
     }
@@ -49,6 +59,11 @@ class ProjectPolicy
      */
     public function delete(User $user, Project $project): bool
     {
+        // Super admin can delete all projects
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         // Only project manager can delete
         $member = $project->users()->where('user_id', $user->id)->first();
         return $member && $member->pivot->role === 'manager';
@@ -59,6 +74,11 @@ class ProjectPolicy
      */
     public function restore(User $user, Project $project): bool
     {
+        // Super admin can restore all projects
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         $member = $project->users()->where('user_id', $user->id)->first();
         return $member && $member->pivot->role === 'manager';
     }
@@ -68,6 +88,11 @@ class ProjectPolicy
      */
     public function forceDelete(User $user, Project $project): bool
     {
+        // Super admin can force delete all projects
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         $member = $project->users()->where('user_id', $user->id)->first();
         return $member && $member->pivot->role === 'manager';
     }
@@ -77,6 +102,11 @@ class ProjectPolicy
      */
     public function manageTeam(User $user, Project $project): bool
     {
+        // Super admin can manage team in all projects
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         $member = $project->users()->where('user_id', $user->id)->first();
         return $member && $member->pivot->role === 'manager';
     }
