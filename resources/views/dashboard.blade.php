@@ -123,7 +123,7 @@
             <p class="welcome-subtitle">Berikut adalah ringkasan aktivitas proyek Anda hari ini.</p>
         </div>
         <div class="welcome-actions">
-            <a href="{{ route('projects.index') }}" class="btn-welcome">
+            <a href="{{ route('projects.index') }}" class="btn btn-welcome">
                 <i class="fas fa-folder-open"></i>
                 Semua Proyek
             </a>

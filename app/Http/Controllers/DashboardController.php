@@ -145,7 +145,7 @@ class DashboardController extends Controller
             'non_rbb' => Project::where('type', 'non_rbb')->count(),
         ];
 
-        // Task distribution per member (top 10 members with most tasks)
+        // Task distribution per member (top 10 members with most tasks) with project info
         $taskDistribution = User::select('users.id', 'users.name')
             ->join('task_user', 'users.id', '=', 'task_user.user_id')
             ->join('tasks', 'task_user.task_id', '=', 'tasks.id')
@@ -155,19 +155,53 @@ class DashboardController extends Controller
             ->selectRaw('SUM(CASE WHEN tasks.status != "done" THEN 1 ELSE 0 END) as pending_tasks')
             ->orderByDesc('total_tasks')
             ->take(10)
-            ->get();
+            ->get()
+            ->map(function ($user) {
+                // Get tasks with project info for each user
+                $user->tasks_with_projects = \DB::table('tasks')
+                    ->join('task_user', 'tasks.id', '=', 'task_user.task_id')
+                    ->join('projects', 'tasks.project_id', '=', 'projects.id')
+                    ->where('task_user.user_id', $user->id)
+                    ->select('tasks.id', 'tasks.title', 'tasks.status', 'projects.name as project_name', 'projects.id as project_id')
+                    ->orderBy('tasks.created_at', 'desc')
+                    ->take(3) // Show only 3 recent tasks per user
+                    ->get();
+                return $user;
+            });
+
+        // All task distribution (for View All modal)
+        $allTaskDistribution = User::select('users.id', 'users.name')
+            ->join('task_user', 'users.id', '=', 'task_user.user_id')
+            ->join('tasks', 'task_user.task_id', '=', 'tasks.id')
+            ->groupBy('users.id', 'users.name')
+            ->selectRaw('COUNT(tasks.id) as total_tasks')
+            ->selectRaw('SUM(CASE WHEN tasks.status = "done" THEN 1 ELSE 0 END) as completed_tasks')
+            ->selectRaw('SUM(CASE WHEN tasks.status != "done" THEN 1 ELSE 0 END) as pending_tasks')
+            ->orderByDesc('total_tasks')
+            ->get()
+            ->map(function ($user) {
+                // Get all tasks with project info for each user
+                $user->tasks_with_projects = \DB::table('tasks')
+                    ->join('task_user', 'tasks.id', '=', 'task_user.task_id')
+                    ->join('projects', 'tasks.project_id', '=', 'projects.id')
+                    ->where('task_user.user_id', $user->id)
+                    ->select('tasks.id', 'tasks.title', 'tasks.status', 'projects.name as project_name', 'projects.id as project_id')
+                    ->orderBy('tasks.created_at', 'desc')
+                    ->get();
+                return $user;
+            });
 
         return view('dashboard-super-admin', compact(
             'stats',
             'projectsByStatus',
             'tasksByStatus',
-            'recentProjects',
             'projectsWithIssues',
             'topUsers',
             'monthlyTrends',
             'systemHealth',
             'projectsByType',
-            'taskDistribution'
+            'taskDistribution',
+            'allTaskDistribution'
         ));
     }
 
@@ -176,17 +210,28 @@ class DashboardController extends Controller
      */
     private function userDashboard(): View
     {
+        $user = auth()->user();
+
+        // Get only projects where user is registered
+        $userProjectIds = $user->projects()->pluck('projects.id');
+
         $stats = [
-            'total_projects' => Project::count(),
-            'active_projects' => Project::where('status', 'active')->count(),
-            'total_tasks' => Task::count(),
-            'completed_tasks' => Task::where('status', 'done')->count(),
-            'pending_tasks' => Task::whereIn('status', ['todo', 'in_progress', 'review'])->count(),
-            'total_clients' => Client::count(),
-            'total_users' => User::count(),
+            'total_projects' => $user->projects()->count(),
+            'active_projects' => $user->projects()->where('status', 'in_progress')->count(),
+            'total_tasks' => Task::whereIn('project_id', $userProjectIds)->count(),
+            'completed_tasks' => Task::whereIn('project_id', $userProjectIds)->where('status', 'done')->count(),
+            'pending_tasks' => Task::whereIn('project_id', $userProjectIds)->whereIn('status', ['todo', 'in_progress', 'review'])->count(),
+            'total_clients' => Client::whereHas('projects', function ($q) use ($userProjectIds) {
+                $q->whereIn('projects.id', $userProjectIds);
+            })->count(),
+            'total_users' => User::whereHas('projects', function ($q) use ($userProjectIds) {
+                $q->whereIn('projects.id', $userProjectIds);
+            })->count(),
         ];
 
-        $recentProjects = Project::with('client')
+        // Only show recent projects where user is registered
+        $recentProjects = $user->projects()
+            ->with('client')
             ->latest()
             ->take(5)
             ->get();
@@ -200,7 +245,9 @@ class DashboardController extends Controller
                 ->get()
             : collect();
 
-        $upcomingDeadlines = Task::whereNotNull('due_date')
+        // Only show upcoming deadlines from user's projects
+        $upcomingDeadlines = Task::whereIn('project_id', $userProjectIds)
+            ->whereNotNull('due_date')
             ->whereNot('status', 'done')
             ->where('due_date', '>=', now())
             ->where('due_date', '<=', now()->addDays(7))
