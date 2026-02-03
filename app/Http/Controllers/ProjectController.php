@@ -37,18 +37,11 @@ class ProjectController extends Controller
             ->wherePivotIn('role', ['manager', 'admin'])
             ->exists();
 
-        if ($isAdminOrManager) {
-            // Admin/Manager can see ALL projects in the system
-            $allProjects = Project::with(['tasks', 'members'])
-                ->orderBy('created_at', 'desc')
-                ->get();
-        } else {
-            // Member can only see projects they are added to
-            $allProjects = $user->projects()
-                ->with(['tasks', 'members'])
-                ->orderBy('created_at', 'desc')
-                ->get();
-        }
+        // All users (including admin and manager) only see projects they are registered in
+        $allProjects = $user->projects()
+            ->with(['tasks', 'members'])
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         $projectsByYear = $allProjects->groupBy(function ($project) {
             return $project->created_at->format('Y');

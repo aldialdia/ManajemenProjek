@@ -22,11 +22,13 @@
             visibility: hidden;
             opacity: 0;
         }
+
         html.loaded body {
             visibility: visible;
             opacity: 1;
             transition: opacity 0.2s ease-in, visibility 0s;
         }
+
         /* Ensure app-container is also hidden initially */
         html:not(.loaded) .app-container {
             visibility: hidden;
@@ -203,7 +205,7 @@
 
         /* Tables */
         .table-container {
-            overflow-x: auto;
+            overflow-x: hidden;
             border-radius: 12px;
         }
 
@@ -923,13 +925,13 @@
         } else {
             window.addEventListener('load', markAsLoaded);
         }
-        
+
         // Also mark as loaded on DOMContentLoaded as fallback with slight delay
         // This ensures styles have been applied
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Small delay to ensure CSS is parsed
-            requestAnimationFrame(function() {
-                requestAnimationFrame(function() {
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
                     markAsLoaded();
                 });
             });
