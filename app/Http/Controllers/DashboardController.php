@@ -6,8 +6,10 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\TimeEntry;
+use App\Exports\DashboardReportExport;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DashboardController extends Controller
 {
@@ -256,6 +258,70 @@ class DashboardController extends Controller
             'non_rbb' => Project::whereIn('id', $userProjectIds)->where('type', 'non_rbb')->count(),
         ];
 
+
         return view('dashboard', compact('stats', 'recentProjects', 'myTasks', 'upcomingDeadlines', 'projectsByType'));
     }
+
+    /**
+     * Export Dashboard Report to Excel (Super Admin Only)
+     */
+    public function exportDashboardReport()
+    {
+        // Check if user is super admin
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Get all the data needed for the report
+        $stats = [
+            'total_projects' => Project::count(),
+            'active_projects' => Project::where('status', 'in_progress')->count(),
+            'on_hold_projects' => Project::where('status', 'on_hold')->count(),
+            'completed_projects' => Project::where('status', 'done')->count(),
+            'total_tasks' => Task::count(),
+            'completed_tasks' => Task::where('status', 'done')->count(),
+            'pending_tasks' => Task::whereIn('status', ['todo', 'in_progress'])->count(),
+            'total_users' => User::count(),
+            'active_users' => User::where('status', 'active')->count(),
+            'total_hours_this_month' => TimeEntry::whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->sum(DB::raw('TIMESTAMPDIFF(SECOND, started_at, ended_at) / 3600')),
+        ];
+
+        // Project type distribution
+        $projectsByType = [
+            'rbb' => Project::where('type', 'rbb')->count(),
+            'non_rbb' => Project::where('type', 'non_rbb')->count(),
+        ];
+
+        // Task distribution per member
+        $taskDistribution = User::select('users.id', 'users.name', 'users.email', 'users.role', 'users.status', 'users.created_at', 'users.updated_at', 'users.email_verified_at')
+            ->selectRaw('COUNT(DISTINCT task_user.task_id) as total_tasks')
+            ->selectRaw('COUNT(DISTINCT CASE WHEN tasks.status = "done" THEN task_user.task_id END) as completed_tasks')
+            ->selectRaw('COUNT(DISTINCT CASE WHEN tasks.status != "done" THEN task_user.task_id END) as pending_tasks')
+            ->leftJoin('task_user', 'users.id', '=', 'task_user.user_id')
+            ->leftJoin('tasks', 'task_user.task_id', '=', 'tasks.id')
+            ->groupBy('users.id', 'users.name', 'users.email', 'users.role', 'users.status', 'users.created_at', 'users.updated_at', 'users.email_verified_at')
+            ->orderByDesc('total_tasks')
+            ->get();
+
+        // Projects with issues
+        $projectsWithIssues = Project::where(function ($query) {
+            $query->where('status', 'on_hold')
+                ->orWhere(function ($q) {
+                    $q->where('end_date', '<', now())
+                        ->where('status', '!=', 'done');
+                });
+        })->get();
+
+        // Generate filename with current date
+        $filename = 'Dashboard_Report_' . now()->format('Y-m-d_His') . '.xlsx';
+
+        // Export to Excel
+        return Excel::download(
+            new DashboardReportExport($stats, $projectsByType, $taskDistribution, $projectsWithIssues),
+            $filename
+        );
+    }
 }
+

@@ -52,6 +52,8 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'check_status'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/export', [DashboardController::class, 'exportDashboardReport'])->name('dashboard.export');
+
 
     // Global Search
     Route::get('/search', [\App\Http\Controllers\SearchController::class, 'search'])->name('search');
