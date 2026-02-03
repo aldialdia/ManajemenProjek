@@ -46,7 +46,6 @@ class Project extends Model
         'description',
         'goals',
         'status',
-        'client_id',
         'start_date',
         'end_date',
         'budget',
@@ -61,14 +60,6 @@ class Project extends Model
             'end_date' => 'date',
             'budget' => 'decimal:2',
         ];
-    }
-
-    /**
-     * Get the client that owns the project.
-     */
-    public function client(): BelongsTo
-    {
-        return $this->belongsTo(Client::class);
     }
 
     /**

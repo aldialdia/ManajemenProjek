@@ -37,11 +37,17 @@ class ProjectController extends Controller
             ->wherePivotIn('role', ['manager', 'admin'])
             ->exists();
 
-        // All users (including admin and manager) only see projects they are registered in
-        $allProjects = $user->projects()
-            ->with(['tasks', 'members'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        // Super admin can see all projects, regular users only see projects they are registered in
+        if ($user->isSuperAdmin()) {
+            $allProjects = Project::with(['tasks', 'members'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } else {
+            $allProjects = $user->projects()
+                ->with(['tasks', 'members'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
 
         $projectsByYear = $allProjects->groupBy(function ($project) {
             return $project->created_at->format('Y');
@@ -151,7 +157,7 @@ class ProjectController extends Controller
     {
         $this->authorize('view', $project);
 
-        $project->load(['client', 'users', 'tasks.assignees', 'attachments', 'comments.user']);
+        $project->load(['users', 'tasks.assignees', 'attachments', 'comments.user']);
 
         $tasksByStatus = $project->tasks->groupBy('status');
 

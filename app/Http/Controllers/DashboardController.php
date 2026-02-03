@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Client;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
@@ -44,7 +43,6 @@ class DashboardController extends Controller
             'pending_tasks' => Task::whereIn('status', ['todo', 'in_progress'])->count(),
             'total_users' => User::count(),
             'active_users' => User::where('status', 'active')->count(),
-            'total_clients' => Client::count(),
         ];
 
         // Project status distribution
@@ -64,7 +62,7 @@ class DashboardController extends Controller
         ];
 
         // Recent projects (all system projects)
-        $recentProjects = Project::with(['client', 'users'])
+        $recentProjects = Project::with(['users'])
             ->latest()
             ->take(8)
             ->get();
@@ -221,9 +219,6 @@ class DashboardController extends Controller
             'total_tasks' => Task::whereIn('project_id', $userProjectIds)->count(),
             'completed_tasks' => Task::whereIn('project_id', $userProjectIds)->where('status', 'done')->count(),
             'pending_tasks' => Task::whereIn('project_id', $userProjectIds)->whereIn('status', ['todo', 'in_progress', 'review'])->count(),
-            'total_clients' => Client::whereHas('projects', function ($q) use ($userProjectIds) {
-                $q->whereIn('projects.id', $userProjectIds);
-            })->count(),
             'total_users' => User::whereHas('projects', function ($q) use ($userProjectIds) {
                 $q->whereIn('projects.id', $userProjectIds);
             })->count(),
@@ -231,7 +226,6 @@ class DashboardController extends Controller
 
         // Only show recent projects where user is registered
         $recentProjects = $user->projects()
-            ->with('client')
             ->latest()
             ->take(5)
             ->get();
@@ -256,6 +250,12 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
-        return view('dashboard', compact('stats', 'recentProjects', 'myTasks', 'upcomingDeadlines'));
+        // Project type distribution (RBB vs Non-RBB) - only user's projects
+        $projectsByType = [
+            'rbb' => Project::whereIn('id', $userProjectIds)->where('type', 'rbb')->count(),
+            'non_rbb' => Project::whereIn('id', $userProjectIds)->where('type', 'non_rbb')->count(),
+        ];
+
+        return view('dashboard', compact('stats', 'recentProjects', 'myTasks', 'upcomingDeadlines', 'projectsByType'));
     }
 }
