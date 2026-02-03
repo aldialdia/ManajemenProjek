@@ -17,19 +17,10 @@ class UserSeeder extends Seeder
         // Create Super Admin account
         User::create([
             'name' => 'Super Admin',
-            'email' => 'superadmin@manajemenprojek.com',
+            'email' => 'superadmin@gmail.com',
             'status' => 'active',
             'role' => UserRole::SUPER_ADMIN,
             'password' => bcrypt('admin123'),
-        ]);
-
-        // Create regular user account
-        User::create([
-            'name' => 'hakim',
-            'email' => 'hakim@gmail.com',
-            'status' => 'active',
-            'role' => UserRole::USER,
-            'password' => bcrypt('revin123'),
         ]);
     }
 }
