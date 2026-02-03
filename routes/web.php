@@ -134,6 +134,7 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::post('/time-tracking', [TimeTrackingController::class, 'store'])->name('time-tracking.store');
     Route::delete('/time-tracking/{timeEntry}', [TimeTrackingController::class, 'destroy'])->name('time-tracking.destroy');
     Route::get('/time-tracking/status', [TimeTrackingController::class, 'status'])->name('time-tracking.status');
+    Route::get('/time-tracking/global-status', [TimeTrackingController::class, 'globalStatus'])->name('time-tracking.global-status');
 
     // Task Timer (accessible from task detail page)
     Route::post('/tasks/{task}/timer/start', [TimeTrackingController::class, 'startFromTask'])->name('tasks.timer.start');

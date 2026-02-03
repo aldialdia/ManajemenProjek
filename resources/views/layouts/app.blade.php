@@ -1098,6 +1098,9 @@
             });
         });
     </script>
+
+    {{-- Floating Timer Widget (shown when time tracking is active) --}}
+    @include('components.floating-timer')
 </body>
 
 </html>
