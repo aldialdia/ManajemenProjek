@@ -569,16 +569,14 @@
                                                 @endif
                                             @endcan
                                         @elseif($isManager)
-                                            {{-- MANAGER ONLY: Show "Set to Review" button --}}
-                                            <form action="{{ route('tasks.update-status', $task) }}" method="POST">
-                                                @csrf
-                                                @method('PATCH')
-                                                <input type="hidden" name="status" value="review">
-                                                <button type="submit" class="btn btn-warning" style="width: 100%;">
-                                                    <i class="fas fa-clipboard-check"></i>
-                                                    Review
-                                                </button>
-                                            </form>
+                                            {{-- MANAGER: Show disabled "Review" button - waiting for assignee to submit --}}
+                                            <button type="button" class="btn btn-secondary" style="width: 100%; opacity: 0.6; cursor: not-allowed;" disabled>
+                                                <i class="fas fa-clock"></i>
+                                                Review
+                                            </button>
+                                            <small class="text-muted" style="display: block; text-align: center; margin-top: 0.5rem;">
+                                                <i class="fas fa-info-circle"></i> Menunggu assignee mengumpulkan tugas
+                                            </small>
                                         @endif
                                     @endif
 
