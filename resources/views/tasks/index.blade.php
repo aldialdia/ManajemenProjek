@@ -21,7 +21,9 @@
                     Kanban View
                 </a>
                 @if(auth()->user()->isManagerInProject($project))
-                    <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" class="btn btn-primary">
+                    <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" 
+                       class="btn btn-primary"
+                       onclick="return checkDeadlineBeforeCreateTask(event, {{ $project->id }}, '{{ $project->end_date?->format('Y-m-d') }}', '{{ route('tasks.create', ['project_id' => $project->id]) }}')">
                         <i class="fas fa-plus"></i>
                         Tambah Tugas
                     </a>

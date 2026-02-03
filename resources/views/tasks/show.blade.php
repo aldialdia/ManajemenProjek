@@ -541,31 +541,45 @@
                                         $statusValue = $task->status->value;
                                     @endphp
 
-                                    {{-- Status: Not review/done - Show "Mark as Done" for assignee/manager --}}
+                                    {{-- Status: Not review/done --}}
                                     @if(!in_array($statusValue, ['review', 'done']))
-                                        @can('updateStatus', $task)
-                                            @if($isAssignee && isset($activeTimeEntry) && $activeTimeEntry)
-                                                {{-- If assignee has active timer, use complete route that stops timer --}}
-                                                <form action="{{ route('tasks.timer.complete', $task) }}" method="POST">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-success" style="width: 100%;">
-                                                        <i class="fas fa-check"></i>
-                                                        Mark as Done
-                                                    </button>
-                                                </form>
-                                            @else
-                                                {{-- Normal Mark as Done --}}
-                                                <form action="{{ route('tasks.update-status', $task) }}" method="POST">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <input type="hidden" name="status" value="review">
-                                                    <button type="submit" class="btn btn-success" style="width: 100%;">
-                                                        <i class="fas fa-check"></i>
-                                                        Mark as Done
-                                                    </button>
-                                                </form>
-                                            @endif
-                                        @endcan
+                                        {{-- ASSIGNEE ONLY: Show "Mark as Done" button --}}
+                                        @if($isAssignee)
+                                            @can('updateStatus', $task)
+                                                @if(isset($activeTimeEntry) && $activeTimeEntry)
+                                                    {{-- If assignee has active timer, use complete route that stops timer --}}
+                                                    <form action="{{ route('tasks.timer.complete', $task) }}" method="POST">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-success" style="width: 100%;">
+                                                            <i class="fas fa-check"></i>
+                                                            Mark as Done
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    {{-- Normal Mark as Done (sets to review for approval) --}}
+                                                    <form action="{{ route('tasks.update-status', $task) }}" method="POST">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <input type="hidden" name="status" value="review">
+                                                        <button type="submit" class="btn btn-success" style="width: 100%;">
+                                                            <i class="fas fa-check"></i>
+                                                            Mark as Done
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            @endcan
+                                        @elseif($isManager)
+                                            {{-- MANAGER ONLY: Show "Set to Review" button --}}
+                                            <form action="{{ route('tasks.update-status', $task) }}" method="POST">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="status" value="review">
+                                                <button type="submit" class="btn btn-warning" style="width: 100%;">
+                                                    <i class="fas fa-clipboard-check"></i>
+                                                    Review
+                                                </button>
+                                            </form>
+                                        @endif
                                     @endif
 
                                     {{-- Status: review (pending approval) --}}
