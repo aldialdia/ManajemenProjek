@@ -110,6 +110,9 @@ class TaskController extends Controller
             $isAssignee = $task->isAssignedTo($user);
             $projectOnHold = $task->project->isOnHold();
 
+            // Pass assignee status to frontend (for done column protection)
+            $task->is_assignee = $isAssignee;
+
             // If project is on_hold, only manager can change status
             if ($projectOnHold) {
                 $task->can_update_status = $isManager;
@@ -459,17 +462,17 @@ class TaskController extends Controller
         $isAssignee = $task->assignees()->where('users.id', $user->id)->exists();
         $newStatus = $request->validated('status');
 
-        // Only assignee can mark task as done/review (not even manager/admin)
-        if (!$isAssignee && in_array($newStatus, ['done', 'review'])) {
+        // Only assignee can mark task as done (managers can set to review for approval)
+        if (!$isAssignee && $newStatus === 'done') {
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Hanya assignee yang dapat menandai task sebagai selesai/review.',
+                    'message' => 'Hanya assignee yang dapat menandai task sebagai selesai.',
                 ], 403);
             }
             return redirect()
                 ->route('tasks.show', $task)
-                ->with('error', 'Hanya assignee yang dapat menandai task sebagai selesai/review.');
+                ->with('error', 'Hanya assignee yang dapat menandai task sebagai selesai.');
         }
 
         // Only Manager/Admin can reopen a done task

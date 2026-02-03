@@ -150,7 +150,9 @@
                     Daftar Tugas
                 </h3>
                 @if(auth()->user()->isManagerInProject($project))
-                    <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" class="btn-add-task">
+                    <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" 
+                       class="btn-add-task"
+                       onclick="return checkDeadlineBeforeCreateTask(event, {{ $project->id }}, '{{ $project->end_date?->format('Y-m-d') }}', '{{ route('tasks.create', ['project_id' => $project->id]) }}')">
                         <i class="fas fa-plus"></i>
                         Tambah Tugas
                     </a>

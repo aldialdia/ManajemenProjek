@@ -193,6 +193,17 @@ class Project extends Model
     }
 
     /**
+     * Check if project deadline has passed or is today.
+     */
+    public function isDeadlinePassed(): bool
+    {
+        if (!$this->end_date) {
+            return false;
+        }
+        return $this->end_date->lte(now()->startOfDay());
+    }
+
+    /**
      * Get progress percentage based on completed tasks.
      */
     public function getProgressAttribute(): int

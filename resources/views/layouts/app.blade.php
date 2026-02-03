@@ -599,6 +599,43 @@
         </div>
     </div>
 
+    <!-- Project Deadline Warning Modal -->
+    <div id="projectDeadlineModal" class="confirm-modal-overlay" style="display: none;">
+        <div class="confirm-modal-box" style="max-width: 450px;">
+            <div class="confirm-modal-header">
+                <div class="confirm-modal-icon" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-color: #fca5a5; color: #dc2626; box-shadow: 0 8px 24px -4px rgba(220, 38, 38, 0.25);">
+                    <i class="fas fa-calendar-times"></i>
+                </div>
+                <h3 class="confirm-modal-title">Deadline Project Terlewati</h3>
+            </div>
+            <div class="confirm-modal-body">
+                <p id="deadlineModalMessage">Project ini telah melewati deadline. Anda tidak dapat menambahkan tugas baru.</p>
+                <div style="margin-top: 1rem; padding: 1rem; background: #f8fafc; border-radius: 12px; text-align: left;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                        <i class="fas fa-info-circle" style="color: #64748b;"></i>
+                        <span style="font-size: 0.875rem; color: #64748b;">Deadline saat ini:</span>
+                    </div>
+                    <div style="font-weight: 600; color: #dc2626;" id="currentDeadlineDisplay">-</div>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #334155; margin-bottom: 0.5rem;">
+                        <i class="fas fa-calendar-plus" style="color: #16a34a; margin-right: 0.25rem;"></i>
+                        Perpanjang deadline ke:
+                    </label>
+                    <input type="date" id="newDeadlineInput" class="form-control" style="width: 100%;">
+                </div>
+            </div>
+            <div class="confirm-modal-footer">
+                <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="closeDeadlineModal()">
+                    <i class="fas fa-times"></i> Batal
+                </button>
+                <button type="button" class="confirm-modal-btn confirm-modal-btn-confirm" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); box-shadow: 0 4px 14px -2px rgba(22, 163, 74, 0.4);" id="extendDeadlineBtn">
+                    <i class="fas fa-calendar-check"></i> Perpanjang Deadline
+                </button>
+            </div>
+        </div>
+    </div>
+
     <style>
         /* Custom Confirm Modal - Premium Design */
         .confirm-modal-overlay {
@@ -912,6 +949,130 @@
                 closeProjectOnHoldModal();
             }
         });
+
+        // Project Deadline Modal Functions
+        let deadlineModalProjectId = null;
+        let deadlineModalRedirectUrl = null;
+
+        function showDeadlineModal(projectId, currentDeadline, redirectUrl) {
+            const modal = document.getElementById('projectDeadlineModal');
+            const currentDisplay = document.getElementById('currentDeadlineDisplay');
+            const newDeadlineInput = document.getElementById('newDeadlineInput');
+            
+            deadlineModalProjectId = projectId;
+            deadlineModalRedirectUrl = redirectUrl;
+            
+            // Display current deadline
+            if (currentDeadline) {
+                const deadlineDate = new Date(currentDeadline);
+                currentDisplay.textContent = deadlineDate.toLocaleDateString('id-ID', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+            } else {
+                currentDisplay.textContent = 'Tidak ditentukan';
+            }
+            
+            // Set min date for new deadline input (tomorrow)
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            newDeadlineInput.min = tomorrow.toISOString().split('T')[0];
+            newDeadlineInput.value = '';
+            
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDeadlineModal() {
+            const modal = document.getElementById('projectDeadlineModal');
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+            deadlineModalProjectId = null;
+            deadlineModalRedirectUrl = null;
+        }
+
+        // Close deadline modal on overlay click
+        document.getElementById('projectDeadlineModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeDeadlineModal();
+            }
+        });
+
+        // Extend deadline button click handler
+        document.getElementById('extendDeadlineBtn').addEventListener('click', function() {
+            const newDeadline = document.getElementById('newDeadlineInput').value;
+            
+            if (!newDeadline) {
+                alert('Silakan pilih tanggal deadline baru.');
+                return;
+            }
+            
+            if (!deadlineModalProjectId) {
+                closeDeadlineModal();
+                return;
+            }
+            
+            // Disable button during request
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+            
+            // Call the updateEndDate API
+            fetch(`/projects/${deadlineModalProjectId}/update-end-date`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    end_date: newDeadline,
+                    confirmed: true
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success and redirect
+                    closeDeadlineModal();
+                    if (deadlineModalRedirectUrl) {
+                        window.location.href = deadlineModalRedirectUrl;
+                    } else {
+                        window.location.reload();
+                    }
+                } else {
+                    alert('Gagal memperpanjang deadline: ' + (data.message || 'Terjadi kesalahan'));
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-calendar-check"></i> Perpanjang Deadline';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Gagal memperpanjang deadline. Silakan coba lagi.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-calendar-check"></i> Perpanjang Deadline';
+            });
+        });
+
+        // Function to check deadline before navigating to task creation
+        function checkDeadlineBeforeCreateTask(event, projectId, endDate, createTaskUrl) {
+            // Check if deadline has passed (today or before)
+            if (endDate) {
+                const deadline = new Date(endDate);
+                deadline.setHours(0, 0, 0, 0);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                if (deadline <= today) {
+                    event.preventDefault();
+                    showDeadlineModal(projectId, endDate, createTaskUrl);
+                    return false;
+                }
+            }
+            return true;
+        }
 
         // Mark page as loaded after stylesheets are ready
         // This prevents FOUC when navigating between pages

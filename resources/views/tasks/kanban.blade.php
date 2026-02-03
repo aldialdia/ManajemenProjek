@@ -26,7 +26,9 @@
                     List View
                 </a>
                 @if(auth()->user()->isManagerInProject($project))
-                    <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" class="btn btn-primary">
+                    <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" 
+                       class="btn btn-primary"
+                       onclick="return checkDeadlineBeforeCreateTask(event, {{ $project->id }}, '{{ $project->end_date?->format('Y-m-d') }}', '{{ route('tasks.create', ['project_id' => $project->id]) }}')">
                         <i class="fas fa-plus"></i>
                         New Task
                     </a>
@@ -607,6 +609,16 @@
                         const card = document.querySelector('.dragging');
                         const taskId = card.dataset.taskId;
                         const newStatus = column.id.replace('column-', '');
+
+                        // Find the task to check if user is assignee
+                        const task = tasks.find(t => t.id == taskId);
+
+                        // Block non-assignees from dropping to done column
+                        if (newStatus === 'done' && task && !task.is_assignee) {
+                            alert('Hanya assignee yang dapat menandai task sebagai selesai. Gunakan tombol Approve di halaman detail task.');
+                            location.reload();
+                            return;
+                        }
 
                         // Update task status via API
                         updateTaskStatus(taskId, newStatus);
