@@ -514,5 +514,32 @@ class TimeTrackingController extends Controller
             'paused_duration' => $runningEntry->paused_duration_seconds,
         ]);
     }
+
+    /**
+     * Get global timer status (for floating widget - no project_id required).
+     */
+    public function globalStatus(): JsonResponse
+    {
+        $user = auth()->user();
+
+        $runningEntry = TimeEntry::forUser($user->id)
+            ->active()
+            ->with(['task:id,title,project_id', 'task.project:id,name'])
+            ->first();
+
+        if (!$runningEntry) {
+            return response()->json(['running' => false]);
+        }
+
+        return response()->json([
+            'running' => true,
+            'entry_id' => $runningEntry->id,
+            'task_id' => $runningEntry->task_id,
+            'task_title' => $runningEntry->task->title,
+            'project_name' => $runningEntry->task->project->name,
+            'started_at' => $runningEntry->started_at->toIso8601String(),
+            'elapsed_seconds' => $runningEntry->current_elapsed_seconds,
+        ]);
+    }
 }
 
