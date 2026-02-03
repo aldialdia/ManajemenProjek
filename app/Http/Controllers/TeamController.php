@@ -16,7 +16,7 @@ class TeamController extends Controller
      */
     public function index(Project $project): View
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
         $userRole = $user->getRoleInProject($project);
 
         // Super admin can access all projects, regular users need to be members
@@ -49,7 +49,7 @@ class TeamController extends Controller
      */
     public function updateRole(Request $request, Project $project, User $user): RedirectResponse
     {
-        $currentUser = auth()->user();
+        $currentUser = $this->authenticatedUser();
         $currentRole = $currentUser->getRoleInProject($project);
 
         // Super admin or manager can change roles
@@ -77,7 +77,7 @@ class TeamController extends Controller
      */
     public function remove(Project $project, User $user): RedirectResponse
     {
-        $currentUser = auth()->user();
+        $currentUser = $this->authenticatedUser();
         $currentRole = $currentUser->getRoleInProject($project);
         $targetRole = $user->getRoleInProject($project);
 
@@ -111,7 +111,7 @@ class TeamController extends Controller
      */
     public function showMemberProfile(Project $project, User $user)
     {
-        $currentUser = auth()->user();
+        $currentUser = $this->authenticatedUser();
         $userRole = $currentUser->getRoleInProject($project);
 
         // Check if current user is member of project
@@ -151,7 +151,7 @@ class TeamController extends Controller
      */
     public function cancelInvitation(ProjectInvitation $invitation): RedirectResponse
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
         $userRole = $user->getRoleInProject($invitation->project);
 
         // Only manager/admin or the one who sent the invitation can cancel

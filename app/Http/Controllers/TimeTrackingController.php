@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\TimeTrackingLog;
+use App\Models\User;
 use App\Notifications\TimeTrackingOverdue;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +21,7 @@ class TimeTrackingController extends Controller
      */
     public function index(Request $request): View|RedirectResponse
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
         $project = null;
 
         // Project is required for time tracking
@@ -118,17 +119,19 @@ class TimeTrackingController extends Controller
     protected function checkAndNotifyOverdueTimer($user): void
     {
         // Find timers running for more than 24 hours for this user
+        /** @var \Illuminate\Database\Eloquent\Collection<int, TimeEntry> $overdueTimers */
         $overdueTimers = TimeEntry::forUser($user->id)
             ->where('is_running', true)
             ->where('started_at', '<', now()->subHours(24))
             ->with('task')
             ->get();
 
+        /** @var TimeEntry $timeEntry */
         foreach ($overdueTimers as $timeEntry) {
             // Use cache to prevent duplicate notifications (remind every 6 hours)
             $cacheKey = 'timer_overdue_notified_' . $timeEntry->id . '_' . now()->format('Y-m-d-H');
             $cacheKeyBase = 'timer_overdue_notified_base_' . $timeEntry->id;
-            
+
             // Only notify once every 6 hours
             if (!Cache::has($cacheKeyBase)) {
                 $user->notify(new TimeTrackingOverdue($timeEntry));
@@ -146,7 +149,7 @@ class TimeTrackingController extends Controller
             'task_id' => 'required|exists:tasks,id',
         ]);
 
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
         $task = Task::findOrFail($request->task_id);
         $project = $task->project;
 
@@ -169,7 +172,7 @@ class TimeTrackingController extends Controller
         TimeEntry::forUser($user->id)
             ->forProject($project->id)
             ->active()
-            ->each(function ($entry) {
+            ->each(function (TimeEntry $entry) {
                 $entry->stop();
             });
 
@@ -210,7 +213,7 @@ class TimeTrackingController extends Controller
      */
     public function startFromTask(Task $task): RedirectResponse
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
         $project = $task->project;
 
         // Check if user is member of this project
@@ -232,7 +235,7 @@ class TimeTrackingController extends Controller
         TimeEntry::forUser($user->id)
             ->forProject($project->id)
             ->active()
-            ->each(function ($entry) {
+            ->each(function (TimeEntry $entry) {
                 $entry->stop();
             });
 
@@ -273,7 +276,7 @@ class TimeTrackingController extends Controller
      */
     public function stop(TimeEntry $timeEntry): RedirectResponse
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
 
         // Check ownership
         if ($timeEntry->user_id !== $user->id) {
@@ -298,7 +301,7 @@ class TimeTrackingController extends Controller
      */
     public function pause(TimeEntry $timeEntry): RedirectResponse
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
 
         // Check ownership
         if ($timeEntry->user_id !== $user->id) {
@@ -321,7 +324,7 @@ class TimeTrackingController extends Controller
      */
     public function resume(TimeEntry $timeEntry): RedirectResponse
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
 
         // Check ownership
         if ($timeEntry->user_id !== $user->id) {
@@ -344,7 +347,7 @@ class TimeTrackingController extends Controller
      */
     public function completeTask(Task $task): RedirectResponse
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
         $project = $task->project;
 
         // Check if user is assignee of this task
@@ -378,7 +381,7 @@ class TimeTrackingController extends Controller
      */
     public function getTaskLogs(Task $task): JsonResponse
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
 
         // Check if user is member of this project
         if (!$user->isMemberOfProject($task->project)) {
@@ -419,7 +422,7 @@ class TimeTrackingController extends Controller
             'description' => 'nullable|string|max:500',
         ]);
 
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
         $task = Task::findOrFail($request->task_id);
         $project = $task->project;
 
@@ -467,7 +470,7 @@ class TimeTrackingController extends Controller
      */
     public function destroy(TimeEntry $timeEntry): RedirectResponse
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
 
         // Check ownership
         if ($timeEntry->user_id !== $user->id) {
@@ -487,7 +490,7 @@ class TimeTrackingController extends Controller
      */
     public function status(Request $request): JsonResponse
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
         $projectId = $request->project_id;
 
         // Check and notify if user has overdue timer (running > 24 hours)
@@ -520,7 +523,7 @@ class TimeTrackingController extends Controller
      */
     public function globalStatus(): JsonResponse
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
 
         $runningEntry = TimeEntry::forUser($user->id)
             ->active()
