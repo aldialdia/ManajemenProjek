@@ -55,13 +55,42 @@
         </div>
     @endif
 
-    <!-- Export Excel Button -->
-    <div style="display: flex; justify-content: flex-end; margin-bottom: 1.5rem;">
-        <a href="{{ route('dashboard.export') }}" class="btn-modern success">
-            <i class="fas fa-file-excel"></i>
-            Export Excel
-        </a>
-    </div>
+    <!-- Floating Export Excel Button -->
+    <a href="{{ route('dashboard.export') }}" class="floating-export-btn" title="Export Excel">
+        <i class="fas fa-file-excel"></i>
+        <span>Export</span>
+    </a>
+
+    <style>
+        .floating-export-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.25rem;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .floating-export-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+            background: linear-gradient(135deg, #059669, #047857);
+        }
+
+        .floating-export-btn i {
+            font-size: 1.1rem;
+        }
+    </style>
 
     <!-- Main Stats Grid -->
     <div class="modern-stats-grid">

@@ -65,7 +65,7 @@ class OverviewSheet implements FromCollection, WithHeadings, WithTitle, WithStyl
             ['Total Users', $this->stats['total_users']],
             ['Active Users', $this->stats['active_users']],
             [''],
-            ['Total Hours This Month', $this->stats['total_hours_this_month']],
+            ['Total Hours This Month', round($this->stats['total_hours_this_month'], 2)],
         ]);
     }
 
@@ -90,7 +90,7 @@ class OverviewSheet implements FromCollection, WithHeadings, WithTitle, WithStyl
     }
 }
 
-// Projects Sheet
+// Projects Sheet with Year column and AutoFilter
 class ProjectsSheet implements FromCollection, WithHeadings, WithMapping, WithTitle, WithStyles
 {
     public function collection()
@@ -101,6 +101,7 @@ class ProjectsSheet implements FromCollection, WithHeadings, WithMapping, WithTi
     public function map($project): array
     {
         return [
+            $project->created_at ? $project->created_at->format('Y') : '-',
             $project->name,
             $project->type->value,
             $project->status->label(),
@@ -117,6 +118,7 @@ class ProjectsSheet implements FromCollection, WithHeadings, WithMapping, WithTi
     public function headings(): array
     {
         return [
+            'Tahun',
             'Project Name',
             'Type',
             'Status',
@@ -137,13 +139,32 @@ class ProjectsSheet implements FromCollection, WithHeadings, WithMapping, WithTi
 
     public function styles(Worksheet $sheet)
     {
+        // Get the last row with data
+        $lastRow = $sheet->getHighestRow();
+        
+        // Set AutoFilter on header row (columns A to K)
+        $sheet->setAutoFilter('A1:K' . $lastRow);
+
+        // Set column width for better readability
+        $sheet->getColumnDimension('A')->setWidth(10);
+        $sheet->getColumnDimension('B')->setWidth(30);
+        $sheet->getColumnDimension('C')->setWidth(12);
+        $sheet->getColumnDimension('D')->setWidth(15);
+        $sheet->getColumnDimension('E')->setWidth(12);
+        $sheet->getColumnDimension('F')->setWidth(12);
+        $sheet->getColumnDimension('G')->setWidth(15);
+        $sheet->getColumnDimension('H')->setWidth(12);
+        $sheet->getColumnDimension('I')->setWidth(15);
+        $sheet->getColumnDimension('J')->setWidth(10);
+        $sheet->getColumnDimension('K')->setWidth(25);
+
         return [
             1 => ['font' => ['bold' => true, 'size' => 11]],
         ];
     }
 }
 
-// Task Distribution Sheet
+// Task Distribution Sheet with AutoFilter
 class TaskDistributionSheet implements FromCollection, WithHeadings, WithTitle, WithStyles
 {
     protected $taskDistribution;
@@ -188,13 +209,19 @@ class TaskDistributionSheet implements FromCollection, WithHeadings, WithTitle, 
 
     public function styles(Worksheet $sheet)
     {
+        // Get the last row with data
+        $lastRow = $sheet->getHighestRow();
+        
+        // Set AutoFilter on header row (columns A to F)
+        $sheet->setAutoFilter('A1:F' . $lastRow);
+
         return [
             1 => ['font' => ['bold' => true, 'size' => 11]],
         ];
     }
 }
 
-// Projects With Issues Sheet
+// Projects With Issues Sheet with Year column and AutoFilter
 class ProjectsWithIssuesSheet implements FromCollection, WithHeadings, WithMapping, WithTitle, WithStyles
 {
     protected $projectsWithIssues;
@@ -222,6 +249,7 @@ class ProjectsWithIssuesSheet implements FromCollection, WithHeadings, WithMappi
         }
 
         return [
+            $project->created_at ? $project->created_at->format('Y') : '-',
             $project->name,
             $project->type->value,
             $project->status->label(),
@@ -233,6 +261,7 @@ class ProjectsWithIssuesSheet implements FromCollection, WithHeadings, WithMappi
     public function headings(): array
     {
         return [
+            'Tahun',
             'Project Name',
             'Type',
             'Status',
@@ -248,6 +277,12 @@ class ProjectsWithIssuesSheet implements FromCollection, WithHeadings, WithMappi
 
     public function styles(Worksheet $sheet)
     {
+        // Get the last row with data
+        $lastRow = $sheet->getHighestRow();
+        
+        // Set AutoFilter on header row (columns A to F)
+        $sheet->setAutoFilter('A1:F' . $lastRow);
+
         return [
             1 => ['font' => ['bold' => true, 'size' => 11]],
         ];
