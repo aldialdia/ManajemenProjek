@@ -259,36 +259,30 @@ class TaskController extends Controller
 
         $task->update($validated);
 
-        // Notify all assignees if due_date was changed/capped
-        if ($oldDueDate && $oldDueDate !== $newDueDate) {
-            $task->load('assignees');
+        // Notify assignee if due_date was changed/capped
+        if ($task->assignee && $oldDueDate && $oldDueDate !== $newDueDate) {
             $reason = $wasCapped ? 'melebihi deadline tugas utama' : 'perubahan jadwal';
-            foreach ($task->assignees as $assignee) {
-                $assignee->notify(new \App\Notifications\TaskDeadlineAdjusted(
-                    $task,
-                    $oldDueDate,
-                    $newDueDate,
-                    $reason
-                ));
-            }
+            $task->assignee->notify(new \App\Notifications\TaskDeadlineAdjusted(
+                $task,
+                $oldDueDate,
+                $newDueDate,
+                $reason
+            ));
         }
 
         // Early Warning: If new due_date is tomorrow (H-1), send warning notification
-        if ($task->status !== \App\Enums\TaskStatus::DONE) {
-            $task->load('assignees');
+        if ($task->assignee && $task->status !== \App\Enums\TaskStatus::DONE) {
             $dueDateCarbon = \Carbon\Carbon::parse($newDueDate);
-            $tomorrow = now()->addDay()->endOfDay();
+            $tomorrow = now()->addDay()->startOfDay();
             $today = now()->startOfDay();
 
             // Check if due_date is between today and tomorrow (H-1)
             if ($dueDateCarbon->gte($today) && $dueDateCarbon->lte($tomorrow)) {
-                $task->refresh(); // Refresh to get updated due_date as Carbon
-                foreach ($task->assignees as $assignee) {
-                    $cacheKey = 'task_deadline_notified_' . $task->id . '_' . $assignee->id . '_' . now()->format('Y-m-d');
-                    if (!cache()->has($cacheKey)) {
-                        $assignee->notify(new \App\Notifications\TaskDeadlineWarning($task));
-                        cache()->put($cacheKey, true, now()->addDay());
-                    }
+                $cacheKey = 'task_deadline_notified_' . $task->id;
+                if (!cache()->has($cacheKey)) {
+                    $task->refresh(); // Refresh to get updated due_date as Carbon
+                    $task->assignee->notify(new \App\Notifications\TaskDeadlineWarning($task));
+                    cache()->put($cacheKey, true, now()->addDay());
                 }
             }
         }
@@ -462,19 +456,20 @@ class TaskController extends Controller
 
         $user = auth()->user();
         $isManager = $user->isManagerInProject($task->project);
+        $isAssignee = $task->assignees()->where('users.id', $user->id)->exists();
         $newStatus = $request->validated('status');
 
-        // Super Admin cannot directly mark task as done, must use approve
-        if ($user->isSuperAdmin() && !$isManager && $newStatus === 'done') {
+        // Only assignee can mark task as done/review (not even manager/admin)
+        if (!$isAssignee && in_array($newStatus, ['done', 'review'])) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Super Admin tidak dapat langsung menandai task sebagai selesai. Gunakan tombol Approve untuk task yang sudah di-review.',
+                    'message' => 'Hanya assignee yang dapat menandai task sebagai selesai/review.',
                 ], 403);
             }
             return redirect()
                 ->route('tasks.show', $task)
-                ->with('error', 'Super Admin tidak dapat langsung menandai task sebagai selesai. Gunakan tombol Approve untuk task yang sudah di-review.');
+                ->with('error', 'Hanya assignee yang dapat menandai task sebagai selesai/review.');
         }
 
         // Only Manager/Admin can reopen a done task

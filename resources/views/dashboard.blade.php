@@ -123,7 +123,7 @@
             <p class="welcome-subtitle">Berikut adalah ringkasan aktivitas proyek Anda hari ini.</p>
         </div>
         <div class="welcome-actions">
-            <a href="{{ route('projects.index') }}" class="btn-welcome">
+            <a href="{{ route('projects.index') }}" class="btn btn-welcome">
                 <i class="fas fa-folder-open"></i>
                 Semua Proyek
             </a>
@@ -139,31 +139,40 @@
             <div class="stat-info">
                 <span class="stat-label">Total Proyek</span>
                 <span class="stat-value">{{ $totalProjects }}</span>
-                @if($projectChange != 0)
-                    <span class="stat-change {{ $projectChange >= 0 ? 'positive' : 'negative' }}">
-                        <i class="fas fa-arrow-{{ $projectChange >= 0 ? 'up' : 'down' }}"></i>
-                        {{ $projectChange >= 0 ? '+' : '' }}{{ $projectChange }}%
-                    </span>
-                @endif
             </div>
-            <span class="stat-note">{{ $activeProjects }} proyek aktif</span>
+            <!-- Breakdown RBB and Non-RBB -->
+            <div class="project-type-breakdown">
+                <div class="breakdown-col">
+                    <span class="breakdown-label">RBB</span>
+                    <span class="breakdown-value">{{ $projectsByType['rbb'] ?? 0 }}</span>
+                </div>
+                <div class="breakdown-col">
+                    <span class="breakdown-label">Non-RBB</span>
+                    <span class="breakdown-value">{{ $projectsByType['non_rbb'] ?? 0 }}</span>
+                </div>
+            </div>
         </div>
+
 
         <div class="stat-card-dashboard stat-green">
             <div class="stat-icon-circle">
-                <i class="fas fa-check-circle"></i>
+                <i class="fas fa-tasks"></i>
             </div>
             <div class="stat-info">
-                <span class="stat-label">Tugas Selesai</span>
-                <span class="stat-value">{{ $completedTasks }}</span>
-                @if($taskChange != 0)
-                    <span class="stat-change {{ $taskChange >= 0 ? 'positive' : 'negative' }}">
-                        <i class="fas fa-arrow-{{ $taskChange >= 0 ? 'up' : 'down' }}"></i>
-                        {{ $taskChange >= 0 ? '+' : '' }}{{ $taskChange }}%
-                    </span>
-                @endif
+                <span class="stat-label">Total Tugas</span>
+                <span class="stat-value">{{ $totalTasks }}</span>
             </div>
-            <span class="stat-note">{{ $pendingTasks }} tugas tertunda</span>
+            <!-- Breakdown Selesai and Pending -->
+            <div class="project-type-breakdown">
+                <div class="breakdown-col">
+                    <span class="breakdown-label">Selesai</span>
+                    <span class="breakdown-value">{{ $completedTasks }}</span>
+                </div>
+                <div class="breakdown-col">
+                    <span class="breakdown-label">Pending</span>
+                    <span class="breakdown-value">{{ $pendingTasks }}</span>
+                </div>
+            </div>
         </div>
 
         <div class="stat-card-dashboard stat-purple">
@@ -352,12 +361,46 @@
                 labels: ['Done', 'In Progress', 'Review', 'To Do'],
                 datasets: [{
                     data: [
-                                                    {{ $tasksByStatus['done'] }},
-                                                    {{ $tasksByStatus['in_progress'] }},
-                                                    {{ $tasksByStatus['review'] }},
+                                                                                {{ $tasksByStatus['done'] }},
+                                                                                {{ $tasksByStatus['in_progress'] }},
+                                                                                {{ $tasksByStatus['review'] }},
                         {{ $tasksByStatus['todo'] }}
                     ],
                     backgroundColor: ['#10b981', '#3b82f6', '#f97316', '#94a3b8'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            font: { size: 12 }
+                        }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+
+        // Project Type Distribution Chart (RBB vs Non-RBB)
+        const projectTypeCtx = document.getElementById('projectTypeChart').getContext('2d');
+        new Chart(projectTypeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['RBB', 'Non-RBB'],
+                datasets: [{
+                    data: [
+                                                {{ $projectsByType['rbb'] }},
+                        {{ $projectsByType['non_rbb'] }}
+                    ],
+                    backgroundColor: ['#6366f1', '#64748b'],
                     borderWidth: 0,
                     hoverOffset: 4
                 }]
@@ -539,6 +582,36 @@
             font-size: 0.75rem;
             color: #94a3b8;
         }
+
+        /* Project Type Breakdown */
+        .project-type-breakdown {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .breakdown-col {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .breakdown-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .breakdown-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+
 
         .chart-legend {
             display: flex;
@@ -1434,9 +1507,9 @@
                 const toast = document.createElement('div');
                 toast.className = `toast-notification toast-${type}`;
                 toast.innerHTML = `
-                            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
-                            <span>${message}</span>
-                        `;
+                                                        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                                                        <span>${message}</span>
+                                                    `;
                 document.body.appendChild(toast);
 
                 // Animate in

@@ -10,15 +10,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('clients', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->nullable();
-            $table->string('phone')->nullable();
-            $table->string('company')->nullable();
-            $table->text('address')->nullable();
-            $table->timestamps();
-        });
+        Schema::dropIfExists('clients');
     }
 
     /**
@@ -26,6 +18,14 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('clients');
+        Schema::create('clients', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('company')->nullable();
+            $table->string('email')->nullable();
+            $table->string('phone')->nullable();
+            $table->text('address')->nullable();
+            $table->timestamps();
+        });
     }
 };
