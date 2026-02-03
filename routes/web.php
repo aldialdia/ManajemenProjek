@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
@@ -83,9 +82,6 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
     Route::patch('/tasks/{task}/approve', [TaskController::class, 'approve'])->name('tasks.approve');
     Route::resource('tasks', TaskController::class);
-
-    // Clients
-    Route::resource('clients', ClientController::class);
 
     // Reports (per project)
     Route::get('/projects/{project}/reports', [ReportController::class, 'index'])->name('projects.reports.index');
