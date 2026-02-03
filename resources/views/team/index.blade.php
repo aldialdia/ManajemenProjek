@@ -16,7 +16,7 @@
     </div>
 
     <div class="team-container">
-        @if($canInvite)
+        @if($canInvite && !$project->isOnHold())
             <!-- Invite Member Card -->
             <div class="card invite-card">
                 <div class="card-header">
@@ -50,6 +50,20 @@
                             </div>
                         </div>
                     </form>
+                </div>
+            </div>
+        @elseif($project->isOnHold())
+            <!-- On Hold Notice -->
+            <div class="card invite-card" style="border-left-color: #f59e0b;">
+                <div class="card-header" style="color: #b45309;">
+                    <i class="fas fa-pause-circle"></i>
+                    Manajemen Tim Ditunda
+                </div>
+                <div class="card-body">
+                    <div style="color: #92400e; display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Project sedang ditunda. Tidak dapat mengundang anggota atau mengubah tim.</span>
+                    </div>
                 </div>
             </div>
         @endif
@@ -142,7 +156,7 @@
                                 title="Lihat Profil">
                                 <i class="fas fa-search"></i>
                             </button>
-                            @if($isManager && $member->id !== auth()->id() && $member->pivot->role !== 'manager')
+                            @if($isManager && $member->id !== auth()->id() && $member->pivot->role !== 'manager' && !$project->isOnHold())
                                 <div class="member-actions">
                                     <form action="{{ route('projects.team.updateRole', [$project, $member]) }}" method="POST"
                                         class="role-form">
@@ -164,7 +178,7 @@
                                         </button>
                                     </form>
                                 </div>
-                            @elseif($userRole === 'admin' && $member->pivot->role === 'member' && $member->id !== auth()->id())
+                            @elseif($userRole === 'admin' && $member->pivot->role === 'member' && $member->id !== auth()->id() && !$project->isOnHold())
                                 <div class="member-actions">
                                     <form action="{{ route('projects.team.remove', [$project, $member]) }}" method="POST"
                                         onsubmit="return confirmSubmit(this, 'Hapus {{ $member->name }} dari project?')">

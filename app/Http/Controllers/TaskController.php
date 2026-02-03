@@ -342,6 +342,13 @@ class TaskController extends Controller
 
         $project = Project::with('users')->findOrFail($request->project_id);
 
+        // BLOCK task creation when project is on_hold
+        if ($project->isOnHold()) {
+            return redirect()
+                ->route('projects.show', $project)
+                ->with('error', 'Project sedang ditunda. Tidak dapat membuat task baru.');
+        }
+
         // Only Manager or Admin can create tasks
         if (!auth()->user()->isManagerInProject($project)) {
             abort(403, 'Hanya Manager atau Admin yang dapat membuat task.');
@@ -365,6 +372,13 @@ class TaskController extends Controller
     public function store(StoreTaskRequest $request): RedirectResponse
     {
         $project = Project::findOrFail($request->project_id);
+
+        // BLOCK task creation when project is on_hold
+        if ($project->isOnHold()) {
+            return redirect()
+                ->route('projects.show', $project)
+                ->with('error', 'Project sedang ditunda. Tidak dapat membuat task baru.');
+        }
 
         // Only Manager or Admin can create tasks
         if (!auth()->user()->isManagerInProject($project)) {

@@ -57,6 +57,11 @@ class TeamController extends Controller
             return back()->with('error', 'Hanya super admin atau manajer yang dapat mengubah role anggota.');
         }
 
+        // BLOCK team changes when project is on_hold
+        if ($project->isOnHold()) {
+            return back()->with('error', 'Project sedang ditunda. Tidak dapat mengubah role anggota.');
+        }
+
         // Cannot change own role
         if ($user->id === $currentUser->id) {
             return back()->with('error', 'Anda tidak dapat mengubah role Anda sendiri.');
@@ -99,6 +104,11 @@ class TeamController extends Controller
             }
         } else {
             return back()->with('error', 'Anda tidak memiliki izin untuk menghapus anggota.');
+        }
+
+        // BLOCK team changes when project is on_hold
+        if ($project->isOnHold()) {
+            return back()->with('error', 'Project sedang ditunda. Tidak dapat menghapus anggota.');
         }
 
         $project->users()->detach($user->id);

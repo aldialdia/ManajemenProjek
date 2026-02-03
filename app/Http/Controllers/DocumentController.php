@@ -124,9 +124,9 @@ class DocumentController extends Controller
      */
     public function store(Request $request, Project $project)
     {
-        // Check if project is on_hold - only manager can upload
-        if ($project->isOnHold() && !auth()->user()->isManagerInProject($project)) {
-            abort(403, 'Project sedang ditunda. Anda tidak dapat mengupload dokumen.');
+        // BLOCK document upload when project is on_hold
+        if ($project->isOnHold()) {
+            abort(403, 'Project sedang ditunda. Tidak dapat mengupload dokumen.');
         }
 
         // Allowed file extensions
@@ -228,10 +228,10 @@ class DocumentController extends Controller
      */
     public function storeVersion(Request $request, Document $document)
     {
-        // Check if project is on_hold - only manager can upload
+        // BLOCK document upload when project is on_hold
         $project = $document->project;
-        if ($project->isOnHold() && !auth()->user()->isManagerInProject($project)) {
-            abort(403, 'Project sedang ditunda. Anda tidak dapat mengupload dokumen.');
+        if ($project->isOnHold()) {
+            abort(403, 'Project sedang ditunda. Tidak dapat mengupload dokumen.');
         }
 
         // Allowed file extensions

@@ -305,9 +305,8 @@
                 <!-- Add Comment Form with @mention -->
                 @auth
                     @php
-                        $canComment = $project->isOnHold()
-                            ? auth()->user()->isManagerInProject($project)
-                            : true;
+                        // If project on hold, no one can comment
+                        $canComment = !$project->isOnHold();
                     @endphp
                     @if($canComment)
                         <div class="chat-input-area">

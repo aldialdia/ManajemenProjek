@@ -41,9 +41,15 @@ class ProjectPolicy
 
     /**
      * Determine whether the user can update the project.
+     * BLOCKED when project is on_hold (use updateStatus instead).
      */
     public function update(User $user, Project $project): bool
     {
+        // BLOCK updates when project is on_hold (except status via updateStatus)
+        if ($project->isOnHold()) {
+            return false;
+        }
+
         // Super admin can update all projects
         if ($user->isSuperAdmin()) {
             return true;
@@ -55,10 +61,32 @@ class ProjectPolicy
     }
 
     /**
+     * Determine whether the user can update the project status.
+     * This is ALLOWED even when project is on_hold (to resume the project).
+     */
+    public function updateStatus(User $user, Project $project): bool
+    {
+        // Super admin can update all project statuses
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Manager or Admin in the project can update status
+        $member = $project->users()->where('user_id', $user->id)->first();
+        return $member && in_array($member->pivot->role, ['manager', 'admin']);
+    }
+
+    /**
      * Determine whether the user can delete the project.
+     * BLOCKED when project is on_hold.
      */
     public function delete(User $user, Project $project): bool
     {
+        // BLOCK deletion when project is on_hold
+        if ($project->isOnHold()) {
+            return false;
+        }
+
         // Super admin can delete all projects
         if ($user->isSuperAdmin()) {
             return true;
@@ -99,9 +127,15 @@ class ProjectPolicy
 
     /**
      * Determine whether the user can manage team members.
+     * BLOCKED when project is on_hold.
      */
     public function manageTeam(User $user, Project $project): bool
     {
+        // BLOCK team management when project is on_hold
+        if ($project->isOnHold()) {
+            return false;
+        }
+
         // Super admin can manage team in all projects
         if ($user->isSuperAdmin()) {
             return true;

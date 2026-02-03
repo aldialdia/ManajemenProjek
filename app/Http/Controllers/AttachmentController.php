@@ -98,17 +98,15 @@ class AttachmentController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        // If project is on_hold, only manager can upload
+        // If project is on_hold, BLOCK all uploads
         if ($project->isOnHold()) {
-            if (!$user->isManagerInProject($project)) {
-                abort(403, 'Project sedang ditunda. Anda tidak dapat mengupload file.');
-            }
-        } else {
-            // Normal case: Manager or Assignee can upload
-            $canUpload = $user->isManagerInProject($project) || $task->isAssignedTo($user);
-            if (!$canUpload) {
-                abort(403, 'Hanya Manager, Admin, atau yang ditugaskan yang dapat mengupload file.');
-            }
+            abort(403, 'Project sedang ditunda. Tidak dapat mengupload file.');
+        }
+
+        // Normal case: Manager or Assignee can upload
+        $canUpload = $user->isManagerInProject($project) || $task->isAssignedTo($user);
+        if (!$canUpload) {
+            abort(403, 'Hanya Manager, Admin, atau yang ditugaskan yang dapat mengupload file.');
         }
 
         // Allowed file extensions
