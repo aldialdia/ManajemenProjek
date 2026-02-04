@@ -18,7 +18,8 @@
                     <i class="fas fa-cloud-upload-alt"></i> Upload File
                 </a>
             @else
-                <button class="doc-upload-btn" disabled title="Project sedang ditunda" style="background: #94a3b8; cursor: not-allowed;">
+                <button type="button" class="doc-upload-btn" disabled title="Project sedang ditunda" 
+                    style="background: #94a3b8 !important; cursor: not-allowed; pointer-events: none; opacity: 0.7;">
                     <i class="fas fa-cloud-upload-alt"></i> Upload File
                 </button>
             @endif

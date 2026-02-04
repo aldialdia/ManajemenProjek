@@ -47,7 +47,8 @@
                             <div class="form-group" style="align-self: flex-end;">
                                 <button type="submit" class="btn btn-primary" 
                                     {{ $project->isOnHold() ? 'disabled' : '' }}
-                                    title="{{ $project->isOnHold() ? 'Project sedang ditunda' : '' }}">
+                                    title="{{ $project->isOnHold() ? 'Project sedang ditunda' : '' }}"
+                                    style="{{ $project->isOnHold() ? 'background: #94a3b8 !important; border-color: #94a3b8 !important; cursor: not-allowed;' : '' }}">
                                     <i class="fas fa-paper-plane"></i>
                                     Kirim Undangan
                                 </button>

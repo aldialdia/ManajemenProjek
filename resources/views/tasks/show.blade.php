@@ -95,16 +95,23 @@
                                     $canDeleteAttachment = $attachment->uploaded_by === auth()->id()
                                         || $task->assignees->contains('id', auth()->id())
                                         || auth()->user()->isManagerInProject($task->project);
+                                    $projectOnHold = $task->project->isOnHold();
                                 @endphp
                                 @if($canDeleteAttachment)
-                                    <form action="{{ route('attachments.destroy', $attachment) }}" method="POST"
-                                        style="display: inline;" onsubmit="return confirmSubmit(this, 'Hapus file ini?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn-icon-action delete" title="Hapus">
+                                    @if($projectOnHold)
+                                        <button class="btn-icon-action delete" disabled title="Project sedang ditunda" style="background: #94a3b8; cursor: not-allowed;">
                                             <i class="fas fa-trash"></i>
                                         </button>
-                                    </form>
+                                    @else
+                                        <form action="{{ route('attachments.destroy', $attachment) }}" method="POST"
+                                            style="display: inline;" onsubmit="return confirmSubmit(this, 'Hapus file ini?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn-icon-action delete" title="Hapus">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    @endif
                                 @endif
                             </div>
                         </div>
@@ -616,22 +623,36 @@
                                     @endif
 
                                     @can('update', $task)
-                                        <a href="{{ route('tasks.edit', $task) }}" class="btn btn-secondary" style="width: 100%;">
-                                            <i class="fas fa-edit"></i>
-                                            Edit Task
-                                        </a>
+                                        @if($task->project->isOnHold())
+                                            <button class="btn btn-secondary" disabled style="width: 100%; background: #94a3b8 !important; cursor: not-allowed;" title="Project sedang ditunda">
+                                                <i class="fas fa-edit"></i>
+                                                Edit Task
+                                            </button>
+                                        @else
+                                            <a href="{{ route('tasks.edit', $task) }}" class="btn btn-secondary" style="width: 100%;">
+                                                <i class="fas fa-edit"></i>
+                                                Edit Task
+                                            </a>
+                                        @endif
                                     @endcan
 
                                     @can('delete', $task)
-                                        <form action="{{ route('tasks.destroy', $task) }}" method="POST"
-                                            onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus tugas ini?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-danger" style="width: 100%;">
+                                        @if($task->project->isOnHold())
+                                            <button class="btn btn-danger" disabled style="width: 100%; background: #94a3b8 !important; cursor: not-allowed;" title="Project sedang ditunda">
                                                 <i class="fas fa-trash"></i>
                                                 Delete Task
                                             </button>
-                                        </form>
+                                        @else
+                                            <form action="{{ route('tasks.destroy', $task) }}" method="POST"
+                                                onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus tugas ini?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger" style="width: 100%;">
+                                                    <i class="fas fa-trash"></i>
+                                                    Delete Task
+                                                </button>
+                                            </form>
+                                        @endif
                                     @endcan
                                 </div>
                             </div>

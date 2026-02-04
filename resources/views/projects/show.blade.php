@@ -13,19 +13,31 @@
                         <h2 class="info-card-title">{{ $project->name }}</h2>
                         <div class="info-card-actions">
                             @can('update', $project)
-                                <a href="{{ route('projects.edit', $project) }}" class="btn-sm btn-edit-sm">
-                                    <i class="fas fa-edit"></i>
-                                </a>
+                                @if($project->isOnHold())
+                                    <button class="btn-sm btn-edit-sm" disabled title="Project sedang ditunda" style="background: #94a3b8; cursor: not-allowed;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                @else
+                                    <a href="{{ route('projects.edit', $project) }}" class="btn-sm btn-edit-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                @endif
                             @endcan
                             @can('delete', $project)
-                                <form action="{{ route('projects.destroy', $project) }}" method="POST" style="display: inline;"
-                                    onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus project ini? Semua tugas dalam project juga akan terhapus.')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn-sm btn-delete-sm">
+                                @if($project->isOnHold())
+                                    <button class="btn-sm btn-delete-sm" disabled title="Project sedang ditunda" style="background: #94a3b8; cursor: not-allowed;">
                                         <i class="fas fa-trash"></i>
                                     </button>
-                                </form>
+                                @else
+                                    <form action="{{ route('projects.destroy', $project) }}" method="POST" style="display: inline;"
+                                        onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus project ini? Semua tugas dalam project juga akan terhapus.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn-sm btn-delete-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                @endif
                             @endcan
                         </div>
                     </div>
