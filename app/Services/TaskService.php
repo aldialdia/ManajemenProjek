@@ -178,6 +178,11 @@ class TaskService
             return;
         }
 
+        // Skip if project is on hold
+        if ($task->project && $task->project->isOnHold()) {
+            return;
+        }
+
         $task->load('assignees');
         
         if ($task->assignees->isEmpty()) {

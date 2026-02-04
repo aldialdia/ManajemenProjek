@@ -33,6 +33,10 @@ class CheckTaskDeadlines extends Command
             ->where('due_date', '<=', $upcomingDeadline)
             ->where('due_date', '>', now())
             ->whereHas('assignees') // Tasks with at least one assignee
+            ->whereHas('project', function($query) {
+                // Skip tasks from on_hold projects
+                $query->where('status', '!=', \App\Enums\ProjectStatus::ON_HOLD);
+            })
             ->with(['assignees', 'project'])
             ->get();
 
@@ -51,6 +55,7 @@ class CheckTaskDeadlines extends Command
 
         // === PROJECT DEADLINE NOTIFICATIONS ===
         $projects = \App\Models\Project::where('status', '!=', \App\Enums\ProjectStatus::DONE)
+            ->where('status', '!=', \App\Enums\ProjectStatus::ON_HOLD) // Skip on_hold projects
             ->whereNotNull('end_date')
             ->where('end_date', '<=', $upcomingDeadline)
             ->where('end_date', '>', now())
