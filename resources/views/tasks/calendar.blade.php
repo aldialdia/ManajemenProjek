@@ -279,8 +279,8 @@
                 fill: #6366f1 !important;
             }
 
-            /* Disable drag for non-managers - block all SVG interactions */
-            @if(!$isManager)
+            /* Disable drag for non-managers OR when project is on_hold - block all SVG interactions */
+            @if(!$isManager || ($projectOnHold ?? false))
                 #gantt svg * {
                     pointer-events: none !important;
                     cursor: default !important;
@@ -449,15 +449,15 @@
                                 borderColor: '#dc2626',
                                 textColor: '#ffffff',
                                 allDay: true,
-                                editable: {{ $isManager ? 'true' : 'false' }},
+                            editable: {{ ($isManager && !($projectOnHold ?? false)) ? 'true' : 'false' }},
                                 classNames: ['project-deadline-event']
                             }
                         @endif
                                                                         ],
-                    editable: {{ $isManager ? 'true' : 'false' }},
-                    eventStartEditable: {{ $isManager ? 'true' : 'false' }},
+                editable: {{ ($isManager && !($projectOnHold ?? false)) ? 'true' : 'false' }},
+                    eventStartEditable: {{ ($isManager && !($projectOnHold ?? false)) ? 'true' : 'false' }},
                     eventDurationEditable: false, // No resize in calendar
-                    droppable: {{ $isManager ? 'true' : 'false' }},
+                    droppable: {{ ($isManager && !($projectOnHold ?? false)) ? 'true' : 'false' }},
                     dragScroll: false,
                     dayMaxEvents: 3,
                     eventContent: function (arg) {
@@ -579,8 +579,8 @@
                         padding: 18,
                         view_mode: 'Day',
                         date_format: 'YYYY-MM-DD',
-                        readonly: !isManager, // Disable editing for non-managers
-                        on_date_change: isManager ? function (task, start, end) {
+                        readonly: !isManager || {{ ($projectOnHold ?? false) ? 'true' : 'false' }}, // Disable editing for non-managers or on_hold projects
+                        on_date_change: (isManager && !{{ ($projectOnHold ?? false) ? 'true' : 'false' }}) ? function (task, start, end) {
                             // Find task data to get parent info
                             const taskData = ganttTasks.find(t => t.id == task.id);
                             const parentDueDate = taskData?.parent_due_date;
@@ -606,8 +606,9 @@
                         document.querySelectorAll('.popup-wrapper').forEach(p => p.remove());
                     }, 100);
 
-                    // Completely disable drag for non-managers
-                    if (!isManager) {
+                    // Completely disable drag for non-managers OR when project is on hold
+                    const projectOnHold = {{ ($projectOnHold ?? false) ? 'true' : 'false' }};
+                    if (!isManager || projectOnHold) {
                         setTimeout(function () {
                             const ganttEl = document.querySelector('#gantt');
                             if (!ganttEl) return;

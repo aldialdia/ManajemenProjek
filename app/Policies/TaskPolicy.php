@@ -36,43 +36,47 @@ class TaskPolicy
     /**
      * Determine whether the user can update the task.
      * Only Manager or Admin can update.
-     * If project is on_hold, only Manager can update.
+     * BLOCKED when project is on_hold.
      */
     public function update(User $user, Task $task): bool
     {
+        // BLOCK all updates when project is on_hold
+        if ($task->project->isOnHold()) {
+            return false;
+        }
+
         // Must be project member first
         if (!$user->isMemberOfProject($task->project)) {
             return false;
         }
 
         // Only Manager or Admin can update tasks
-        if (!$user->isManagerInProject($task->project)) {
-            return false;
-        }
-
-        // If project is on_hold, still allow manager to update
-        return true;
+        return $user->isManagerInProject($task->project);
     }
 
     /**
      * Determine whether the user can update task status.
-     * Only Manager, Admin, or Assignee can update status.
-     * If project is on_hold, only Manager can update status.
+     * BLOCKED when project is on_hold (only managers can change project status to resume).
      */
     public function updateStatus(User $user, Task $task): bool
     {
-        // Must be project member first
-        if (!$user->isMemberOfProject($task->project)) {
+        // BLOCK all status updates when project is on_hold
+        if ($task->project->isOnHold()) {
             return false;
         }
 
-        // If project is on_hold, only Manager can update status
-        if ($task->project->isOnHold()) {
-            return $user->isManagerInProject($task->project);
+        // Must be project member first (or super admin)
+        if (!$user->isSuperAdmin() && !$user->isMemberOfProject($task->project)) {
+            return false;
         }
 
         // Manager or Admin can update status
         if ($user->isManagerInProject($task->project)) {
+            return true;
+        }
+
+        // Super admin can update status (but controller will prevent marking as done)
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
@@ -82,10 +86,15 @@ class TaskPolicy
 
     /**
      * Determine whether the user can delete the task.
-     * Only Manager or Admin can delete.
+     * BLOCKED when project is on_hold.
      */
     public function delete(User $user, Task $task): bool
     {
+        // BLOCK deletion when project is on_hold
+        if ($task->project->isOnHold()) {
+            return false;
+        }
+
         // Must be project member first
         if (!$user->isMemberOfProject($task->project)) {
             return false;
@@ -123,17 +132,17 @@ class TaskPolicy
 
     /**
      * Determine whether the user can upload attachments.
-     * If project is on_hold, only Manager can upload.
+     * BLOCKED when project is on_hold.
      */
     public function uploadAttachment(User $user, Task $task): bool
     {
-        if (!$user->isMemberOfProject($task->project)) {
+        // BLOCK uploads when project is on_hold
+        if ($task->project->isOnHold()) {
             return false;
         }
 
-        // If project is on_hold, only Manager can upload
-        if ($task->project->isOnHold()) {
-            return $user->isManagerInProject($task->project);
+        if (!$user->isMemberOfProject($task->project)) {
+            return false;
         }
 
         // Manager or Assignee can upload
@@ -142,17 +151,17 @@ class TaskPolicy
 
     /**
      * Determine whether the user can add comments.
-     * If project is on_hold, only Manager can comment.
+     * BLOCKED when project is on_hold.
      */
     public function addComment(User $user, Task $task): bool
     {
-        if (!$user->isMemberOfProject($task->project)) {
+        // BLOCK comments when project is on_hold
+        if ($task->project->isOnHold()) {
             return false;
         }
 
-        // If project is on_hold, only Manager can comment
-        if ($task->project->isOnHold()) {
-            return $user->isManagerInProject($task->project);
+        if (!$user->isMemberOfProject($task->project)) {
+            return false;
         }
 
         // All project members can comment

@@ -21,10 +21,19 @@
                     Kanban View
                 </a>
                 @if(auth()->user()->isManagerInProject($project))
-                    <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i>
-                        Tambah Tugas
-                    </a>
+                    @if($project->isOnHold())
+                        <button class="btn btn-primary" disabled title="Project sedang ditunda" style="background: #94a3b8 !important; border-color: #94a3b8 !important; cursor: not-allowed;">
+                            <i class="fas fa-plus"></i>
+                            Tambah Tugas
+                        </button>
+                    @else
+                        <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" 
+                           class="btn btn-primary"
+                           onclick="return checkDeadlineBeforeCreateTask(event, {{ $project->id }}, '{{ $project->end_date?->format('Y-m-d') }}', '{{ route('tasks.create', ['project_id' => $project->id]) }}')">
+                            <i class="fas fa-plus"></i>
+                            Tambah Tugas
+                        </a>
+                    @endif
                 @endif
             @else
                 <a href="{{ route('tasks.kanban') }}" class="btn btn-secondary">
@@ -147,19 +156,31 @@
                             <td>
                                 <div style="display: flex; gap: 0.5rem;">
                                     @can('update', $task)
-                                        <a href="{{ route('tasks.edit', $task) }}" class="btn-icon" title="Edit">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
+                                        @if($task->project->isOnHold())
+                                            <button class="btn-icon" disabled title="Project sedang ditunda" style="background: #94a3b8; cursor: not-allowed;">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        @else
+                                            <a href="{{ route('tasks.edit', $task) }}" class="btn-icon" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        @endif
                                     @endcan
                                     @can('delete', $task)
-                                        <form action="{{ route('tasks.destroy', $task) }}" method="POST"
-                                            onsubmit="return confirmSubmit(this, 'Hapus tugas ini?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn-icon text-danger" title="Hapus">
+                                        @if($task->project->isOnHold())
+                                            <button class="btn-icon text-danger" disabled title="Project sedang ditunda" style="background: #94a3b8; cursor: not-allowed;">
                                                 <i class="fas fa-trash"></i>
                                             </button>
-                                        </form>
+                                        @else
+                                            <form action="{{ route('tasks.destroy', $task) }}" method="POST"
+                                                onsubmit="return confirmSubmit(this, 'Hapus tugas ini?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn-icon text-danger" title="Hapus">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        @endif
                                     @endcan
                                 </div>
                             </td>
@@ -234,19 +255,31 @@
                                 <td>
                                     <div style="display: flex; gap: 0.5rem;">
                                         @can('update', $subtask)
-                                            <a href="{{ route('tasks.edit', $subtask) }}" class="btn-icon" title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
+                                            @if($subtask->project->isOnHold())
+                                                <button class="btn-icon" disabled title="Project sedang ditunda" style="background: #94a3b8; cursor: not-allowed;">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                            @else
+                                                <a href="{{ route('tasks.edit', $subtask) }}" class="btn-icon" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            @endif
                                         @endcan
                                         @can('delete', $subtask)
-                                            <form action="{{ route('tasks.destroy', $subtask) }}" method="POST"
-                                                onsubmit="return confirmSubmit(this, 'Hapus sub-task ini?')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn-icon text-danger" title="Hapus">
+                                            @if($subtask->project->isOnHold())
+                                                <button class="btn-icon text-danger" disabled title="Project sedang ditunda" style="background: #94a3b8; cursor: not-allowed;">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
-                                            </form>
+                                            @else
+                                                <form action="{{ route('tasks.destroy', $subtask) }}" method="POST"
+                                                    onsubmit="return confirmSubmit(this, 'Hapus sub-task ini?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn-icon text-danger" title="Hapus">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
                                         @endcan
                                     </div>
                                 </td>

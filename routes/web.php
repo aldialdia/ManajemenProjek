@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
@@ -53,6 +52,8 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'check_status'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/export', [DashboardController::class, 'exportDashboardReport'])->name('dashboard.export');
+
 
     // Global Search
     Route::get('/search', [\App\Http\Controllers\SearchController::class, 'search'])->name('search');
@@ -83,9 +84,6 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
     Route::patch('/tasks/{task}/approve', [TaskController::class, 'approve'])->name('tasks.approve');
     Route::resource('tasks', TaskController::class);
-
-    // Clients
-    Route::resource('clients', ClientController::class);
 
     // Reports (per project)
     Route::get('/projects/{project}/reports', [ReportController::class, 'index'])->name('projects.reports.index');
@@ -138,6 +136,7 @@ Route::middleware(['auth', 'check_status'])->group(function () {
     Route::post('/time-tracking', [TimeTrackingController::class, 'store'])->name('time-tracking.store');
     Route::delete('/time-tracking/{timeEntry}', [TimeTrackingController::class, 'destroy'])->name('time-tracking.destroy');
     Route::get('/time-tracking/status', [TimeTrackingController::class, 'status'])->name('time-tracking.status');
+    Route::get('/time-tracking/global-status', [TimeTrackingController::class, 'globalStatus'])->name('time-tracking.global-status');
 
     // Task Timer (accessible from task detail page)
     Route::post('/tasks/{task}/timer/start', [TimeTrackingController::class, 'startFromTask'])->name('tasks.timer.start');

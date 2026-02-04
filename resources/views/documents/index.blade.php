@@ -11,16 +11,17 @@
                 <p class="doc-subtitle">Kelola semua file dan dokumen proyek</p>
             </div>
             @php
-                $canUpload = !$project->isOnHold() || auth()->user()->isManagerInProject($project);
+                $canUpload = !$project->isOnHold();
             @endphp
             @if($canUpload)
                 <a href="{{ route('projects.documents.create', $project) }}" class="doc-upload-btn">
                     <i class="fas fa-cloud-upload-alt"></i> Upload File
                 </a>
             @else
-                <span class="doc-upload-btn disabled" title="Project sedang ditunda">
-                    <i class="fas fa-pause-circle"></i> Upload Tidak Tersedia
-                </span>
+                <button type="button" class="doc-upload-btn" disabled title="Project sedang ditunda" 
+                    style="background: #94a3b8 !important; cursor: not-allowed; pointer-events: none; opacity: 0.7;">
+                    <i class="fas fa-cloud-upload-alt"></i> Upload File
+                </button>
             @endif
         </div>
 
@@ -197,9 +198,16 @@
                     </div>
                     <h3>Belum ada dokumen</h3>
                     <p>Mulai kelola dokumen proyek Anda dengan mengupload file pertama.</p>
-                    <a href="{{ route('projects.documents.create', $project) }}" class="doc-upload-btn">
-                        <i class="fas fa-plus"></i> Upload File Pertama
-                    </a>
+                    @if($project->isOnHold())
+                        <button type="button" class="doc-upload-btn" disabled title="Project sedang ditunda"
+                            style="background: #94a3b8 !important; cursor: not-allowed; pointer-events: none; opacity: 0.7;">
+                            <i class="fas fa-plus"></i> Upload File Pertama
+                        </button>
+                    @else
+                        <a href="{{ route('projects.documents.create', $project) }}" class="doc-upload-btn">
+                            <i class="fas fa-plus"></i> Upload File Pertama
+                        </a>
+                    @endif
                 </div>
             @endforelse
         </div>
@@ -655,10 +663,7 @@
             });
         });
 
-        // Show warning popup for members when project is on hold
-        @if($project->isOnHold() && !auth()->user()->isManagerInProject($project))
-            showProjectOnHoldModal('Project "{{ $project->name }}" sedang ditunda. Anda hanya dapat melihat data project.');
-        @endif
+
     </script>
 
     <style>

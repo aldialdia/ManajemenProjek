@@ -24,9 +24,9 @@ class CommentController extends Controller
             abort(403, 'Anda tidak memiliki akses ke task ini.');
         }
 
-        // If project is on_hold, only manager can comment
-        if ($project->isOnHold() && !auth()->user()->isManagerInProject($project)) {
-            abort(403, 'Project sedang ditunda. Anda tidak dapat menambahkan komentar.');
+        // BLOCK comments when project is on_hold
+        if ($project->isOnHold()) {
+            abort(403, 'Project sedang ditunda. Tidak dapat menambahkan komentar.');
         }
 
         $request->validate(['body' => 'required|string|max:5000']);
@@ -58,9 +58,9 @@ class CommentController extends Controller
             abort(403, 'Anda tidak memiliki akses ke project ini.');
         }
 
-        // If project is on_hold, only manager can comment
-        if ($project->isOnHold() && !auth()->user()->isManagerInProject($project)) {
-            abort(403, 'Project sedang ditunda. Anda tidak dapat menambahkan komentar.');
+        // BLOCK comments when project is on_hold
+        if ($project->isOnHold()) {
+            abort(403, 'Project sedang ditunda. Tidak dapat menambahkan komentar.');
         }
 
         $request->validate(['body' => 'required|string|max:5000']);

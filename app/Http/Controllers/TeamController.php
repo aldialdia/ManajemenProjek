@@ -16,11 +16,11 @@ class TeamController extends Controller
      */
     public function index(Project $project): View
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
         $userRole = $user->getRoleInProject($project);
 
-        // Check if user is member of project
-        if (!$userRole) {
+        // Super admin can access all projects, regular users need to be members
+        if (!$user->isSuperAdmin() && !$userRole) {
             abort(403, 'Anda bukan anggota project ini.');
         }
 
@@ -37,9 +37,9 @@ class TeamController extends Controller
             ->with('user', 'inviter')
             ->get();
 
-        // Check if current user can invite (manager or admin)
-        $canInvite = in_array($userRole, ['manager', 'admin']);
-        $isManager = $userRole === 'manager';
+        // Super admin or manager/admin can invite
+        $canInvite = $user->isSuperAdmin() || in_array($userRole, ['manager', 'admin']);
+        $isManager = $user->isSuperAdmin() || $userRole === 'manager';
 
         return view('team.index', compact('project', 'members', 'pendingInvitations', 'canInvite', 'isManager', 'userRole'));
     }
@@ -49,12 +49,17 @@ class TeamController extends Controller
      */
     public function updateRole(Request $request, Project $project, User $user): RedirectResponse
     {
-        $currentUser = auth()->user();
+        $currentUser = $this->authenticatedUser();
         $currentRole = $currentUser->getRoleInProject($project);
 
-        // Only manager can change roles
-        if ($currentRole !== 'manager') {
-            return back()->with('error', 'Hanya manajer yang dapat mengubah role anggota.');
+        // Super admin or manager can change roles
+        if (!$currentUser->isSuperAdmin() && $currentRole !== 'manager') {
+            return back()->with('error', 'Hanya super admin atau manajer yang dapat mengubah role anggota.');
+        }
+
+        // BLOCK team changes when project is on_hold
+        if ($project->isOnHold()) {
+            return back()->with('error', 'Project sedang ditunda. Tidak dapat mengubah role anggota.');
         }
 
         // Cannot change own role
@@ -77,13 +82,19 @@ class TeamController extends Controller
      */
     public function remove(Project $project, User $user): RedirectResponse
     {
-        $currentUser = auth()->user();
+        $currentUser = $this->authenticatedUser();
         $currentRole = $currentUser->getRoleInProject($project);
         $targetRole = $user->getRoleInProject($project);
 
+        // Super admin can remove anyone except themselves
+        if ($currentUser->isSuperAdmin()) {
+            if ($user->id === $currentUser->id) {
+                return back()->with('error', 'Anda tidak dapat menghapus diri sendiri dari project.');
+            }
+        }
         // Manager can remove anyone except themselves
         // Admin can remove members only
-        if ($currentRole === 'manager') {
+        elseif ($currentRole === 'manager') {
             if ($user->id === $currentUser->id) {
                 return back()->with('error', 'Anda tidak dapat menghapus diri sendiri dari project.');
             }
@@ -93,6 +104,11 @@ class TeamController extends Controller
             }
         } else {
             return back()->with('error', 'Anda tidak memiliki izin untuk menghapus anggota.');
+        }
+
+        // BLOCK team changes when project is on_hold
+        if ($project->isOnHold()) {
+            return back()->with('error', 'Project sedang ditunda. Tidak dapat menghapus anggota.');
         }
 
         $project->users()->detach($user->id);
@@ -105,7 +121,7 @@ class TeamController extends Controller
      */
     public function showMemberProfile(Project $project, User $user)
     {
-        $currentUser = auth()->user();
+        $currentUser = $this->authenticatedUser();
         $userRole = $currentUser->getRoleInProject($project);
 
         // Check if current user is member of project
@@ -145,7 +161,7 @@ class TeamController extends Controller
      */
     public function cancelInvitation(ProjectInvitation $invitation): RedirectResponse
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
         $userRole = $user->getRoleInProject($invitation->project);
 
         // Only manager/admin or the one who sent the invitation can cancel

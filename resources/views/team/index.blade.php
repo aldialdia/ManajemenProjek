@@ -30,20 +30,25 @@
                             <div class="form-group" style="flex: 2;">
                                 <label for="email" class="form-label">Email User</label>
                                 <input type="email" name="email" id="email" class="form-control"
-                                    placeholder="Masukkan email user yang terdaftar" required>
+                                    placeholder="Masukkan email user yang terdaftar" required
+                                    {{ $project->isOnHold() ? 'disabled' : '' }}>
                                 @error('email')
                                     <span class="text-danger text-sm">{{ $message }}</span>
                                 @enderror
                             </div>
                             <div class="form-group" style="flex: 1;">
                                 <label for="role" class="form-label">Role</label>
-                                <select name="role" id="role" class="form-control" required>
+                                <select name="role" id="role" class="form-control" required
+                                    {{ $project->isOnHold() ? 'disabled' : '' }}>
                                     <option value="member">Member</option>
                                     <option value="admin">Admin</option>
                                 </select>
                             </div>
                             <div class="form-group" style="align-self: flex-end;">
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-primary" 
+                                    {{ $project->isOnHold() ? 'disabled' : '' }}
+                                    title="{{ $project->isOnHold() ? 'Project sedang ditunda' : '' }}"
+                                    style="{{ $project->isOnHold() ? 'background: #94a3b8 !important; border-color: #94a3b8 !important; cursor: not-allowed;' : '' }}">
                                     <i class="fas fa-paper-plane"></i>
                                     Kirim Undangan
                                 </button>
@@ -148,31 +153,41 @@
                                         class="role-form">
                                         @csrf
                                         @method('PATCH')
-                                        <select name="role" class="form-control form-control-sm" onchange="this.form.submit()">
+                                        <select name="role" class="form-control form-control-sm" 
+                                            onchange="this.form.submit()"
+                                            {{ $project->isOnHold() ? 'disabled' : '' }}>
                                             <option value="admin" {{ $member->pivot->role === 'admin' ? 'selected' : '' }}>Admin
                                             </option>
                                             <option value="member" {{ $member->pivot->role === 'member' ? 'selected' : '' }}>Member
                                             </option>
                                         </select>
                                     </form>
-                                    <form action="{{ route('projects.team.remove', [$project, $member]) }}" method="POST"
-                                        onsubmit="return confirmSubmit(this, 'Hapus {{ $member->name }} dari project?')">
+                                    <button type="button" class="btn-icon-delete" 
+                                        title="{{ $project->isOnHold() ? 'Project sedang ditunda' : 'Hapus dari project' }}"
+                                        {{ $project->isOnHold() ? 'disabled style=opacity:0.5;cursor:not-allowed;' : '' }}
+                                        @if(!$project->isOnHold())
+                                        onclick="confirmSubmit(document.getElementById('remove-member-{{ $member->id }}'), 'Hapus {{ $member->name }} dari project?')"
+                                        @endif>
+                                        <i class="fas fa-user-minus"></i>
+                                    </button>
+                                    <form id="remove-member-{{ $member->id }}" action="{{ route('projects.team.remove', [$project, $member]) }}" method="POST" style="display:none;">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn-icon-delete" title="Hapus dari project">
-                                            <i class="fas fa-user-minus"></i>
-                                        </button>
                                     </form>
                                 </div>
                             @elseif($userRole === 'admin' && $member->pivot->role === 'member' && $member->id !== auth()->id())
                                 <div class="member-actions">
-                                    <form action="{{ route('projects.team.remove', [$project, $member]) }}" method="POST"
-                                        onsubmit="return confirmSubmit(this, 'Hapus {{ $member->name }} dari project?')">
+                                    <button type="button" class="btn-icon-delete" 
+                                        title="{{ $project->isOnHold() ? 'Project sedang ditunda' : 'Hapus dari project' }}"
+                                        {{ $project->isOnHold() ? 'disabled style=opacity:0.5;cursor:not-allowed;' : '' }}
+                                        @if(!$project->isOnHold())
+                                        onclick="confirmSubmit(document.getElementById('remove-member-{{ $member->id }}'), 'Hapus {{ $member->name }} dari project?')"
+                                        @endif>
+                                        <i class="fas fa-user-minus"></i>
+                                    </button>
+                                    <form id="remove-member-{{ $member->id }}" action="{{ route('projects.team.remove', [$project, $member]) }}" method="POST" style="display:none;">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn-icon-delete" title="Hapus dari project">
-                                            <i class="fas fa-user-minus"></i>
-                                        </button>
                                     </form>
                                 </div>
                             @endif

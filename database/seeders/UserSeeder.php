@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -13,11 +14,13 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
+        // Create Super Admin account
         User::create([
-            'name' => 'hakim',
-            'email' => 'hakim@gmail.com',
+            'name' => 'Super Admin',
+            'email' => 'superadmin@gmail.com',
             'status' => 'active',
-            'password' => bcrypt('revin123'),
+            'role' => UserRole::SUPER_ADMIN,
+            'password' => bcrypt('admin123'),
         ]);
     }
 }

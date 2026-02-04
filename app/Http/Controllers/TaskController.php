@@ -110,6 +110,9 @@ class TaskController extends Controller
             $isAssignee = $task->isAssignedTo($user);
             $projectOnHold = $task->project->isOnHold();
 
+            // Pass assignee status to frontend (for done column protection)
+            $task->is_assignee = $isAssignee;
+
             // If project is on_hold, only manager can change status
             if ($projectOnHold) {
                 $task->can_update_status = $isManager;
@@ -227,7 +230,10 @@ class TaskController extends Controller
         // Check if current user is manager/admin for this project (can edit project deadline)
         $isManager = $project ? auth()->user()->isManagerInProject($project) : false;
 
-        return view('tasks.calendar', compact('calendarTasks', 'ganttTasks', 'project', 'projectEndDate', 'isManager'));
+        // Check if project is on hold (disable all editing)
+        $projectOnHold = $project ? $project->isOnHold() : false;
+
+        return view('tasks.calendar', compact('calendarTasks', 'ganttTasks', 'project', 'projectEndDate', 'isManager', 'projectOnHold'));
     }
 
     /**
@@ -259,36 +265,30 @@ class TaskController extends Controller
 
         $task->update($validated);
 
-        // Notify all assignees if due_date was changed/capped
-        if ($oldDueDate && $oldDueDate !== $newDueDate) {
-            $task->load('assignees');
+        // Notify assignee if due_date was changed/capped
+        if ($task->assignee && $oldDueDate && $oldDueDate !== $newDueDate) {
             $reason = $wasCapped ? 'melebihi deadline tugas utama' : 'perubahan jadwal';
-            foreach ($task->assignees as $assignee) {
-                $assignee->notify(new \App\Notifications\TaskDeadlineAdjusted(
-                    $task,
-                    $oldDueDate,
-                    $newDueDate,
-                    $reason
-                ));
-            }
+            $task->assignee->notify(new \App\Notifications\TaskDeadlineAdjusted(
+                $task,
+                $oldDueDate,
+                $newDueDate,
+                $reason
+            ));
         }
 
         // Early Warning: If new due_date is tomorrow (H-1), send warning notification
-        if ($task->status !== \App\Enums\TaskStatus::DONE) {
-            $task->load('assignees');
+        if ($task->assignee && $task->status !== \App\Enums\TaskStatus::DONE) {
             $dueDateCarbon = \Carbon\Carbon::parse($newDueDate);
-            $tomorrow = now()->addDay()->endOfDay();
+            $tomorrow = now()->addDay()->startOfDay();
             $today = now()->startOfDay();
 
             // Check if due_date is between today and tomorrow (H-1)
             if ($dueDateCarbon->gte($today) && $dueDateCarbon->lte($tomorrow)) {
-                $task->refresh(); // Refresh to get updated due_date as Carbon
-                foreach ($task->assignees as $assignee) {
-                    $cacheKey = 'task_deadline_notified_' . $task->id . '_' . $assignee->id . '_' . now()->format('Y-m-d');
-                    if (!cache()->has($cacheKey)) {
-                        $assignee->notify(new \App\Notifications\TaskDeadlineWarning($task));
-                        cache()->put($cacheKey, true, now()->addDay());
-                    }
+                $cacheKey = 'task_deadline_notified_' . $task->id;
+                if (!cache()->has($cacheKey)) {
+                    $task->refresh(); // Refresh to get updated due_date as Carbon
+                    $task->assignee->notify(new \App\Notifications\TaskDeadlineWarning($task));
+                    cache()->put($cacheKey, true, now()->addDay());
                 }
             }
         }
@@ -345,6 +345,13 @@ class TaskController extends Controller
 
         $project = Project::with('users')->findOrFail($request->project_id);
 
+        // BLOCK task creation when project is on_hold
+        if ($project->isOnHold()) {
+            return redirect()
+                ->route('projects.show', $project)
+                ->with('error', 'Project sedang ditunda. Tidak dapat membuat task baru.');
+        }
+
         // Only Manager or Admin can create tasks
         if (!auth()->user()->isManagerInProject($project)) {
             abort(403, 'Hanya Manager atau Admin yang dapat membuat task.');
@@ -368,6 +375,13 @@ class TaskController extends Controller
     public function store(StoreTaskRequest $request): RedirectResponse
     {
         $project = Project::findOrFail($request->project_id);
+
+        // BLOCK task creation when project is on_hold
+        if ($project->isOnHold()) {
+            return redirect()
+                ->route('projects.show', $project)
+                ->with('error', 'Project sedang ditunda. Tidak dapat membuat task baru.');
+        }
 
         // Only Manager or Admin can create tasks
         if (!auth()->user()->isManagerInProject($project)) {
@@ -462,9 +476,24 @@ class TaskController extends Controller
 
         $user = auth()->user();
         $isManager = $user->isManagerInProject($task->project);
+        $isAssignee = $task->assignees()->where('users.id', $user->id)->exists();
+        $newStatus = $request->validated('status');
+
+        // Only assignee can mark task as done (managers can set to review for approval)
+        if (!$isAssignee && $newStatus === 'done') {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hanya assignee yang dapat menandai task sebagai selesai.',
+                ], 403);
+            }
+            return redirect()
+                ->route('tasks.show', $task)
+                ->with('error', 'Hanya assignee yang dapat menandai task sebagai selesai.');
+        }
 
         // Only Manager/Admin can reopen a done task
-        if ($task->status->value === 'done' && !$isManager) {
+        if ($task->status->value === 'done' && !$isManager && !$user->isSuperAdmin()) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
@@ -476,7 +505,7 @@ class TaskController extends Controller
                 ->with('error', 'Hanya Manager atau Admin yang dapat membuka kembali task yang sudah selesai.');
         }
 
-        $this->taskService->updateStatus($task, $request->validated('status'));
+        $this->taskService->updateStatus($task, $newStatus);
 
         // Return JSON for AJAX requests (Kanban), redirect for form submissions
         if ($request->expectsJson()) {

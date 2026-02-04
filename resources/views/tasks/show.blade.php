@@ -95,16 +95,23 @@
                                     $canDeleteAttachment = $attachment->uploaded_by === auth()->id()
                                         || $task->assignees->contains('id', auth()->id())
                                         || auth()->user()->isManagerInProject($task->project);
+                                    $projectOnHold = $task->project->isOnHold();
                                 @endphp
                                 @if($canDeleteAttachment)
-                                    <form action="{{ route('attachments.destroy', $attachment) }}" method="POST"
-                                        style="display: inline;" onsubmit="return confirmSubmit(this, 'Hapus file ini?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn-icon-action delete" title="Hapus">
+                                    @if($projectOnHold)
+                                        <button class="btn-icon-action delete" disabled title="Project sedang ditunda" style="background: #94a3b8; cursor: not-allowed;">
                                             <i class="fas fa-trash"></i>
                                         </button>
-                                    </form>
+                                    @else
+                                        <form action="{{ route('attachments.destroy', $attachment) }}" method="POST"
+                                            style="display: inline;" onsubmit="return confirmSubmit(this, 'Hapus file ini?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn-icon-action delete" title="Hapus">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    @endif
                                 @endif
                             </div>
                         </div>
@@ -264,23 +271,15 @@
                         // If project on hold, no one can comment
                         $canComment = !$task->project->isOnHold();
                     @endphp
-                                @if($canComment)
-                                    <div class="chat-input-area">
-                                        @include('components.mention-comment-box', [
-                                            'action' => route('tasks.comments.store', $task),
-                                            'id' => 'task-' . $task->id,
-                                            'placeholder' => 'Tulis pesan... (@ untuk mention)',
-                                            'projectId' => $task->project_id
-                                        ])
-                                    </div>
-                                @else
-                                    <div class="chat-input-area">
-                                        <div class="project-onhold-notice">
-                                            <i class="fas fa-pause-circle"></i>
-                                            <span>Project sedang ditunda. Komentar tidak tersedia.</span>
-                                        </div>
-                                    </div>
-                                @endif
+                        <div class="chat-input-area">
+                            @include('components.mention-comment-box', [
+                                'action' => route('tasks.comments.store', $task),
+                                'id' => 'task-' . $task->id,
+                                'placeholder' => 'Tulis pesan... (@ untuk mention)',
+                                'projectId' => $task->project_id,
+                                'disabled' => !$canComment
+                            ])
+                        </div>
                 @endauth
                     </div>
                 </div>
@@ -541,31 +540,43 @@
                                         $statusValue = $task->status->value;
                                     @endphp
 
-                                    {{-- Status: Not review/done - Show "Mark as Done" for assignee/manager --}}
+                                    {{-- Status: Not review/done --}}
                                     @if(!in_array($statusValue, ['review', 'done']))
-                                        @can('updateStatus', $task)
-                                            @if($isAssignee && isset($activeTimeEntry) && $activeTimeEntry)
-                                                {{-- If assignee has active timer, use complete route that stops timer --}}
-                                                <form action="{{ route('tasks.timer.complete', $task) }}" method="POST">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-success" style="width: 100%;">
-                                                        <i class="fas fa-check"></i>
-                                                        Mark as Done
-                                                    </button>
-                                                </form>
-                                            @else
-                                                {{-- Normal Mark as Done --}}
-                                                <form action="{{ route('tasks.update-status', $task) }}" method="POST">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <input type="hidden" name="status" value="review">
-                                                    <button type="submit" class="btn btn-success" style="width: 100%;">
-                                                        <i class="fas fa-check"></i>
-                                                        Mark as Done
-                                                    </button>
-                                                </form>
-                                            @endif
-                                        @endcan
+                                        {{-- ASSIGNEE ONLY: Show "Mark as Done" button --}}
+                                        @if($isAssignee)
+                                            @can('updateStatus', $task)
+                                                @if(isset($activeTimeEntry) && $activeTimeEntry)
+                                                    {{-- If assignee has active timer, use complete route that stops timer --}}
+                                                    <form action="{{ route('tasks.timer.complete', $task) }}" method="POST">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-success" style="width: 100%;">
+                                                            <i class="fas fa-check"></i>
+                                                            Mark as Done
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    {{-- Normal Mark as Done (sets to review for approval) --}}
+                                                    <form action="{{ route('tasks.update-status', $task) }}" method="POST">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <input type="hidden" name="status" value="review">
+                                                        <button type="submit" class="btn btn-success" style="width: 100%;">
+                                                            <i class="fas fa-check"></i>
+                                                            Mark as Done
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            @endcan
+                                        @elseif($isManager)
+                                            {{-- MANAGER: Show disabled "Review" button - waiting for assignee to submit --}}
+                                            <button type="button" class="btn btn-secondary" style="width: 100%; opacity: 0.6; cursor: not-allowed;" disabled>
+                                                <i class="fas fa-clock"></i>
+                                                Review
+                                            </button>
+                                            <small class="text-muted" style="display: block; text-align: center; margin-top: 0.5rem;">
+                                                <i class="fas fa-info-circle"></i> Menunggu assignee mengumpulkan tugas
+                                            </small>
+                                        @endif
                                     @endif
 
                                     {{-- Status: review (pending approval) --}}
@@ -612,22 +623,36 @@
                                     @endif
 
                                     @can('update', $task)
-                                        <a href="{{ route('tasks.edit', $task) }}" class="btn btn-secondary" style="width: 100%;">
-                                            <i class="fas fa-edit"></i>
-                                            Edit Task
-                                        </a>
+                                        @if($task->project->isOnHold())
+                                            <button class="btn btn-secondary" disabled style="width: 100%; background: #94a3b8 !important; cursor: not-allowed;" title="Project sedang ditunda">
+                                                <i class="fas fa-edit"></i>
+                                                Edit Task
+                                            </button>
+                                        @else
+                                            <a href="{{ route('tasks.edit', $task) }}" class="btn btn-secondary" style="width: 100%;">
+                                                <i class="fas fa-edit"></i>
+                                                Edit Task
+                                            </a>
+                                        @endif
                                     @endcan
 
                                     @can('delete', $task)
-                                        <form action="{{ route('tasks.destroy', $task) }}" method="POST"
-                                            onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus tugas ini?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-danger" style="width: 100%;">
+                                        @if($task->project->isOnHold())
+                                            <button class="btn btn-danger" disabled style="width: 100%; background: #94a3b8 !important; cursor: not-allowed;" title="Project sedang ditunda">
                                                 <i class="fas fa-trash"></i>
                                                 Delete Task
                                             </button>
-                                        </form>
+                                        @else
+                                            <form action="{{ route('tasks.destroy', $task) }}" method="POST"
+                                                onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus tugas ini?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger" style="width: 100%;">
+                                                    <i class="fas fa-trash"></i>
+                                                    Delete Task
+                                                </button>
+                                            </form>
+                                        @endif
                                     @endcan
                                 </div>
                             </div>

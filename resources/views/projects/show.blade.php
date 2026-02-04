@@ -13,19 +13,31 @@
                         <h2 class="info-card-title">{{ $project->name }}</h2>
                         <div class="info-card-actions">
                             @can('update', $project)
-                                <a href="{{ route('projects.edit', $project) }}" class="btn-sm btn-edit-sm">
-                                    <i class="fas fa-edit"></i>
-                                </a>
+                                @if($project->isOnHold())
+                                    <button class="btn-sm btn-edit-sm" disabled title="Project sedang ditunda" style="background: #94a3b8; cursor: not-allowed;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                @else
+                                    <a href="{{ route('projects.edit', $project) }}" class="btn-sm btn-edit-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                @endif
                             @endcan
                             @can('delete', $project)
-                                <form action="{{ route('projects.destroy', $project) }}" method="POST" style="display: inline;"
-                                    onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus project ini? Semua tugas dalam project juga akan terhapus.')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn-sm btn-delete-sm">
+                                @if($project->isOnHold())
+                                    <button class="btn-sm btn-delete-sm" disabled title="Project sedang ditunda" style="background: #94a3b8; cursor: not-allowed;">
                                         <i class="fas fa-trash"></i>
                                     </button>
-                                </form>
+                                @else
+                                    <form action="{{ route('projects.destroy', $project) }}" method="POST" style="display: inline;"
+                                        onsubmit="return confirmSubmit(this, 'Apakah Anda yakin ingin menghapus project ini? Semua tugas dalam project juga akan terhapus.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn-sm btn-delete-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                @endif
                             @endcan
                         </div>
                     </div>
@@ -150,10 +162,19 @@
                     Daftar Tugas
                 </h3>
                 @if(auth()->user()->isManagerInProject($project))
-                    <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" class="btn-add-task">
-                        <i class="fas fa-plus"></i>
-                        Tambah Tugas
-                    </a>
+                    @if($project->isOnHold())
+                        <button class="btn-add-task" disabled title="Project sedang ditunda" style="background: #94a3b8; opacity: 0.7; cursor: not-allowed;">
+                            <i class="fas fa-plus"></i>
+                            Tambah Tugas
+                        </button>
+                    @else
+                        <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" 
+                           class="btn-add-task"
+                           onclick="return checkDeadlineBeforeCreateTask(event, {{ $project->id }}, '{{ $project->end_date?->format('Y-m-d') }}', '{{ route('tasks.create', ['project_id' => $project->id]) }}')">
+                            <i class="fas fa-plus"></i>
+                            Tambah Tugas
+                        </a>
+                    @endif
                 @endif
             </div>
             <div class="tasks-list">
@@ -303,27 +324,18 @@
                 <!-- Add Comment Form with @mention -->
                 @auth
                     @php
-                        $canComment = $project->isOnHold()
-                            ? auth()->user()->isManagerInProject($project)
-                            : true;
+                        // If project on hold, no one can comment
+                        $canComment = !$project->isOnHold();
                     @endphp
-                    @if($canComment)
-                        <div class="chat-input-area">
-                            @include('components.mention-comment-box', [
-                                'action' => route('projects.comments.store', $project),
-                                'id' => 'project-' . $project->id,
-                                'placeholder' => 'Tulis pesan... (@ untuk mention)',
-                                'projectId' => $project->id
-                            ])
-                        </div>
-                    @else
-                        <div class="chat-input-area">
-                            <div class="project-onhold-notice">
-                                <i class="fas fa-pause-circle"></i>
-                                <span>Project sedang ditunda. Komentar tidak tersedia.</span>
-                            </div>
-                        </div>
-                    @endif
+                    <div class="chat-input-area">
+                        @include('components.mention-comment-box', [
+                            'action' => route('projects.comments.store', $project),
+                            'id' => 'project-' . $project->id,
+                            'placeholder' => 'Tulis pesan... (@ untuk mention)',
+                            'projectId' => $project->id,
+                            'disabled' => !$canComment
+                        ])
+                    </div>
                 @endauth
             </div>
 
