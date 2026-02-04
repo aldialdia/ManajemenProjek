@@ -211,6 +211,10 @@ class TaskController extends Controller
             if ($task->parent_task_id) {
                 $customClass .= ' subtask-bar';
             }
+            // Add class for on_hold projects to disable drag via CSS
+            if ($task->project->isOnHold()) {
+                $customClass .= ' project-on-hold';
+            }
 
             return [
                 'id' => (string) $task->id,
@@ -221,6 +225,7 @@ class TaskController extends Controller
                 'custom_class' => $customClass,
                 'parent_task_id' => $task->parent_task_id,
                 'parent_due_date' => $task->parent?->due_date?->format('Y-m-d'),
+                'project_on_hold' => $task->project->isOnHold(), // Per-task on_hold check
             ];
         });
 

@@ -295,6 +295,26 @@
 
             @endif
 
+            /* Disable drag for individual on_hold project tasks (when viewing all projects) */
+            #gantt .project-on-hold,
+            #gantt .project-on-hold * {
+                pointer-events: none !important;
+                cursor: default !important;
+                user-select: none !important;
+                -webkit-user-drag: none !important;
+            }
+            
+            /* Allow click but not drag on on_hold bars */
+            #gantt .bar-wrapper.project-on-hold {
+                pointer-events: auto !important;
+                cursor: pointer !important;
+            }
+            #gantt .bar-wrapper.project-on-hold .bar,
+            #gantt .bar-wrapper.project-on-hold .handle-group {
+                pointer-events: none !important;
+                cursor: default !important;
+            }
+
             /* Hide default popup, show on bar hover */
             .gantt .popup-wrapper {
                 display: none !important;
@@ -580,9 +600,16 @@
                         view_mode: 'Day',
                         date_format: 'YYYY-MM-DD',
                         readonly: !isManager || {{ ($projectOnHold ?? false) ? 'true' : 'false' }}, // Disable editing for non-managers or on_hold projects
-                        on_date_change: (isManager && !{{ ($projectOnHold ?? false) ? 'true' : 'false' }}) ? function (task, start, end) {
-                            // Find task data to get parent info
+                        on_date_change: isManager ? function (task, start, end) {
+                            // Find task data to get parent info and project_on_hold status
                             const taskData = ganttTasks.find(t => t.id == task.id);
+                            
+                            // Check if this specific task's project is on hold
+                            if (taskData?.project_on_hold) {
+                                setTimeout(() => window.location.reload(), 100);
+                                return;
+                            }
+                            
                             const parentDueDate = taskData?.parent_due_date;
 
                             // Validate subtask deadline before sending to server
