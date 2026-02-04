@@ -295,6 +295,26 @@
 
             @endif
 
+            /* Disable drag for individual on_hold project tasks (when viewing all projects) */
+            #gantt .project-on-hold,
+            #gantt .project-on-hold * {
+                pointer-events: none !important;
+                cursor: default !important;
+                user-select: none !important;
+                -webkit-user-drag: none !important;
+            }
+            
+            /* Allow click but not drag on on_hold bars */
+            #gantt .bar-wrapper.project-on-hold {
+                pointer-events: auto !important;
+                cursor: pointer !important;
+            }
+            #gantt .bar-wrapper.project-on-hold .bar,
+            #gantt .bar-wrapper.project-on-hold .handle-group {
+                pointer-events: none !important;
+                cursor: default !important;
+            }
+
             /* Hide default popup, show on bar hover */
             .gantt .popup-wrapper {
                 display: none !important;
