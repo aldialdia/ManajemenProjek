@@ -221,6 +221,7 @@ class TaskController extends Controller
                 'custom_class' => $customClass,
                 'parent_task_id' => $task->parent_task_id,
                 'parent_due_date' => $task->parent?->due_date?->format('Y-m-d'),
+                'project_on_hold' => $task->project->isOnHold(), // Per-task on_hold check
             ];
         });
 
