@@ -198,9 +198,16 @@
                     </div>
                     <h3>Belum ada dokumen</h3>
                     <p>Mulai kelola dokumen proyek Anda dengan mengupload file pertama.</p>
-                    <a href="{{ route('projects.documents.create', $project) }}" class="doc-upload-btn">
-                        <i class="fas fa-plus"></i> Upload File Pertama
-                    </a>
+                    @if($project->isOnHold())
+                        <button type="button" class="doc-upload-btn" disabled title="Project sedang ditunda"
+                            style="background: #94a3b8 !important; cursor: not-allowed; pointer-events: none; opacity: 0.7;">
+                            <i class="fas fa-plus"></i> Upload File Pertama
+                        </button>
+                    @else
+                        <a href="{{ route('projects.documents.create', $project) }}" class="doc-upload-btn">
+                            <i class="fas fa-plus"></i> Upload File Pertama
+                        </a>
+                    @endif
                 </div>
             @endforelse
         </div>
