@@ -564,12 +564,33 @@
     }
 
     function highlightActiveSubmenu() {
-        const currentPath = window.location.pathname + window.location.search;
+        const currentPath = window.location.pathname;
+        const currentSearch = window.location.search;
+        const fullPath = currentPath + currentSearch;
         const submenuItems = document.querySelectorAll('.submenu-item');
 
         submenuItems.forEach(item => {
             const href = item.getAttribute('href');
-            if (currentPath.includes(href) || href === currentPath) {
+            let isActive = false;
+
+            // Exact match for full path (including query params)
+            if (href === fullPath) {
+                isActive = true;
+            }
+            // For Overview: exact pathname match (no trailing paths)
+            else if (href.match(/^\/projects\/\d+$/) && currentPath === href) {
+                isActive = true;
+            }
+            // For other /projects/{id}/xxx paths: exact pathname match
+            else if (href.includes('/projects/') && href.includes('/') && currentPath === href) {
+                isActive = true;
+            }
+            // For query-based paths like /tasks?project_id=X: check both path and query
+            else if (href.includes('?') && fullPath === href) {
+                isActive = true;
+            }
+
+            if (isActive) {
                 item.classList.add('active');
             } else {
                 item.classList.remove('active');

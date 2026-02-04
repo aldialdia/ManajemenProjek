@@ -16,11 +16,11 @@ class UserSeeder extends Seeder
     {
         // Create Super Admin account
         User::create([
-            'name' => 'Super Admin',
+            'name' => 'Ni Lus',
             'email' => 'superadmin@gmail.com',
             'status' => 'active',
             'role' => UserRole::SUPER_ADMIN,
-            'password' => bcrypt('admin123'),
+            'password' => bcrypt('adm12345'),
         ]);
     }
 }
