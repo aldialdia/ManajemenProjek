@@ -150,13 +150,38 @@
                 <a href="{{ $notifications->previousPageUrl() }}" class="page-nav"><i class="fas fa-chevron-left"></i></a>
             @endif
             
-            @foreach($notifications->getUrlRange(1, $notifications->lastPage()) as $page => $url)
-                @if($page == $notifications->currentPage())
+            @php
+                $currentPage = $notifications->currentPage();
+                $lastPage = $notifications->lastPage();
+                $maxVisible = 4;
+                
+                // Calculate window start and end
+                if ($lastPage <= $maxVisible) {
+                    $start = 1;
+                    $end = $lastPage;
+                } else {
+                    // Center current page in window when possible
+                    $start = max(1, $currentPage - floor($maxVisible / 2));
+                    $end = min($lastPage, $start + $maxVisible - 1);
+                    
+                    // Adjust if we're near the end
+                    if ($end == $lastPage) {
+                        $start = max(1, $lastPage - $maxVisible + 1);
+                    }
+                }
+            @endphp
+            
+            @for($page = $start; $page <= $end; $page++)
+                @if($page == $currentPage)
                     <span class="page-num active">{{ $page }}</span>
                 @else
-                    <a href="{{ $url }}" class="page-num">{{ $page }}</a>
+                    <a href="{{ $notifications->url($page) }}" class="page-num">{{ $page }}</a>
                 @endif
-            @endforeach
+            @endfor
+            
+            @if($end < $lastPage)
+                <span class="page-ellipsis">...</span>
+            @endif
             
             @if($notifications->hasMorePages())
                 <a href="{{ $notifications->nextPageUrl() }}" class="page-nav"><i class="fas fa-chevron-right"></i></a>
@@ -515,6 +540,16 @@
         height: 2px;
         background: #1e293b;
         border-radius: 1px;
+    }
+
+    .page-ellipsis {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        height: 32px;
+        font-size: 0.875rem;
+        color: #94a3b8;
     }
 
     .header-actions {
