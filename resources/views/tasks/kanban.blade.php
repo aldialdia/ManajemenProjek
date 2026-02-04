@@ -26,12 +26,19 @@
                     List View
                 </a>
                 @if(auth()->user()->isManagerInProject($project))
-                    <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" 
-                       class="btn btn-primary"
-                       onclick="return checkDeadlineBeforeCreateTask(event, {{ $project->id }}, '{{ $project->end_date?->format('Y-m-d') }}', '{{ route('tasks.create', ['project_id' => $project->id]) }}')">
-                        <i class="fas fa-plus"></i>
-                        New Task
-                    </a>
+                    @if($project->isOnHold())
+                        <button class="btn btn-primary" disabled title="Project sedang ditunda" style="background: #94a3b8 !important; border-color: #94a3b8 !important; cursor: not-allowed;">
+                            <i class="fas fa-plus"></i>
+                            New Task
+                        </button>
+                    @else
+                        <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" 
+                           class="btn btn-primary"
+                           onclick="return checkDeadlineBeforeCreateTask(event, {{ $project->id }}, '{{ $project->end_date?->format('Y-m-d') }}', '{{ route('tasks.create', ['project_id' => $project->id]) }}')">
+                            <i class="fas fa-plus"></i>
+                            New Task
+                        </a>
+                    @endif
                 @endif
             @else
                 <a href="{{ route('tasks.index') }}" class="btn btn-secondary">

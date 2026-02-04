@@ -27,6 +27,24 @@
                 </div>
             </div>
 
+            @if($project->isOnHold())
+                <div class="upload-form" style="text-align: center; padding: 3rem 2rem;">
+                    <div style="width: 80px; height: 80px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+                        <i class="fas fa-pause-circle" style="font-size: 2rem; color: #f59e0b;"></i>
+                    </div>
+                    <h3 style="color: #1e293b; margin-bottom: 0.5rem;">Project Sedang Ditunda</h3>
+                    <p style="color: #64748b; margin-bottom: 1.5rem;">Upload dokumen tidak tersedia saat project dalam status on hold.</p>
+                    @if(!empty($fromOverview))
+                        <a href="{{ route('projects.show', $project) }}" class="btn-cancel">
+                            <i class="fas fa-arrow-left"></i> Kembali ke Overview
+                        </a>
+                    @else
+                        <a href="{{ route('projects.documents.index', $project) }}" class="btn-cancel">
+                            <i class="fas fa-arrow-left"></i> Kembali ke Daftar Dokumen
+                        </a>
+                    @endif
+                </div>
+            @else
             <form action="{{ route('projects.documents.store', $project) }}" method="POST" enctype="multipart/form-data"
                 class="upload-form">
                 @csrf
@@ -97,6 +115,7 @@
                     </button>
                 </div>
             </form>
+            @endif
         </div>
     </div>
 

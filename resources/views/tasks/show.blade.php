@@ -264,23 +264,15 @@
                         // If project on hold, no one can comment
                         $canComment = !$task->project->isOnHold();
                     @endphp
-                                @if($canComment)
-                                    <div class="chat-input-area">
-                                        @include('components.mention-comment-box', [
-                                            'action' => route('tasks.comments.store', $task),
-                                            'id' => 'task-' . $task->id,
-                                            'placeholder' => 'Tulis pesan... (@ untuk mention)',
-                                            'projectId' => $task->project_id
-                                        ])
-                                    </div>
-                                @else
-                                    <div class="chat-input-area">
-                                        <div class="project-onhold-notice">
-                                            <i class="fas fa-pause-circle"></i>
-                                            <span>Project sedang ditunda. Komentar tidak tersedia.</span>
-                                        </div>
-                                    </div>
-                                @endif
+                        <div class="chat-input-area">
+                            @include('components.mention-comment-box', [
+                                'action' => route('tasks.comments.store', $task),
+                                'id' => 'task-' . $task->id,
+                                'placeholder' => 'Tulis pesan... (@ untuk mention)',
+                                'projectId' => $task->project_id,
+                                'disabled' => !$canComment
+                            ])
+                        </div>
                 @endauth
                     </div>
                 </div>

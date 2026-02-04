@@ -150,12 +150,19 @@
                     Daftar Tugas
                 </h3>
                 @if(auth()->user()->isManagerInProject($project))
-                    <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" 
-                       class="btn-add-task"
-                       onclick="return checkDeadlineBeforeCreateTask(event, {{ $project->id }}, '{{ $project->end_date?->format('Y-m-d') }}', '{{ route('tasks.create', ['project_id' => $project->id]) }}')">
-                        <i class="fas fa-plus"></i>
-                        Tambah Tugas
-                    </a>
+                    @if($project->isOnHold())
+                        <button class="btn-add-task" disabled title="Project sedang ditunda" style="background: #94a3b8; opacity: 0.7; cursor: not-allowed;">
+                            <i class="fas fa-plus"></i>
+                            Tambah Tugas
+                        </button>
+                    @else
+                        <a href="{{ route('tasks.create', ['project_id' => $project->id]) }}" 
+                           class="btn-add-task"
+                           onclick="return checkDeadlineBeforeCreateTask(event, {{ $project->id }}, '{{ $project->end_date?->format('Y-m-d') }}', '{{ route('tasks.create', ['project_id' => $project->id]) }}')">
+                            <i class="fas fa-plus"></i>
+                            Tambah Tugas
+                        </a>
+                    @endif
                 @endif
             </div>
             <div class="tasks-list">
@@ -308,23 +315,15 @@
                         // If project on hold, no one can comment
                         $canComment = !$project->isOnHold();
                     @endphp
-                    @if($canComment)
-                        <div class="chat-input-area">
-                            @include('components.mention-comment-box', [
-                                'action' => route('projects.comments.store', $project),
-                                'id' => 'project-' . $project->id,
-                                'placeholder' => 'Tulis pesan... (@ untuk mention)',
-                                'projectId' => $project->id
-                            ])
-                        </div>
-                    @else
-                        <div class="chat-input-area">
-                            <div class="project-onhold-notice">
-                                <i class="fas fa-pause-circle"></i>
-                                <span>Project sedang ditunda. Komentar tidak tersedia.</span>
-                            </div>
-                        </div>
-                    @endif
+                    <div class="chat-input-area">
+                        @include('components.mention-comment-box', [
+                            'action' => route('projects.comments.store', $project),
+                            'id' => 'project-' . $project->id,
+                            'placeholder' => 'Tulis pesan... (@ untuk mention)',
+                            'projectId' => $project->id,
+                            'disabled' => !$canComment
+                        ])
+                    </div>
                 @endauth
             </div>
 

@@ -11,16 +11,16 @@
                 <p class="doc-subtitle">Kelola semua file dan dokumen proyek</p>
             </div>
             @php
-                $canUpload = !$project->isOnHold() || auth()->user()->isManagerInProject($project);
+                $canUpload = !$project->isOnHold();
             @endphp
             @if($canUpload)
                 <a href="{{ route('projects.documents.create', $project) }}" class="doc-upload-btn">
                     <i class="fas fa-cloud-upload-alt"></i> Upload File
                 </a>
             @else
-                <span class="doc-upload-btn disabled" title="Project sedang ditunda">
-                    <i class="fas fa-pause-circle"></i> Upload Tidak Tersedia
-                </span>
+                <button class="doc-upload-btn" disabled title="Project sedang ditunda" style="background: #94a3b8; cursor: not-allowed;">
+                    <i class="fas fa-cloud-upload-alt"></i> Upload File
+                </button>
             @endif
         </div>
 
@@ -655,10 +655,7 @@
             });
         });
 
-        // Show warning popup for members when project is on hold
-        @if($project->isOnHold() && !auth()->user()->isManagerInProject($project))
-            showProjectOnHoldModal('Project "{{ $project->name }}" sedang ditunda. Anda hanya dapat melihat data project.');
-        @endif
+
     </script>
 
     <style>

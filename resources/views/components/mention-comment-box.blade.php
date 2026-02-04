@@ -1,5 +1,5 @@
 {{-- @mention Comment Box Component --}}
-{{-- Usage: @include('components.mention-comment-box', ['action' => route(...), 'placeholder' => '...']) --}}
+{{-- Usage: @include('components.mention-comment-box', ['action' => route(...), 'placeholder' => '...', 'disabled' => false]) --}}
 
 <div class="mention-comment-wrapper">
     <form action="{{ $action }}" method="POST" class="discussion-form">
@@ -7,10 +7,14 @@
         <div class="mention-input-wrapper">
             <textarea name="body" id="comment-body-{{ $id ?? 'default' }}" class="form-control mention-textarea"
                 placeholder="{{ $placeholder ?? 'Tulis komentar... (Gunakan @ untuk mention user)' }}" rows="3"
+                {{ ($disabled ?? false) ? 'disabled' : '' }}
                 required></textarea>
             <div class="mention-dropdown" id="mention-dropdown-{{ $id ?? 'default' }}"></div>
         </div>
-        <button type="submit" class="btn btn-primary">
+        <button type="submit" class="btn btn-primary" 
+            {{ ($disabled ?? false) ? 'disabled' : '' }}
+            title="{{ ($disabled ?? false) ? 'Project sedang ditunda' : '' }}"
+            style="{{ ($disabled ?? false) ? 'background: #94a3b8 !important; border-color: #94a3b8 !important; cursor: not-allowed;' : '' }}">
             <i class="fas fa-paper-plane"></i>
             Kirim
         </button>
