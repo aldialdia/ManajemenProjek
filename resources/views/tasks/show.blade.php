@@ -288,8 +288,8 @@
                 <div>
                     <!-- Task Info -->
                     <div class="card" style="margin-bottom: 1.5rem;">
-                        <div class="card-header">Task Details</div>
-                        <div class="card-body">
+                        <div class="card-header" style="padding: 0.75rem 1rem;">Task Details</div>
+                        <div class="card-body" style="padding: 0.5rem 1rem;">
                             <div class="info-row">
                                 <span class="info-label">Project</span>
                                 <a href="{{ route('projects.show', $task->project) }}" class="info-link">
@@ -488,7 +488,7 @@
                                 <i class="fas fa-history"></i>
                                 Activity Log
                             </div>
-                            <div class="card-body" style="padding: 0; max-height: 250px; overflow-y: auto;">
+                            <div class="card-body" style="padding: 0; max-height: 180px; overflow-y: auto;">
                                 <div class="activity-timeline">
                                     @foreach($taskLogs as $log)
                                         <div class="activity-item">
@@ -728,7 +728,7 @@
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding: 0.75rem 0;
+                    padding: 0.5rem 0;
                     border-bottom: 1px solid #e2e8f0;
                 }
 
