@@ -288,6 +288,47 @@
         </div>
     </div>
 
+    <!-- Overdue Tasks Section -->
+    @if($overdueTasksCount > 0)
+        <div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #ef4444;">
+            <div class="card-header" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-bottom: 1px solid #fecaca;">
+                <span style="font-size: 0.95rem; color: #991b1b; font-weight: 600;">
+                    <i class="fas fa-exclamation-circle text-danger"></i> 
+                    Tugas Melewati Deadline ({{ $overdueTasksCount }})
+                </span>
+                <span class="text-muted text-sm" style="color: #dc2626 !important;">Perlu segera ditangani</span>
+            </div>
+            <div class="card-body" style="padding: 0; max-height: 320px; overflow-y: auto;">
+                @foreach($overdueTasks as $task)
+                    <div class="overdue-task-row">
+                        <div class="overdue-task-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="overdue-task-info">
+                            <a href="{{ route('tasks.show', $task) }}" class="overdue-task-title">
+                                {{ Str::limit($task->title, 40) }}
+                            </a>
+                            <div class="overdue-task-meta">
+                                <span class="overdue-project">
+                                    <i class="fas fa-folder"></i>
+                                    {{ $task->project->name ?? 'No Project' }}
+                                </span>
+                                <span class="overdue-days">
+                                    <i class="fas fa-calendar-times"></i>
+                                    Terlambat {{ $task->due_date->locale('id')->diffForHumans() }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="overdue-task-status">
+                            <span class="status-badge-overdue {{ $task->status->value }}">
+                                {{ $task->status->label() }}
+                            </span>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1586,6 +1627,108 @@
 
         .toast-warning i {
             color: #f59e0b;
+        }
+
+        /* Overdue Tasks Section Styles */
+        .overdue-task-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.875rem 1.25rem;
+            border-bottom: 1px solid #fef2f2;
+            transition: all 0.2s ease;
+        }
+
+        .overdue-task-row:last-child {
+            border-bottom: none;
+        }
+
+        .overdue-task-row:hover {
+            background: #fef2f2;
+        }
+
+        .overdue-task-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ef4444;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .overdue-task-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .overdue-task-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #1e293b;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .overdue-task-title:hover {
+            color: #dc2626;
+        }
+
+        .overdue-task-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .overdue-project {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .overdue-days {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            color: #dc2626;
+            font-weight: 500;
+        }
+
+        .overdue-task-status {
+            flex-shrink: 0;
+        }
+
+        .status-badge-overdue {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.625rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-badge-overdue.todo {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .status-badge-overdue.in_progress {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .status-badge-overdue.review {
+            background: #fef3c7;
+            color: #d97706;
         }
     </style>
 @endsection
