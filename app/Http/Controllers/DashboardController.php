@@ -258,8 +258,25 @@ class DashboardController extends Controller
             'non_rbb' => Project::whereIn('id', $userProjectIds)->where('type', 'non_rbb')->count(),
         ];
 
+        // Overdue tasks - tasks that have passed their deadline and not done (user's assigned tasks)
+        $overdueTasks = Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))
+            ->whereNotNull('due_date')
+            ->where('due_date', '<', now())
+            ->where('status', '!=', 'done')
+            ->with(['project'])
+            ->orderBy('due_date', 'asc')
+            ->take(10)
+            ->get();
 
-        return view('dashboard', compact('stats', 'recentProjects', 'myTasks', 'upcomingDeadlines', 'projectsByType'));
+        // Count of overdue tasks
+        $overdueTasksCount = Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))
+            ->whereNotNull('due_date')
+            ->where('due_date', '<', now())
+            ->where('status', '!=', 'done')
+            ->count();
+
+
+        return view('dashboard', compact('stats', 'recentProjects', 'myTasks', 'upcomingDeadlines', 'projectsByType', 'overdueTasks', 'overdueTasksCount'));
     }
 
     /**

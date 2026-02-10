@@ -637,6 +637,11 @@
     </div>
 
     <style>
+        /* Info Modal should appear above other modals */
+        #infoModal {
+            z-index: 999999 !important;
+        }
+
         /* Custom Confirm Modal - Premium Design */
         .confirm-modal-overlay {
             position: fixed;
@@ -1005,7 +1010,7 @@
             const newDeadline = document.getElementById('newDeadlineInput').value;
             
             if (!newDeadline) {
-                alert('Silakan pilih tanggal deadline baru.');
+                showInfoModal('Silakan pilih tanggal deadline terbaru terlebih dahulu.');
                 return;
             }
             
