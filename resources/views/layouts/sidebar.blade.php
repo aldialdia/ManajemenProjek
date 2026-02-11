@@ -560,6 +560,11 @@
         const projectId = params.get('project_id');
         if (projectId) return parseInt(projectId);
 
+        // Pattern: window.currentProject (set by task detail, kanban, etc.)
+        if (window.currentProject && window.currentProject.id) {
+            return parseInt(window.currentProject.id);
+        }
+
         return null;
     }
 
@@ -569,12 +574,20 @@
         const fullPath = currentPath + currentSearch;
         const submenuItems = document.querySelectorAll('.submenu-item');
 
+        // Check if we're on a task detail page (/tasks/{id})
+        const taskDetailMatch = currentPath.match(/^\/tasks\/(\d+)$/);
+        const currentProjectId = getCurrentProjectId();
+
         submenuItems.forEach(item => {
             const href = item.getAttribute('href');
             let isActive = false;
 
+            // If on task detail page, highlight the Tugas submenu for the matching project
+            if (taskDetailMatch && currentProjectId && href === `/tasks?project_id=${currentProjectId}`) {
+                isActive = true;
+            }
             // Exact match for full path (including query params)
-            if (href === fullPath) {
+            else if (href === fullPath) {
                 isActive = true;
             }
             // For Overview: exact pathname match (no trailing paths)
@@ -592,6 +605,11 @@
 
             if (isActive) {
                 item.classList.add('active');
+                // Also expand the parent project group
+                const projectGroup = item.closest('.recent-project-group');
+                if (projectGroup) {
+                    projectGroup.classList.add('expanded');
+                }
             } else {
                 item.classList.remove('active');
             }

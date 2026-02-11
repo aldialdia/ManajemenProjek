@@ -94,7 +94,7 @@
                                     </span>
                                     <div class="project-members">
                                         <i class="fas fa-users"></i>
-                                        {{ $project->members->count() }}
+                                        {{ $project->users->count() }}
                                     </div>
                                 </div>
                             </a>

@@ -593,23 +593,25 @@
                                             </form>
                                         @endcan
 
-                                        {{-- Assignee/Manager can Reopen --}}
-                                        @can('updateStatus', $task)
-                                            <form action="{{ route('tasks.update-status', $task) }}" method="POST">
-                                                @csrf
-                                                @method('PATCH')
-                                                <input type="hidden" name="status" value="in_progress">
-                                                <button type="submit" class="btn btn-secondary" style="width: 100%;">
-                                                    <i class="fas fa-undo"></i>
-                                                    Reopen Task
-                                                </button>
-                                            </form>
-                                        @endcan
+                                        {{-- Assignee/Manager can Reopen (not Super Admin) --}}
+                                        @if(!auth()->user()->isSuperAdmin())
+                                            @can('updateStatus', $task)
+                                                <form action="{{ route('tasks.update-status', $task) }}" method="POST">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <input type="hidden" name="status" value="in_progress">
+                                                    <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                                                        <i class="fas fa-undo"></i>
+                                                        Reopen Task
+                                                    </button>
+                                                </form>
+                                            @endcan
+                                        @endif
                                     @endif
 
-                                    {{-- Status: done - Only Manager/Admin can Reopen --}}
+                                    {{-- Status: done - Only project Manager/Admin can Reopen (not Super Admin) --}}
                                     @if($statusValue === 'done')
-                                        @if($isManager)
+                                        @if($isManager && !auth()->user()->isSuperAdmin())
                                             <form action="{{ route('tasks.update-status', $task) }}" method="POST">
                                                 @csrf
                                                 @method('PATCH')
@@ -1523,4 +1525,12 @@
             });
         </script>
         @endif
+
+    <script>
+        // Set current project for sidebar to auto-expand and highlight Tugas
+        window.currentProject = {
+            id: {{ $task->project->id }},
+            name: @json($task->project->name)
+        };
+    </script>
 @endsection

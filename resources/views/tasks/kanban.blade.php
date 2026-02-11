@@ -134,8 +134,7 @@
                                 default => 'background: #f1f5f9; color: #475569;',
                             };
                         @endphp
-                        <span class="status-badge"
-                            style="{{ $fromColor }}">{{ $log->from_status?->label() ?? 'New' }}</span>
+                        <span class="status-badge" style="{{ $fromColor }}">{{ $log->from_status?->label() ?? 'New' }}</span>
                         ke
                         @php
                             $toStatus = $log->to_status->value;
@@ -534,44 +533,44 @@
                         const notDraggableClass = canDrag ? '' : 'not-draggable';
 
                         return `
-                                                                                                                    <div class="kanban-card ${notDraggableClass}" ${draggableAttr} data-task-id="${task.id}">
-                                                                                                                        <div class="card-title">
-                                                                                                                            <a href="/tasks/${task.id}">${task.title}</a>
-                                                                                                                        </div>
-                                                                                                                                                ${task.parent ? `
-                                                                                                                                                                    <div class="subtask-indicator">
-                                                                                                                                                                        <i class="fas fa-level-up-alt fa-rotate-90"></i>
-                                                                                                                                                                        Sub-task dari: ${task.parent.title}
-                                                                                                                                                                    </div>
-                                                                                                                                                                ` : ''}
-                                                                                                                                                <div class="card-project">
-                                                                                                                                                    <i class="fas fa-folder"></i>
-                                                                                                                                                    ${task.project?.name || 'No Project'}
-                                                                                                                                                </div>
-                                                                                                                                                <div class="card-meta">
-                                                                                                                                                    <span class="card-priority priority-${task.priority}">
-                                                                                                                                                        ${task.priority}
-                                                                                                                                                    </span>
-                                                                                                                                                    ${task.assignees && task.assignees.length > 0 ? `
-                                                                                                                                                                        ${task.assignees[0].avatar ? `
-                                                                                                                                                            <div class="avatar avatar-sm" style="width: 28px; height: 28px; background-image: url('/storage/${task.assignees[0].avatar}'); background-size: cover; background-position: center;"></div>
-                                                                                                                                                        ` : `
-                                                                                                                                                            <div class="avatar avatar-sm" style="width: 28px; height: 28px; font-size: 0.7rem;">
-                                                                                                                                                                ${getInitials(task.assignees[0].name)}
+                                                                                                                                    <div class="kanban-card ${notDraggableClass}" ${draggableAttr} data-task-id="${task.id}">
+                                                                                                                                        <div class="card-title">
+                                                                                                                                            <a href="/tasks/${task.id}">${task.title}</a>
+                                                                                                                                        </div>
+                                                                                                                                                                ${task.parent ? `
+                                                                                                                                                                                    <div class="subtask-indicator">
+                                                                                                                                                                                        <i class="fas fa-level-up-alt fa-rotate-90"></i>
+                                                                                                                                                                                        Sub-task dari: ${task.parent.title}
+                                                                                                                                                                                    </div>
+                                                                                                                                                                                ` : ''}
+                                                                                                                                                                <div class="card-project">
+                                                                                                                                                                    <i class="fas fa-folder"></i>
+                                                                                                                                                                    ${task.project?.name || 'No Project'}
+                                                                                                                                                                </div>
+                                                                                                                                                                <div class="card-meta">
+                                                                                                                                                                    <span class="card-priority priority-${task.priority}">
+                                                                                                                                                                        ${task.priority}
+                                                                                                                                                                    </span>
+                                                                                                                                                                    ${task.assignees && task.assignees.length > 0 ? `
+                                                                                                                                                                                        ${task.assignees[0].avatar ? `
+                                                                                                                                                                            <div class="avatar avatar-sm" style="width: 28px; height: 28px; background-image: url('/storage/${task.assignees[0].avatar}'); background-size: cover; background-position: center;"></div>
+                                                                                                                                                                        ` : `
+                                                                                                                                                                            <div class="avatar avatar-sm" style="width: 28px; height: 28px; font-size: 0.7rem;">
+                                                                                                                                                                                ${getInitials(task.assignees[0].name)}
+                                                                                                                                                                            </div>
+                                                                                                                                                                        `}
+                                                                                                                                                                                    ` : ''}
+                                                                                                                                                                </div>
+                                                                                                                                                                ${task.due_date ? `
+                                                                                                                                                                                    <div class="card-footer">
+                                                                                                                                                                                        <span class="card-due ${isOverdue(task.due_date) ? 'overdue' : ''}">
+                                                                                                                                                                                            <i class="fas fa-calendar"></i>
+                                                                                                                                                                                            ${formatDate(task.due_date)}
+                                                                                                                                                                                        </span>
+                                                                                                                                                                                    </div>
+                                                                                                                                                                                ` : ''}
                                                                                                                                                             </div>
-                                                                                                                                                        `}
-                                                                                                                                                                    ` : ''}
-                                                                                                                                                </div>
-                                                                                                                                                ${task.due_date ? `
-                                                                                                                                                                    <div class="card-footer">
-                                                                                                                                                                        <span class="card-due ${isOverdue(task.due_date) ? 'overdue' : ''}">
-                                                                                                                                                                            <i class="fas fa-calendar"></i>
-                                                                                                                                                                            ${formatDate(task.due_date)}
-                                                                                                                                                                        </span>
-                                                                                                                                                                    </div>
-                                                                                                                                                                ` : ''}
-                                                                                                                                            </div>
-                                                                                                                                        `;
+                                                                                                                                                        `;
                     }).join('');
                 });
 
@@ -633,16 +632,17 @@
                         if (newStatus === 'done' && (oldStatus === 'todo' || oldStatus === 'in_progress')) {
                             alert(
                                 'Task tidak bisa langsung dipindah ke Done. Harap pindahkan ke Review terlebih dahulu.'
-                                );
+                            );
                             return;
                         }
 
-                        // Block non-assignees from dropping to done column
-                        if (newStatus === 'done' && task && !task.is_assignee) {
-                            alert(
-                                'Hanya assignee yang dapat menandai task sebagai selesai. Gunakan tombol Approve di halaman detail task.'
-                                );
-                            location.reload();
+                        // Block users without approve permission from moving review tasks (approve/reopen)
+                        if (oldStatus === 'review' && task && !task.can_approve) {
+                            return;
+                        }
+
+                        // Block users without approve permission from moving done tasks (reopen)
+                        if (oldStatus === 'done' && task && !task.can_approve) {
                             return;
                         }
 
@@ -689,7 +689,7 @@
                 window.location.href = url.toString();
             }
 
-            document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('DOMContentLoaded', function () {
                 renderTasks();
 
                 // Show warning popup when project is on hold
@@ -698,7 +698,7 @@
                         'Project "{{ $project->name }}" sedang ditunda. Tugas-tugas tidak dapat dikerjakan saat ini.'
                     );
                 @endif
-            });
+                            });
         </script>
     @endpush
 @endsection

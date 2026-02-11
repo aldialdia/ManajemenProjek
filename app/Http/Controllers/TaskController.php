@@ -113,6 +113,14 @@ class TaskController extends Controller
             // Pass assignee status to frontend (for done column protection)
             $task->is_assignee = $isAssignee;
 
+            // Can approve: only actual project Manager/Admin (not Super Admin)
+            if ($user->isSuperAdmin()) {
+                $task->can_approve = false;
+            } else {
+                $role = $user->getRoleInProject($task->project);
+                $task->can_approve = in_array($role, ['manager', 'admin']);
+            }
+
             // If project is on_hold, only manager can change status
             if ($projectOnHold) {
                 $task->can_update_status = $isManager;
@@ -484,6 +492,19 @@ class TaskController extends Controller
         $isAssignee = $task->assignees()->where('users.id', $user->id)->exists();
         $newStatus = $request->validated('status');
 
+        // Block Super Admin from approving tasks (review → done)
+        if ($user->isSuperAdmin() && $task->status->value === 'review' && $newStatus === 'done') {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hanya Manager atau Admin project yang dapat meng-approve task.',
+                ], 403);
+            }
+            return redirect()
+                ->route('tasks.show', $task)
+                ->with('error', 'Hanya Manager atau Admin project yang dapat meng-approve task.');
+        }
+
         // Only assignee can mark task as done (managers can set to review for approval)
         if (!$isAssignee && $newStatus === 'done') {
             if ($request->expectsJson()) {
@@ -497,17 +518,22 @@ class TaskController extends Controller
                 ->with('error', 'Hanya assignee yang dapat menandai task sebagai selesai.');
         }
 
-        // Only Manager/Admin can reopen a done task
-        if ($task->status->value === 'done' && !$isManager && !$user->isSuperAdmin()) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Hanya Manager atau Admin yang dapat membuka kembali task yang sudah selesai.',
-                ], 403);
+        // Only actual project Manager/Admin can reopen a done task (Super Admin cannot)
+        if ($task->status->value === 'done') {
+            $role = $user->getRoleInProject($task->project);
+            $isProjectManagerOrAdmin = !$user->isSuperAdmin() && in_array($role, ['manager', 'admin']);
+
+            if (!$isProjectManagerOrAdmin) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Hanya Manager atau Admin project yang dapat membuka kembali task yang sudah selesai.',
+                    ], 403);
+                }
+                return redirect()
+                    ->route('tasks.show', $task)
+                    ->with('error', 'Hanya Manager atau Admin project yang dapat membuka kembali task yang sudah selesai.');
             }
-            return redirect()
-                ->route('tasks.show', $task)
-                ->with('error', 'Hanya Manager atau Admin yang dapat membuka kembali task yang sudah selesai.');
         }
 
         $this->taskService->updateStatus($task, $newStatus);

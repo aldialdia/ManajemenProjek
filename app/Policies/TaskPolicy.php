@@ -119,15 +119,23 @@ class TaskPolicy
 
     /**
      * Determine whether the user can approve the task.
-     * Only Manager or Admin can approve.
+     * Only Manager or Admin in the project can approve.
+     * Super Admin cannot approve (they are not project members).
      */
     public function approve(User $user, Task $task): bool
     {
+        // Super Admin cannot approve tasks
+        if ($user->isSuperAdmin()) {
+            return false;
+        }
+
         if (!$user->isMemberOfProject($task->project)) {
             return false;
         }
 
-        return $user->isManagerInProject($task->project);
+        // Only Manager or Admin in the project can approve
+        $role = $user->getRoleInProject($task->project);
+        return in_array($role, ['manager', 'admin']);
     }
 
     /**
